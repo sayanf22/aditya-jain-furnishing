@@ -16,5 +16,24 @@
       "!/_next/static/*",
       "!/*/_next/static/*"
     ]
+  },
+  // Catalogue data and enquiries. No database_id yet: Wrangler creates the
+  // database in the client's Cloudflare account on first deploy.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aditya-jain-furnishing-db",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Product photos, décor images and Watch & Buy videos.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "aditya-jain-furnishing-media"
+    }
+  ],
+  "observability": {
+    "enabled": true
   }
 }
