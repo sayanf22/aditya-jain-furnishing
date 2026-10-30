@@ -24,4 +24,5 @@ npm run db:migrate:local
 | `npm run db:migrate:local` | Applies D1 migrations to the local database |
 | `npm run perf -- <url>` | Phone-profile speed check (LCP, layout shift, blocking time, bytes) |
 | `node scripts/server-timing.mjs <base> <routes…>` | Local Worker response times per route |
+| `npm run cpu -- <routes…>` | Local estimate of Worker CPU time per request (needs `npx wrangler dev --port 8787 --local --inspector-port 9230` running after an OpenNext build) |
 | `npm run deploy` | Deploys to Cloudflare. **Not used until the client's account exists** |

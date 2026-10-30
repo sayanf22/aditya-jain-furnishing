@@ -108,6 +108,16 @@ The rules that keep it this way:
 | `/api/health` | 5.3 ms; first request 6 ms | Next.js server not loaded |
 | `/no-such-page` (404) | 8.5 ms; **first request 183 ms** | first 404 in a fresh Worker loads the Next.js server |
 
+**CPU time per request, local estimate** (`npm run cpu`: the DevTools CPU profiler on the local Worker, 30 requests per route). Every local request carries 4.5–5.5 ms of Wrangler dev-wrapper and profiler overhead, measured on `/api/health`, which does almost nothing; the route's own work is the figure above that:
+
+| Route | Route's own CPU work | First request in a fresh Worker |
+|---|---|---|
+| `/` (pre-rendered page) | about 1.7–2.5 ms | about 3–12 ms |
+| `/no-such-page` (404) | about 2.6–3.3 ms | **about 110 ms** (loads the Next.js server) |
+| `/api/health` | baseline | about 4–24 ms |
+
+Cloudflare's docs give 2.2 ms as the average CPU time of a Worker request, and 10–20 ms for server-side rendering. The real figure for this site comes from Workers Logs once it runs on Cloudflare.
+
 - Worker startup (`wrangler check startup`): 28 ms of CPU locally, against a 1-second startup limit. Bundle 4.6 MB, 985 KB gzipped.
 - Phone profile (`scripts/perf-check.mjs`: 4x slower CPU, fast 4G), placeholder page: LCP 0.43–0.47 s, layout shift 0, blocking time 100–135 ms (target under 200). JavaScript is 445 KB before compression, almost all React and the Next.js router; files are cached for a year.
 
