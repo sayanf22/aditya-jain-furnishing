@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aditya-jain-furnishing",
+  // Local-only build for now: don't send Wrangler usage data to Cloudflare.
+  "send_metrics": false,
   "compatibility_date": "2026-10-30",
   "compatibility_flags": [
     "nodejs_compat"

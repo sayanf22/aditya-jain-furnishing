@@ -67,6 +67,25 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 
 **Not included**: cart or payments, email or SMS alerts, extra categories or pages, photography, video or image editing, advanced SEO.
 
+## 5a. vinext vs OpenNext, and server-side rendering
+
+| | **vinext (used)** | OpenNext (not used) |
+|---|---|---|
+| What it is | Cloudflare's own rebuild of the Next.js framework on Vite | An adapter that takes the output of Vercel's `next build` and makes it run on Workers |
+| `next` package installed | No: vinext provides `next/link`, `next/image`, `next/navigation` and the rest itself | Yes |
+| Our code | Normal Next.js App Router code (`app/`, `page.tsx`, `layout.tsx`, route handlers) | Same |
+| Server-side rendering | Yes: React Server Components, streaming SSR, Server Actions, route handlers, middleware, ISR | Yes |
+| Cloudflare's recommendation (Oct 2026) | Default for Next.js on Workers | Only for existing OpenNext apps |
+
+How the site renders today, and how that can change later without rewriting:
+- Pages that don't need live data are **pre-rendered** at build into static files (the fastest option).
+- Pages that read the database **render on the server** (checked locally: a page reading D1 rendered at request time).
+- Any page can switch to per-request server rendering later by adding `export const dynamic = "force-dynamic"`. On the free plan that render must stay under 10 ms CPU (§5); on Workers Paid it can use up to 30 seconds.
+
+**Local-only rule**: until the client's Cloudflare account exists, everything runs on this computer (`npm run dev`, `npm run start`, local D1 and R2). Nothing is deployed or connected to Cloudflare, and Wrangler's usage data is turned off (`send_metrics: false`). Code is pushed to GitHub only.
+
+**Speed baseline** (empty starter page, production build, `npm run start`, measured with `scripts/perf-check.mjs` on a phone profile: 4x slower CPU, fast 4G): time to first byte 11–33 ms, LCP 0.44 s, layout shift 0, blocking time 2–13 ms. JavaScript is 134 KB gzipped (React and the router), cached for a year. Every page is re-measured with the same script before it's shown to you.
+
 ## 5. The 10 ms CPU limit and how we avoid it
 
 On the free plan, each request may use 10 ms of CPU. Waiting for D1, R2 or another server does **not** count, only the Worker's own computing. The work that can go over is rendering a page. The options:
@@ -81,7 +100,7 @@ Whichever we pick, we keep the other heavy work off the request path: photos are
 
 **What I tested**: vinext cannot read D1 while pre-rendering during the build ("Cloudflare bindings are unavailable during build-time prerendering"). So option B needs the edge cache, and option A needs the JSON snapshot script. Reading D1 at request time works.
 
-**Recommendation**: build the pages so they read data through one module (`lib/content.ts`). That module can read D1 (option B) or the snapshot (option A), so switching later only changes configuration. Once the Home page exists, we deploy a test copy to a WhyCreatives Cloudflare account and read the real CPU time per render in Workers Observability. If a render stays under about 5 ms, use B (instant updates). If not, use A.
+**Recommendation**: build the pages so they read data through one module (`lib/content.ts`). That module can read D1 (option B) or the snapshot (option A), so switching later only changes configuration. The real CPU time per render is measured on the client's account once it exists (Workers Observability). If a render stays under about 5 ms, use B (instant updates). If not, use A. Until then the local build uses B's code path, since it is the one that also covers future server rendering.
 
 ## 6. Stack (installed)
 
@@ -171,13 +190,13 @@ Each step ends with a check before the next one starts.
 | 2 | D1 and R2 bindings; schema; seed the catalogue; Playwright | Migrations apply; the five categories come back in order; D1 readable at request time | Done |
 | 3 | **Your design guide** → colours, type, spacing, fonts, header, footer, floating WhatsApp button | Screenshots at 390 px and 1440 px | Next |
 | 4 | **Home page**, section by section in the agreed order, with its animations | Screenshots; your approval | |
-| 5 | Test deploy of the Home page; measure render CPU; choose option A or B (§5) | CPU time per render from Workers Observability | |
+| 5 | Speed check of the Home page locally (`scripts/perf-check.mjs`) | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile | |
 | 6 | **Collection pages** | Your approval | |
 | 7 | **Gallery** | Your approval | |
 | 8 | **Contact** and the enquiry form (B2C/B2B, Turnstile, saved to D1) | Test enquiry saved; bad input rejected | |
 | 9 | **Admin dashboard** | Full add, edit, reorder, delete cycle | |
 | 10 | Performance and basic SEO | Lighthouse mobile 95+; sitemap valid | |
-| 11 | Deploy to the client's Cloudflare account on `workers.dev`, behind Access during review | Preview opens for approved emails only | |
+| 11 | Once the client's account exists: deploy to `workers.dev` behind Access; measure render CPU; choose option A or B (§5) | Preview opens for approved emails only; CPU per render known | |
 | 12 | Client review and revisions (6 minor included) | Client approval | |
 | 13 | Launch after final payment: domain, Access on `/admin` only | SSL, speed, admin login, enquiry form checked live | |
 
