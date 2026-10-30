@@ -5,13 +5,11 @@ docs/client-pdfs/
 # Dependencies
 node_modules/
 
-# Next.js
+# vinext / Vite build output
+/dist/
+.vinext/
 .next/
-out/
 next-env.d.ts
-
-# Generated content export
-content/generated/
 
 # Cloudflare / Wrangler
 .wrangler/
