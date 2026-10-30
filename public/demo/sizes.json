@@ -1,0 +1,228 @@
+{
+  "hero-curtains": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "hero-upholstery": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "hero-carpets": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "cat-upholstery": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "cat-curtains": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "cat-carpets": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "cat-cushions": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "cat-wallpaper": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "decor-velvet": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
+  "decor-leather": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
+  "decor-grey": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
+  "decor-ivory": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
+  "enquiry-showroom": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "swatch-velvet": {
+    "widths": [
+      160,
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "swatch-leather": {
+    "widths": [
+      160,
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "swatch-grey": {
+    "widths": [
+      160,
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "swatch-ivory": {
+    "widths": [
+      160,
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "watch-cushions-poster": {
+    "widths": [
+      270,
+      540
+    ],
+    "aspect": [
+      9,
+      16
+    ]
+  },
+  "watch-curtains-poster": {
+    "widths": [
+      270,
+      540
+    ],
+    "aspect": [
+      9,
+      16
+    ]
+  },
+  "watch-fabric-poster": {
+    "widths": [
+      270,
+      540
+    ],
+    "aspect": [
+      9,
+      16
+    ]
+  },
+  "watch-rugs-poster": {
+    "widths": [
+      270,
+      540
+    ],
+    "aspect": [
+      9,
+      16
+    ]
+  }
+}

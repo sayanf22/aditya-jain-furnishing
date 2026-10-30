@@ -38,3 +38,6 @@ Thumbs.db
 # Editor
 .vscode/*
 !.vscode/extensions.json
+
+# Stock downloads, review sheets and screenshots (local only)
+.stock/

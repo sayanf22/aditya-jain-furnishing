@@ -1,6 +1,6 @@
 # Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
-Status: plan v4 (Next.js + OpenNext). Setup and local database done and checked. Waiting for the design guide.
+Status: plan v5. Home page designed and built locally with stand-in images; waiting for your review before the Collection page.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
 Client PDFs: `docs/client-pdfs/` (kept out of git).
 
@@ -18,6 +18,20 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 | Upholstery Fabric | Flat list as in the revised agreement: Fabric, Velvet, Linen, Prints, Leather |
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
 | Code repository | Private GitHub repo `sayanf22/aditya-jain-furnishing` |
+| Design direction | The Floor & Furnishings screenshots you sent: full-screen photo hero with the headline bottom left and a terracotta button, a terracotta ribbon of category names, then a row of tall category cards with "Explore" buttons. Warm ivory and sand backgrounds, terracotta accent, near-black text, one font (Instrument Sans, regular to semibold, no italics) |
+
+## 1a. Business details (from the client's visiting card)
+
+| Field | Value | Shown in |
+|---|---|---|
+| Name | Delta Furnishings (legal: Delta Furnishings Pvt Ltd) | Header logo, hero, footer, page title |
+| Address | 77, First Floor, Furniture Block, Kirti Nagar, New Delhi 110015 | Quick enquiry, footer, "Get directions" (Google Maps search) |
+| Mobile | +91 98112 68268 | Call buttons, footer |
+| GSTIN | 07AAECD7008E1ZZ | Footer |
+
+Stored in `migrations/0003_business_settings.sql` (editable later from the dashboard).
+
+**Not confirmed yet** (asked of the client before launch): whether the mobile number is also the WhatsApp number (the local preview assumes it is), the Instagram handle (the Instagram button stays hidden until it's added), the logo (a text logo is used for now).
 
 ## 2. The documents, oldest to newest
 
@@ -233,9 +247,9 @@ Each step ends with a check before the next one starts.
 |---|---|---|---|
 | 1 | Next.js 16.4.3 + OpenNext; Wrangler config; custom Worker entry; lint, types, git, GitHub | `next build`, OpenNext build, local Worker serves `/` (cache HIT) and `/api/health`; lint and type check pass | Done |
 | 2 | D1 and R2 bindings; schema; catalogue seed; Playwright | Pre-rendered page reads D1 at build; D1 readable at request time; `next dev` sees local D1 | Done |
-| 3 | **Your design guide** → colours, type, spacing, fonts, header, footer, floating WhatsApp button | Screenshots at 390 px and 1440 px | Next |
-| 4 | **Home page**, section by section in the agreed order, with its animations | Screenshots; your approval | |
-| 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | |
+| 3 | Design tokens, font, header, footer, floating WhatsApp button | Screenshots at 390 px and 1440 px | Done |
+| 4 | **Home page**, section by section in the agreed order, with its animations (see §11a) | Screenshots; `scripts/interaction-check.mjs` all PASS; your approval | Built, waiting for your review |
+| 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | Done (§11a) |
 | 6 | **Collection pages** | Your approval | |
 | 7 | **Gallery** | Your approval | |
 | 8 | **Contact** and the enquiry form (B2C/B2B, Turnstile, saved to D1 through `worker/api.ts`) | Test enquiry saved; bad input rejected | |
@@ -245,9 +259,39 @@ Each step ends with a check before the next one starts.
 | 12 | Client review and revisions (6 minor included) | Client approval | |
 | 13 | Launch after final payment: domain, R2 photo domain, Access on `/admin` only | SSL, speed, admin login, enquiry form checked live | |
 
+## 11a. Home page (built)
+
+Sections in the agreed order, all pre-rendered from D1 at build time:
+
+| # | Section | What it does | Code |
+|---|---|---|---|
+| – | Header | Text logo centred, links left, Call and Enquire right. Transparent over the hero, turns solid ivory on scroll. Phone menu slides in, closes on tap or Escape | `components/SiteHeader.tsx` |
+| 01 | Hero | Full-screen photo slides: cross-fade, slow zoom on the active photo, headline and button rising in on each slide. Dots, "Scroll" cue. Only the first photo loads with the page | `components/home/Hero.tsx` |
+| – | Ribbon | Terracotta strip with the five category names scrolling (CSS only), pauses on hover | `components/home/Marquee.tsx` |
+| 02 | Main categories | Five tall cards in the agreed order. Desktop: hover widens a card and reveals its subcategories. Phone: swipe row, subcategories always shown. Carpets & Mats also links "Direct collections" | `components/home/Categories.tsx` |
+| 03 | Interactive home décor | Tap a texture swatch, the matching photo cross-fades in; "Enquire about this look" opens WhatsApp naming the texture | `components/home/DecorPicker.tsx` |
+| 04 | Watch & Buy | Portrait clips; a clip downloads only when tapped, one plays at a time, pauses when scrolled away; "Enquire" on each | `components/home/WatchAndBuy.tsx` |
+| 05 | Testimonials | Right after Watch & Buy; hidden when no reviews exist | `components/home/Testimonials.tsx` |
+| 06 | Quick enquiry | WhatsApp, Call, Instagram (once added), address with "Get directions" | `components/home/QuickEnquiry.tsx` |
+| – | Footer | Name, categories, address, phone, GSTIN, © and "Built by WhyCreatives" | `components/SiteFooter.tsx` |
+| – | Floating WhatsApp | Fixed on the right on every page | `components/FloatingWhatsApp.tsx` |
+
+Scroll reveal (fade and rise) runs through one observer (`components/RevealObserver.tsx`). All motion turns off for "reduce motion".
+
+**Stand-in content (local only)**: `seeds/demo-local.sql` points the page at stock images and clips from Pexels and a public-domain William Morris wallpaper (licences in `docs/stock-images.md`), and adds three testimonials clearly marked "Sample review". None of it goes to the client's database. The décor stand-ins show four different sofas; the client will photograph one product in each fabric.
+
+**Checks (local, OpenNext build on workerd)**:
+- Phone profile (4x slower CPU, fast 4G): LCP 0.64 s, layout shift 0, blocking time 83–98 ms.
+- Frame timing at 4x slower CPU: hero cross-fade, category hover and full-page scroll all at about 60 fps (p95 16.7 ms, no frames over 50 ms).
+- One visit (phone, scrolled to the bottom): **1 Worker request** (the page), 28 static files (878 KB, free). About 100,000 such visits a day fit in the free plan.
+- Worker CPU for `/`: about 2.4 ms of its own work per request (local estimate).
+- `scripts/interaction-check.mjs`: all 11 checks pass (slide change, card hover, swatch swap, clip loads only on tap and plays, phone menu, no sideways scroll). No browser console errors.
+
+Links to Collection, Gallery and Contact point at pages that come in the next steps, so they show the 404 page for now.
+
 ## 12. Needed from the client (by the time we reach each step)
 
-Logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy content; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
+Confirmation that 98112 68268 is on WhatsApp; Instagram handle; logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy content; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
 
 ## 13. Sources checked (October 2026)
 
