@@ -5,17 +5,17 @@ docs/client-pdfs/
 # Dependencies
 node_modules/
 
-# vinext / Vite build output
-/dist/
-.vinext/
+# Next.js and OpenNext build output
 .next/
+out/
+.open-next/
 next-env.d.ts
 
 # Cloudflare / Wrangler
 .wrangler/
 .dev.vars*
 !.dev.vars.example
-worker-configuration.d.ts
+cloudflare-env.d.ts
 
 # Env files
 .env*
@@ -30,10 +30,11 @@ npm-debug.log*
 *.log
 .DS_Store
 Thumbs.db
+*.pem
+
+# TypeScript incremental build info
+*.tsbuildinfo
 
 # Editor
 .vscode/*
 !.vscode/extensions.json
-
-# TypeScript incremental build info
-*.tsbuildinfo

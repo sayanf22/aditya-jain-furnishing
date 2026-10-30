@@ -1,6 +1,6 @@
 # Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
-Status: plan v3 (vinext). Setup and local database done. Waiting for the design guide.
+Status: plan v4 (Next.js + OpenNext). Setup and local database done and checked. Waiting for the design guide.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
 Client PDFs: `docs/client-pdfs/` (kept out of git).
 
@@ -10,9 +10,10 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 
 | Topic | Decision |
 |---|---|
-| Framework | Next.js code (App Router) run by **vinext**, Cloudflare's Next.js-on-Vite toolchain. No OpenNext |
+| Framework | **Next.js 16.4.3** (App Router) on Cloudflare Workers through the **OpenNext adapter** (`@opennextjs/cloudflare` 1.20.15). vinext removed |
 | Hosting | Cloudflare Workers **Free plan** only, in the client's own Cloudflare account |
-| Way of working | One page at a time: design and build the Home page, get approval, then the next page |
+| Local-only | Built and tested on this computer. Nothing is deployed or connected to Cloudflare until the client's account exists. Code is pushed to GitHub only |
+| Way of working | One page at a time: Home first, get approval, then the next page |
 | Footer credit | "Built by WhyCreatives", in the bottom legal row next to the copyright line |
 | Upholstery Fabric | Flat list as in the revised agreement: Fabric, Velvet, Linen, Prints, Leather |
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
@@ -67,75 +68,89 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 
 **Not included**: cart or payments, email or SMS alerts, extra categories or pages, photography, video or image editing, advanced SEO.
 
-## 5a. vinext vs OpenNext, and server-side rendering
+## 5. How it stays fast and inside the free plan
 
-| | **vinext (used)** | OpenNext (not used) |
+Free-plan limits: **100,000 Worker requests a day** and **10 ms of CPU per request**. Waiting for D1, R2 or another server doesn't count toward the 10 ms, only the Worker's own work. Requests for static files (JS, CSS, fonts, icons) are free and don't count toward the 100,000.
+
+```
+Visitor
+  ├─ /_next/static/*, fonts, icons ──► Workers Static Assets            free, not counted, Worker never runs
+  ├─ pages (/, /collection/…)       ──► OpenNext cache interception     pre-rendered HTML from static assets,
+  │                                                                     Next.js server not loaded
+  ├─ /api/*                         ──► worker/api.ts (small handlers)  quick D1 / R2 call, Next.js server not loaded
+  └─ unknown URLs (404)             ──► Next.js server                  only case that loads the Next.js server
+```
+
+The rules that keep it this way:
+
+| Rule | Why |
+|---|---|
+| Every public page is **pre-rendered at build time** (`export const dynamic = "force-static"`), reading the catalogue from D1 during the build | Visits don't render anything on the Worker |
+| OpenNext **static-assets incremental cache** with **cache interception** on (`open-next.config.ts`) | Pre-rendered pages are answered without starting the Next.js server |
+| **Custom Worker entry** (`worker/index.ts`) sends `/api/*` to small handlers in `worker/api.ts` | Form posts and dashboard calls never load the Next.js server (about 4.6 MB of code) |
+| Cache Components / Partial Prerendering **off** | Cache interception doesn't work with them |
+| No middleware / proxy | It would run on every request |
+| Links prefetch **on hover or touch**, not on scroll into view | Next.js would otherwise fetch every visible link in the background, and each prefetch is a Worker request |
+| Photos resized in the admin's browser at upload (3 WebP widths); no image optimisation on the Worker | Image resizing is heavy CPU work |
+| After launch, photos are served from R2's own custom domain | Photo requests then don't count as Worker requests |
+| Admin login through Cloudflare Access (email code), checked in `worker/api.ts` | No password hashing on the Worker |
+
+**Updating content**: because pages are pre-rendered, a change in the dashboard reaches the public site after a rebuild. The dashboard's Publish button will trigger a Cloudflare Workers Builds rebuild (about 2–3 minutes; free plan includes 3,000 build minutes a month). If instant updates are needed later, switch `open-next.config.ts` to the R2 incremental cache with a D1 tag cache and call `revalidatePath` on save; that is a configuration change, not a rewrite.
+
+**Server-side rendering later**: any page can render per request by switching it to `export const dynamic = "force-dynamic"`. On the free plan that loads the Next.js server and may go over 10 ms CPU; on Workers Paid ($5 a month, paid by the client) the limit is 30 seconds. Route handlers can also move back into `app/api/` then.
+
+**Measured locally** (OpenNext build served by Wrangler on workerd, the same runtime Cloudflare uses; `scripts/server-timing.mjs`, 40 requests per route):
+
+| Route | Median | Compared with a static JS file (Worker doesn't run) |
 |---|---|---|
-| What it is | Cloudflare's own rebuild of the Next.js framework on Vite | An adapter that takes the output of Vercel's `next build` and makes it run on Workers |
-| `next` package installed | No: vinext provides `next/link`, `next/image`, `next/navigation` and the rest itself | Yes |
-| Our code | Normal Next.js App Router code (`app/`, `page.tsx`, `layout.tsx`, route handlers) | Same |
-| Server-side rendering | Yes: React Server Components, streaming SSR, Server Actions, route handlers, middleware, ISR | Yes |
-| Cloudflare's recommendation (Oct 2026) | Default for Next.js on Workers | Only for existing OpenNext apps |
+| `/_next/static/…js` | 7.4–7.6 ms | baseline |
+| `/` (pre-rendered page) | 7.5 ms | same as baseline: the Worker does almost no work |
+| `/api/health` | 5.3 ms; first request 6 ms | Next.js server not loaded |
+| `/no-such-page` (404) | 8.5 ms; **first request 183 ms** | first 404 in a fresh Worker loads the Next.js server |
 
-How the site renders today, and how that can change later without rewriting:
-- Pages that don't need live data are **pre-rendered** at build into static files (the fastest option).
-- Pages that read the database **render on the server** (checked locally: a page reading D1 rendered at request time).
-- Any page can switch to per-request server rendering later by adding `export const dynamic = "force-dynamic"`. On the free plan that render must stay under 10 ms CPU (§5); on Workers Paid it can use up to 30 seconds.
+- Worker startup (`wrangler check startup`): 28 ms of CPU locally, against a 1-second startup limit. Bundle 4.6 MB, 985 KB gzipped.
+- Phone profile (`scripts/perf-check.mjs`: 4x slower CPU, fast 4G), placeholder page: LCP 0.43–0.47 s, layout shift 0, blocking time 100–135 ms (target under 200). JavaScript is 445 KB before compression, almost all React and the Next.js router; files are cached for a year.
 
-**Local-only rule**: until the client's Cloudflare account exists, everything runs on this computer (`npm run dev`, `npm run start`, local D1 and R2). Nothing is deployed or connected to Cloudflare, and Wrangler's usage data is turned off (`send_metrics: false`). Code is pushed to GitHub only.
-
-**Speed baseline** (empty starter page, production build, `npm run start`, measured with `scripts/perf-check.mjs` on a phone profile: 4x slower CPU, fast 4G): time to first byte 11–33 ms, LCP 0.44 s, layout shift 0, blocking time 2–13 ms. JavaScript is 134 KB gzipped (React and the router), cached for a year. Every page is re-measured with the same script before it's shown to you.
-
-## 5. The 10 ms CPU limit and how we avoid it
-
-On the free plan, each request may use 10 ms of CPU. Waiting for D1, R2 or another server does **not** count, only the Worker's own computing. The work that can go over is rendering a page. The options:
-
-| Option | How it works | Updates go live | CPU risk | Free-plan request count |
-|---|---|---|---|---|
-| **A. Snapshot at build** | A script copies the catalogue from D1 into JSON before the build; every page is pre-rendered into static files. Publish button rebuilds | 2–3 minutes after pressing Publish | None: no rendering at request time | 1 request per page view |
-| **B. Edge cache (ISR) with Workers Cache** | vinext renders a page once on the Worker, Cloudflare caches it worldwide and serves the copy without running the Worker. Saving in the dashboard clears that page's cache; it re-renders once on the next visit. Deploys pre-fill the cache (`--warm-cache`) | Seconds after saving | Only on that one re-render after a change | Every file counts, about 10–15 per page view, so roughly 7,000–10,000 page views a day |
-| C. Workers Paid | Raises the limit to 30 seconds | – | None | $5 a month, paid by the client. Not wanted |
-
-Whichever we pick, we keep the other heavy work off the request path: photos are resized in the admin's browser before upload, admin login uses Cloudflare Access (no password hashing), and enquiry checks are network waits.
-
-**What I tested**: vinext cannot read D1 while pre-rendering during the build ("Cloudflare bindings are unavailable during build-time prerendering"). So option B needs the edge cache, and option A needs the JSON snapshot script. Reading D1 at request time works.
-
-**Recommendation**: build the pages so they read data through one module (`lib/content.ts`). That module can read D1 (option B) or the snapshot (option A), so switching later only changes configuration. The real CPU time per render is measured on the client's account once it exists (Workers Observability). If a render stays under about 5 ms, use B (instant updates). If not, use A. Until then the local build uses B's code path, since it is the one that also covers future server rendering.
+**Remaining risks, stated plainly**
+- The first 404 (or any non-pre-rendered page) in a fresh Worker loads the Next.js server. That one request may go over 10 ms of CPU on the free plan and fail with error 1102. It doesn't affect pre-rendered pages, static files or `/api/*`.
+- Local timings are not Cloudflare's CPU figures. The real CPU per request is read from Workers Observability once the site runs on the client's account (step 11). If pages are near the limit, turning on Workers Cache in front of the Worker (`"cache": { "enabled": true }`) serves them without running the Worker at all; cache hits then count as requests, including static files.
+- OpenNext warns that it isn't fully supported on Windows. Builds work locally; Cloudflare's production builds run on Linux. If local builds start failing, move development into WSL.
+- The Next.js client runtime is heavier than vinext's (blocking time 100–135 ms vs 2–13 ms on the phone profile for an empty page). Every page is checked against the 200 ms target before it's shown to you.
 
 ## 6. Stack (installed)
 
 | Layer | Package | Installed version |
 |---|---|---|
-| Next.js API on Vite | vinext | 1.4.0 |
-| Cloudflare adapter and deploy | @vinext/cloudflare, @cloudflare/vite-plugin | 1.3.0, 1.66.0 |
-| Bundler | Vite | 8.3.5 |
-| UI | React, React DOM | 19.3.1 (`<ViewTransition>` is stable in 19.3) |
-| Styling | Tailwind CSS | 4.3.3 |
-| Language | TypeScript | 7.0.2 |
-| Cloudflare CLI | Wrangler | 4.156.0 (the new `cf` CLI is still beta, so not used) |
-| Screenshot checks | Playwright + Chromium | 1.64.1 |
+| Framework | next | 16.4.3 (Turbopack) |
+| Cloudflare adapter | @opennextjs/cloudflare | 1.20.15 |
+| UI | react, react-dom | 19.3.1 (`<ViewTransition>` is stable in 19.3) |
+| Styling | tailwindcss, @tailwindcss/turbopack | 4.3.3 |
+| Language | typescript | 5.9.3 (the version create-next-app 16.4.3 installs) |
+| Lint | eslint, eslint-config-next | 9.39.5, 16.4.3 |
+| Cloudflare CLI | wrangler | 4.156.0 |
+| Speed checks | @playwright/test + Chromium | 1.64.1 |
 
 Added when a step needs them: Zod (enquiry form and admin input), jose (Access token check), @dnd-kit/react (admin drag-reorder).
 
-Node.js 22.16.0 is installed and meets every package's requirement; `.node-version` pins 22 for Cloudflare's build machines.
+`npm audit`: 0 vulnerabilities. `package.json` overrides `glob` to 10.5.0 inside `@node-minify/core` (an OpenNext build tool) to clear a high-severity glob CLI advisory.
 
-**Known audit note**: `npm audit` reports 5 moderate issues, all from one path: vinext → @vercel/og → satori → fflate 0.7 (an infinite loop when unzipping a malformed ZIP64 file). We don't generate OG images or unzip anything, and the only "fix" npm offers is downgrading vinext to 0.2.1. Recheck when vinext updates.
+Node.js 22.16.0 meets every package's requirement; `.node-version` pins 22 for Cloudflare's build machines.
 
 **Cloudflare services (all free)**
 | Service | Use | Free limit |
 |---|---|---|
-| Workers + static assets | Site and API | 100,000 Worker requests a day; 10 ms CPU per request |
+| Workers + static assets | Site and API | 100,000 Worker requests a day; 10 ms CPU per request; static files free |
 | D1 (`DB`) | Catalogue data, enquiries | 5 GB; 5 million rows read and 100,000 written a day |
 | R2 (`MEDIA`) | Photos, videos | 10 GB; 1M writes and 10M reads a month; no egress fees |
-| Workers Builds | Builds on push (and Publish, if option A) | 3,000 build minutes a month |
+| Workers Builds | Rebuild on Publish | 3,000 build minutes a month |
 | Access (Zero Trust free) | Admin login with an email one-time code | No passwords stored |
 | Turnstile | Spam protection on the enquiry form | Free |
 
-**Photos**: resized in the admin's browser into 3 WebP widths (about 480, 960, 1600 px) and stored in R2. Frames follow each photo's own shape and show the whole product.
-
 **Animations**, no animation library: React `<ViewTransition>` for the page slide from the right; CSS for the hero reveal, staggered category tiles, hover and button effects; a small IntersectionObserver hook for scroll fade-and-rise; native `<dialog>` for gallery zoom. All motion turns off for "reduce motion".
 
-**Performance targets**: Lighthouse 95+ on mobile; LCP under 2 seconds on 4G; hero image under 150 KB; fonts self-hosted through `next/font` (no italic or thin weights).
+**Fonts**: self-hosted with `next/font/local` (no italic or thin weights).
+
+**Performance targets**: Lighthouse 95+ on mobile; LCP under 2 seconds on 4G; blocking time under 200 ms on the phone profile; hero image under 150 KB.
 
 ## 7. Data model (D1, `migrations/0001_init.sql`)
 
@@ -151,65 +166,85 @@ Node.js 22.16.0 is installed and meets every package's requirement; `.node-versi
 | `enquiries` | Date, B2C or B2B, name, phone, message, product or category, read or unread |
 | `settings` | WhatsApp number, Instagram handle, phone, address, hero images |
 
-`migrations/0002_seed_catalogue.sql` adds the five categories and the subcategory names from the revised agreement.
+`migrations/0002_seed_catalogue.sql` adds the five categories and the subcategory names from the revised agreement. Checked: a pre-rendered page reads these rows from the local D1 during `next build`.
 
 ## 8. Routes
 
-| Route | Purpose |
-|---|---|
-| `/` | Home |
-| `/collection` | All five categories |
-| `/collection/[category]` | Category with its subcategories |
-| `/collection/[category]/[subcategory]` | Products; each opens in a zoom view with description and WhatsApp button |
-| `/collection/[category]/all` | Direct collections: everything in the category |
-| `/gallery` | Grid, search and category filter |
-| `/contact` | Enquiry form and contact options |
-| `/admin/*` | Dashboard (behind Access) |
-| `/api/enquiry`, `/api/admin/*` | Route handlers: form submission, dashboard data, uploads |
-| `/media/*` | Photos and videos from R2, cached for a year |
-| `/sitemap.xml`, `/robots.txt` | Basic SEO |
+| Route | Served by | Purpose |
+|---|---|---|
+| `/` | Pre-rendered | Home |
+| `/collection` | Pre-rendered | All five categories |
+| `/collection/[category]` | Pre-rendered | Category with its subcategories |
+| `/collection/[category]/[subcategory]` | Pre-rendered | Products; each opens in a zoom view with description and WhatsApp button |
+| `/collection/[category]/all` | Pre-rendered | Direct collections: everything in the category |
+| `/gallery` | Pre-rendered | Grid, search and category filter (search runs in the browser) |
+| `/contact` | Pre-rendered | Enquiry form and contact options |
+| `/admin/*` | Pre-rendered shell, live data from `/api/admin/*` | Dashboard (behind Access) |
+| `/api/health` | `worker/api.ts` | Health check (exists now) |
+| `/api/enquiry`, `/api/admin/*`, `/api/media/*` | `worker/api.ts` | Form submission, dashboard data, uploads, photos from R2 |
+| `/sitemap.xml`, `/robots.txt` | Pre-rendered | Basic SEO |
 
-## 9. Commands
+## 9. Project layout
+
+```
+client4/
+├─ app/                  Next.js pages (layout, Home placeholder for now)
+├─ worker/index.ts       Worker entry: /api/* → worker/api.ts, rest → OpenNext
+├─ worker/api.ts         Small API handlers
+├─ migrations/           D1 schema and catalogue seed
+├─ scripts/              perf-check.mjs (phone profile), server-timing.mjs (local Worker timings)
+├─ public/_headers       Year-long caching for /_next/static/*
+├─ open-next.config.ts   Static-assets cache + cache interception
+├─ next.config.ts        Tailwind via Turbopack; local bindings for `next dev`
+├─ wrangler.jsonc        Worker, static assets, D1, R2; send_metrics off
+├─ docs/client-pdfs/     Client PDFs (not in git)
+└─ PLAN.md, README.md, AGENTS.md
+```
+
+## 10. Commands
 
 | Command | Does |
 |---|---|
-| `npm run dev` | Local dev server (Vite) |
-| `npm run build` | Production build into `dist/` |
-| `npm run start` | Runs the built Worker locally with Wrangler |
+| `npm run dev` | Next.js dev server on http://localhost:3000, with local D1 and R2 |
+| `npm run build` | Next.js production build |
+| `npm run preview` | OpenNext build, then serves the Worker locally on http://localhost:8787 |
 | `npm run typecheck` | Regenerates binding types, then type-checks |
+| `npm run lint` | ESLint |
 | `npm run db:migrate:local` | Applies D1 migrations to the local database |
-| `npm run deploy` | Deploys (not used until the client's account exists) |
+| `npm run perf -- <url>` | Phone-profile speed check |
+| `node scripts/server-timing.mjs <base> <routes…>` | Local Worker response times per route |
+| `npm run deploy` | Deploys to Cloudflare. Not used until the client's account exists |
 
-## 10. Build steps
+## 11. Build steps
 
 Each step ends with a check before the next one starts.
 
 | Step | Work | Check | Status |
 |---|---|---|---|
-| 1 | Create the vinext app, pin versions, Wrangler config, git and GitHub | Build, type check, local Worker serves `/` and `/api/hello` | Done |
-| 2 | D1 and R2 bindings; schema; seed the catalogue; Playwright | Migrations apply; the five categories come back in order; D1 readable at request time | Done |
+| 1 | Next.js 16.4.3 + OpenNext; Wrangler config; custom Worker entry; lint, types, git, GitHub | `next build`, OpenNext build, local Worker serves `/` (cache HIT) and `/api/health`; lint and type check pass | Done |
+| 2 | D1 and R2 bindings; schema; catalogue seed; Playwright | Pre-rendered page reads D1 at build; D1 readable at request time; `next dev` sees local D1 | Done |
 | 3 | **Your design guide** → colours, type, spacing, fonts, header, footer, floating WhatsApp button | Screenshots at 390 px and 1440 px | Next |
 | 4 | **Home page**, section by section in the agreed order, with its animations | Screenshots; your approval | |
-| 5 | Speed check of the Home page locally (`scripts/perf-check.mjs`) | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile | |
+| 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | |
 | 6 | **Collection pages** | Your approval | |
 | 7 | **Gallery** | Your approval | |
-| 8 | **Contact** and the enquiry form (B2C/B2B, Turnstile, saved to D1) | Test enquiry saved; bad input rejected | |
-| 9 | **Admin dashboard** | Full add, edit, reorder, delete cycle | |
+| 8 | **Contact** and the enquiry form (B2C/B2B, Turnstile, saved to D1 through `worker/api.ts`) | Test enquiry saved; bad input rejected | |
+| 9 | **Admin dashboard** and Publish button | Full add, edit, reorder, delete and rebuild cycle locally | |
 | 10 | Performance and basic SEO | Lighthouse mobile 95+; sitemap valid | |
-| 11 | Once the client's account exists: deploy to `workers.dev` behind Access; measure render CPU; choose option A or B (§5) | Preview opens for approved emails only; CPU per render known | |
+| 11 | Once the client's account exists: deploy to `workers.dev` behind Access; connect Workers Builds; read real CPU per request | Preview opens for approved emails only; CPU per request known | |
 | 12 | Client review and revisions (6 minor included) | Client approval | |
-| 13 | Launch after final payment: domain, Access on `/admin` only | SSL, speed, admin login, enquiry form checked live | |
+| 13 | Launch after final payment: domain, R2 photo domain, Access on `/admin` only | SSL, speed, admin login, enquiry form checked live | |
 
-## 11. Needed from the client (by the time we reach each step)
+## 12. Needed from the client (by the time we reach each step)
 
 Logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy content; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
 
-## 12. Sources checked (October 2026)
+## 13. Sources checked (October 2026)
 
-- Cloudflare's Next.js guidance (vinext recommended, beta note): [Workers Next.js guide](https://developers.cloudflare.com/workers/frameworks/framework-guides/nextjs)
-- vinext 1.0 (pre-rendering, ISR, cache warming): [Cloudflare blog](https://blog.cloudflare.com/vinext-nextjs-on-vite/), [vinext on GitHub](https://github.com/cloudflare/vinext), [vinext.dev](https://vinext.dev)
-- Workers free limits and Workers Cache billing: [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing), [Workers Cache](https://developers.cloudflare.com/workers/cache/)
-- `cf` CLI beta status: [cf for Wrangler users](https://developers.cloudflare.com/cf/wrangler/)
+- OpenNext on Cloudflare: [get started](https://opennext.js.org/cloudflare/get-started), [caching (SSG static-assets cache, cache interception)](https://opennext.js.org/cloudflare/caching), [bindings](https://opennext.js.org/cloudflare/bindings), [custom Worker](https://opennext.js.org/cloudflare/howtos/custom-worker)
+- Cloudflare's OpenNext guide and feature table: [Workers docs](https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/)
+- Next.js 16.4 docs bundled in `node_modules/next/dist/docs/` (Partial Prefetching needs Cache Components; `<Link prefetch>` options; route segment `dynamic`)
+- Workers free limits, static asset billing and Workers Cache billing: [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing), [Workers Cache](https://developers.cloudflare.com/workers/cache/)
 - Workers Builds limits and deploy hooks: [limits](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/), [deploy hooks](https://developers.cloudflare.com/workers/ci-cd/builds/deploy-hooks/)
 - D1 and R2 free limits: [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing), [R2 pricing](https://developers.cloudflare.com/r2/pricing)
 - Access on Workers and one-time PIN: [changelog](https://developers.cloudflare.com/changelog/post/2026-08-14-workers-access/), [one-time PIN](https://developers.cloudflare.com/cloudflare-one/identity/one-time-pin)

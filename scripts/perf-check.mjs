@@ -1,14 +1,14 @@
 // Local speed check for one page, run against the production build served
-// by `npm run start`. It emulates a mid-range phone (4x slower CPU) on a
+// by `npm run preview`. It emulates a mid-range phone (4x slower CPU) on a
 // fast 4G connection and reports the numbers that decide whether a page
 // feels laggy.
 //
 // Usage: node scripts/perf-check.mjs [url]
-//   default url: http://localhost:8788/
+//   default url: http://localhost:8787/
 
 import { chromium } from "@playwright/test";
 
-const url = process.argv[2] ?? "http://localhost:8788/";
+const url = process.argv[2] ?? "http://localhost:8787/";
 
 const browser = await chromium.launch();
 const context = await browser.newContext({

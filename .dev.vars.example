@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local preview. .dev.vars is not committed.
+NEXTJS_ENV=development
