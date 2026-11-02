@@ -138,19 +138,3 @@ export function SendIcon({ className }: IconProps) {
     </Line>
   );
 }
-
-export function PauseIcon({ className }: IconProps) {
-  return (
-    <Line className={className}>
-      <path d="M9 6v12M15 6v12" />
-    </Line>
-  );
-}
-
-export function PlayIcon({ className }: IconProps) {
-  return (
-    <Line className={className}>
-      <path d="M8 5.5v13l10.5-6.5L8 5.5Z" />
-    </Line>
-  );
-}

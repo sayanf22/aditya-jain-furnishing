@@ -26,7 +26,7 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Product photos, décor images and Watch & Buy videos.
+  // Product photos, décor images and Watch & Buy look photos (no video).
   "r2_buckets": [
     {
       "binding": "MEDIA",

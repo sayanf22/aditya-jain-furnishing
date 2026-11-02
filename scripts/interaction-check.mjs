@@ -1,7 +1,7 @@
 // Checks the Home page interactions and animation smoothness in a real
 // browser (run against `npm run preview` on port 8787).
 //   - hero dots change the slide; headline animates word by word; the hero
-//     moves on by itself (mouse over it, after a hidden tab), pause works
+//     moves on by itself (mouse over it, after a hidden tab), dots only
 //   - Our looks: the arrow slides the next photo in
 //   - category hover widens the card, then the subcategories appear one by
 //     one; names never re-wrap and nothing overlaps (desktop)
@@ -98,14 +98,24 @@ const browser = await chromium.launch();
   const t3 = await h1();
   ok("hero waits while the tab is hidden, then carries on", t2 === t1 && t3 !== t2);
 
-  await page.locator('button[aria-label="Pause slides"]').click();
-  const t4 = await h1();
-  await page.waitForTimeout(7000);
-  const t5 = await h1();
-  await page.locator('button[aria-label="Play slides"]').click();
-  await page.waitForTimeout(7000);
-  const t6 = await h1();
-  ok("hero pause button stops and restarts the slides", t4 === t5 && t6 !== t5);
+  const heroButtons = await page.locator('section[aria-label="Showroom highlights"] button').evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
+  ok("hero has slide dots only (no pause button)", heroButtons.length > 0 && heroButtons.every((l) => l?.startsWith("Show slide")), heroButtons.join(", "));
+
+  // Sections stay visible when React re-renders them. Simulated by having
+  // React's own class handling rewrite the class list, as a hot reload or a
+  // prop change does: the "shown" mark must survive.
+  const cats = page.locator('section[aria-labelledby="categories-title"]');
+  await cats.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1500);
+  await page.locator(".cat-card").evaluateAll((els) =>
+    els.forEach((el) => {
+      const key = Object.keys(el).find((k) => k.startsWith("__reactProps$"));
+      if (key) el.className = el[key].className;
+    }),
+  );
+  await page.waitForTimeout(1200);
+  const afterRerender = await page.locator(".cat-card").evaluateAll((els) => els.filter((el) => Number(getComputedStyle(el).opacity) > 0.9).length);
+  ok("category cards stay visible after a re-render", afterRerender === 5, `${afterRerender} of 5`);
   await page.close();
 }
 
@@ -277,7 +287,7 @@ const browser = await chromium.launch();
         await new Promise((r) => setTimeout(r, 100));
       }
       await new Promise((r) => setTimeout(r, 1000));
-      return document.querySelectorAll(".js [data-reveal]:not(.is-visible), .js [data-words]:not(.is-visible)").length;
+      return document.querySelectorAll(".js [data-reveal]:not([data-shown]), .js [data-words]:not([data-shown])").length;
     });
   await page.goto(new URL("/collection", url).href, { waitUntil: "networkidle" });
   await page.locator('nav[aria-label="Main"] a[href="/"]').click();

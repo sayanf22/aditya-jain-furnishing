@@ -9,13 +9,12 @@
 // Timer: every slide stays SLIDE_MS, shown as a bar filling the active dot.
 // The bar is a CSS animation and the slide changes when it ends, so what the
 // visitor sees and the timer can never drift apart. It waits (keeping its
-// place) while the hero is scrolled out of view, the tab is in the
-// background, or the visitor presses pause. No auto-advance for visitors who
-// ask for reduced motion.
+// place) while the hero is scrolled out of view or the tab is in the
+// background. No auto-advance for visitors who ask for reduced motion.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HeroSlide } from "@/lib/content";
 import { imageSource } from "@/lib/media";
-import { ArrowRightIcon, PauseIcon, PlayIcon } from "../icons";
+import { ArrowRightIcon } from "../icons";
 import { SiteLink } from "../SiteLink";
 import { Words } from "../Words";
 
@@ -27,7 +26,6 @@ type Props = { slides: HeroSlide[]; eyebrow: { brand: string; place: string } };
 export function Hero({ slides, eyebrow }: Props) {
   const [active, setActive] = useState(0);
   const [loadRest, setLoadRest] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
   const [tabVisible, setTabVisible] = useState(true);
   const [motionOk, setMotionOk] = useState(false);
@@ -69,7 +67,7 @@ export function Hero({ slides, eyebrow }: Props) {
   if (count === 0) return null;
   const current = slides[active];
   const autoplay = count > 1 && motionOk;
-  const running = autoplay && loadRest && !userPaused && onScreen && tabVisible;
+  const running = autoplay && loadRest && onScreen && tabVisible;
 
   return (
     <section
@@ -163,16 +161,6 @@ export function Hero({ slides, eyebrow }: Props) {
               </span>
             </button>
           ))}
-          {autoplay && (
-            <button
-              type="button"
-              onClick={() => setUserPaused((p) => !p)}
-              aria-label={userPaused ? "Play slides" : "Pause slides"}
-              className="ml-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/35 text-white/90 transition-colors duration-300 hover:border-white hover:bg-white hover:text-ink"
-            >
-              {userPaused ? <PlayIcon className="h-3.5 w-3.5" /> : <PauseIcon className="h-3.5 w-3.5" />}
-            </button>
-          )}
         </div>
       )}
 
