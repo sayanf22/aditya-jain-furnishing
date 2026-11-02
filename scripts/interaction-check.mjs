@@ -1,7 +1,10 @@
 // Checks the Home page interactions and animation smoothness in a real
 // browser (run against `npm run preview` on port 8787).
 //   - hero dots change the slide; headline animates word by word
-//   - category hover reveals subcategories (desktop)
+//   - category hover widens the card, then the subcategories appear one by
+//     one; names never re-wrap and nothing overlaps (desktop)
+//   - Home after a client-side link and after back/forward shows everything
+//   - footer spans the full width
 //   - décor swatch swaps the photo
 //   - shop-the-look dots and arrows; no <video> anywhere
 //   - enquiry form errors, B2B firm field and submit
@@ -71,6 +74,30 @@ const browser = await chromium.launch();
   const card = cards.nth(1);
   await card.scrollIntoViewIfNeeded();
   await page.waitForTimeout(1500);
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(300);
+
+  // Name, chip row and button of every card must not overlap, and each
+  // name keeps its line count whether its card is open or closed.
+  const cardLayout = () =>
+    page.locator(".cat-card").evaluateAll((els) =>
+      els.map((el) => {
+        const box = (sel) => {
+          const n = el.querySelector(sel);
+          if (!n) return null;
+          const r = n.getBoundingClientRect();
+          return r.height > 1 ? { top: r.top, bottom: r.bottom } : null;
+        };
+        return { width: el.getBoundingClientRect().width, title: box("h3"), subs: box(".cat-subs"), button: box(".btn") };
+      }),
+    );
+  const overlaps = (list) =>
+    list.filter((c) => {
+      const parts = [c.title, c.subs, c.button].filter(Boolean);
+      return parts.some((a, i) => parts.slice(i + 1).some((b) => a.bottom > b.top + 0.5));
+    }).length;
+  const rest = await cardLayout();
+
   const hoverTiming = frameTiming(page, 2600);
   await card.hover();
   await page.waitForTimeout(700);
@@ -80,11 +107,26 @@ const browser = await chromium.launch();
   }
   await card.hover();
   const catTiming = await hoverTiming;
-  // The panel fades in over 0.45 s after a 0.08 s delay; wait past that.
-  await page.waitForTimeout(900);
-  const panelOpacity = await card.locator(".cat-panel").evaluate((el) => getComputedStyle(el).opacity);
-  const chipsVisible = await card.locator(".cat-panel li").first().isVisible();
-  ok("category hover reveals subcategories", chipsVisible && Number(panelOpacity) > 0.95, `panel opacity ${panelOpacity}`);
+
+  // Chips rise in one after another: shortly after hover, the first is
+  // further along than the last.
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(1200);
+  await card.hover();
+  await page.waitForTimeout(430);
+  const early = await card.locator(".cat-chip").evaluateAll((els) => els.map((e) => Number(getComputedStyle(e).opacity)));
+  await page.waitForTimeout(1200);
+  const open = await cardLayout();
+  const chipOps = await card.locator(".cat-chip").evaluateAll((els) => els.map((e) => Number(getComputedStyle(e).opacity)));
+  const others = open.filter((_, i) => i !== 1).map((c) => c.width);
+  const widen = open[1].width / Math.max(...others);
+  const titleSteady = rest.every((c, i) => Math.abs(c.title.bottom - c.title.top - (open[i].title.bottom - open[i].title.top)) < 1);
+
+  ok("category hover widens the card", widen > 1.6, `${open[1].width.toFixed(0)} px vs ${Math.max(...others).toFixed(0)} px for the others`);
+  ok("category hover reveals subcategories", chipOps.length > 0 && chipOps.every((o) => o > 0.95), `chip opacity ${chipOps.map((o) => o.toFixed(2)).join(",")}`);
+  ok("subcategories appear one by one", early.length > 1 && early[0] > early[early.length - 1] + 0.1, `at 0.43 s: ${early.map((o) => o.toFixed(2)).join(",")}`);
+  ok("category names never re-wrap", titleSteady);
+  ok("no overlapping text in category cards", overlaps(rest) === 0 && overlaps(open) === 0, `rest ${overlaps(rest)}, open ${overlaps(open)}`);
   ok("category hover smooth", catTiming.over50 <= 1, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
 
   // Décor swatch swap.
@@ -153,6 +195,40 @@ const browser = await chromium.launch();
   });
   const st = await scrollTiming;
   ok("scrolling smooth", st.over50 <= 3, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
+
+  const footerGap = await page.locator("footer").evaluate((el) => window.innerWidth - el.getBoundingClientRect().width - (window.innerWidth - document.documentElement.clientWidth));
+  ok("footer spans the full width", Math.abs(footerGap) < 1, `${footerGap.toFixed(0)} px short`);
+  await page.close();
+}
+
+// Home reached from another page through a link (client-side navigation),
+// then through the browser's back and forward buttons: every section must
+// still appear once scrolled to.
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const home = new URL("/", url).href;
+  const hidden = () =>
+    page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += 400) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+      return document.querySelectorAll(".js [data-reveal]:not(.is-visible), .js [data-words]:not(.is-visible)").length;
+    });
+  await page.goto(new URL("/collection", url).href, { waitUntil: "networkidle" });
+  await page.locator('nav[aria-label="Main"] a[href="/"]').click();
+  await page.waitForURL(home);
+  await page.waitForTimeout(800);
+  const afterLink = await hidden();
+  await page.goBack();
+  await page.waitForTimeout(800);
+  await page.goForward();
+  await page.waitForURL(home);
+  await page.waitForTimeout(800);
+  const afterBack = await hidden();
+  ok("Home shows every section after a link", afterLink === 0, `${afterLink} hidden`);
+  ok("Home shows every section after back and forward", afterBack === 0, `${afterBack} hidden`);
   await page.close();
 }
 

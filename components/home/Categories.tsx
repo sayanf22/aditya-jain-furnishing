@@ -3,9 +3,11 @@
 // that has to start up on a phone smaller.
 //
 // Section 02 · Main categories, in the agreed order. On desktop, hovering a
-// card lifts it, zooms the photo and reveals its subcategories (Furnish &
-// Shades-inspired). On phones and tablets the cards sit in a swipe row with
-// the subcategories always shown. Only opacity and transform animate.
+// card widens it, then its subcategories rise in one by one (see
+// "Category cards" in globals.css). Each card has one name, one list and
+// one button, so nothing is ever drawn twice on top of itself. On phones
+// and tablets the cards sit in a swipe row with the subcategories shown.
+import type { CSSProperties } from "react";
 import type { Category } from "@/lib/content";
 import { imageSource } from "@/lib/media";
 import { ArrowRightIcon } from "../icons";
@@ -25,7 +27,9 @@ export function Categories({ categories }: { categories: Category[] }) {
           </p>
         </div>
 
-        <div className="no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-2 pb-4 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:mx-0 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:px-0">
+        {/* Desktop: the gaps are padding inside each item, so the pointer is
+            always over a card and the row never flickers between states. */}
+        <div className="cat-row no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-2 pb-4 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0">
           {categories.map((cat, i) => (
             <CategoryCard key={cat.id} category={cat} index={i} />
           ))}
@@ -44,61 +48,63 @@ function CategoryCard({ category, index }: { category: Category; index: number }
       : category.subcategories;
 
   return (
-    <div className="w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none" data-reveal style={{ ["--reveal-delay" as string]: index }}>
-      <article className="cat-card group relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(31,27,23,0.5)] lg:h-[29rem]">
+    <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">
+      <article
+        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(31,27,23,0.5)] lg:h-[29rem]"
+        data-reveal
+        style={{ ["--reveal-delay" as string]: index }}
+      >
         {source && (
+          // The photo keeps one width (wider than an open card) and stays
+          // centred, so widening the card reveals more of it instead of
+          // resizing it on every frame.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={source.src}
             srcSet={source.srcSet}
-            sizes="(min-width: 1024px) 20vw, 80vw"
+            sizes="(min-width: 1024px) 28rem, 80vw"
             width={source.width}
             height={source.height}
             alt=""
             loading="lazy"
             decoding="async"
-            className="cat-img absolute inset-0 -z-10 h-full w-full object-cover"
+            className="cat-img absolute inset-y-0 left-1/2 -z-10 h-full w-full max-w-none object-cover lg:w-[28rem]"
           />
         )}
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.78)_0%,rgba(20,16,12,0.3)_40%,rgba(20,16,12,0)_70%)]"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.8)_0%,rgba(20,16,12,0.32)_42%,rgba(20,16,12,0)_70%)]"
         />
-        {/* Darker shade behind the subcategory panel (fades in on hover). */}
+        {/* Deeper shade behind the subcategories, fades in on hover. */}
         <div
           aria-hidden="true"
-          className="cat-panel-shade absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.9)_0%,rgba(20,16,12,0.55)_48%,rgba(20,16,12,0.1)_85%)]"
+          className="cat-shade absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.55)_0%,rgba(20,16,12,0.25)_45%,rgba(20,16,12,0)_75%)]"
         />
 
-        {/* Resting state on desktop: name and button. */}
-        <div className="cat-base absolute inset-x-0 bottom-0 p-5 text-white sm:p-6" aria-hidden="true">
-          <p className="text-[1.25rem] leading-tight font-medium">{category.name}</p>
-          <span className="mt-4 inline-flex items-center gap-2 rounded-lg bg-ivory px-3.5 py-2 text-[0.7rem] font-semibold tracking-[0.12em] text-ink uppercase">
-            Explore
-            <ArrowRightIcon className="h-3.5 w-3.5" />
-          </span>
-        </div>
-
-        {/* Hover (desktop) / always (touch): name, subcategories, button. */}
-        <div className="cat-panel absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
-          <h3 className="text-[1.25rem] leading-tight font-medium">
+        {/* Not positioned, so the name's link overlay covers the whole card. */}
+        <div className="flex h-full flex-col items-start justify-end p-5 text-white sm:p-6 lg:p-5 xl:p-6">
+          {/* Fixed width on desktop: the name wraps the same way whether the
+              card is narrow or open, so it never jumps mid-animation. */}
+          <h3 className="text-[1.25rem] leading-tight font-medium lg:max-w-[6.75rem] lg:text-[1.125rem] xl:max-w-[7.75rem] xl:text-[1.25rem]">
             <a href={href} className="after:absolute after:inset-0 after:content-['']">
               {category.name}
             </a>
           </h3>
           {subs.length > 0 && (
-            <ul className="relative mt-3 flex flex-wrap gap-2">
-              {subs.map((s) => (
-                <li key={s.id}>
-                  <a
-                    href={`${href}/${s.slug}`}
-                    className="block rounded-full border border-white/45 bg-black/20 px-3 py-1 text-[0.76rem] whitespace-nowrap transition-colors duration-300 hover:border-white hover:bg-white hover:text-ink"
-                  >
-                    {s.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div className="cat-subs">
+              <ul className="relative -mx-1.5 -mb-1.5 flex flex-wrap gap-2 px-1.5 pt-3 pb-1.5">
+                {subs.map((s, i) => (
+                  <li key={s.id} className="cat-chip" style={{ "--i": i } as CSSProperties}>
+                    <a
+                      href={`${href}/${s.slug}`}
+                      className="block rounded-full border border-white/45 bg-black/20 px-3 py-1 text-[0.76rem] whitespace-nowrap transition-colors duration-300 hover:border-white hover:bg-white hover:text-ink"
+                    >
+                      {s.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           <span className="btn pointer-events-none mt-4 inline-flex items-center gap-2 rounded-lg bg-ivory px-3.5 py-2 text-[0.7rem] font-semibold tracking-[0.12em] text-ink uppercase">
             Explore

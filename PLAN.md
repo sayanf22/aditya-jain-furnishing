@@ -1,6 +1,6 @@
 # Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
-Status: plan v6. Home page revision round 2 built locally with stand-in images (no video, photo-based "Our looks", enquiry form, new footer); waiting for your review before the Collection page.
+Status: plan v7. Home page revision rounds 2 and 3 built locally with stand-in images (no video, photo-based "Our looks", enquiry form, full-width footer, category cards that widen on hover); waiting for your review before the Collection page.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
 Client PDFs: `docs/client-pdfs/` (kept out of git).
 
@@ -270,21 +270,25 @@ Sections in the agreed order, all pre-rendered from D1 at build time:
 | – | Header | Text logo centred, links left, Call and Enquire right. Transparent over the hero, turns solid ivory on scroll. Phone: the burger turns into a cross, and a full-screen menu slides in with its links rising one by one, plus Call, WhatsApp and the address. Closes on tap, Escape or page change | `components/SiteHeader.tsx` |
 | 01 | Hero | Full-screen photo slides: cross-fade, slow zoom on the active photo. The headline rises in word by word on every slide, on desktop and phone. Dots, "Scroll" cue. Only the first photo loads with the page | `components/home/Hero.tsx`, `components/Words.tsx` |
 | – | Ribbon | Terracotta strip with the five category names scrolling (CSS only), pauses on hover | `components/home/Marquee.tsx` |
-| 02 | Main categories | Five tall cards in the agreed order. Desktop: hover lifts the card, zooms its photo and cross-fades to its subcategories (only opacity and transform animate, so it stays at 60 fps). Phone: swipe row, subcategories always shown. Carpets & Mats also links "Direct collections" | `components/home/Categories.tsx` |
+| 02 | Main categories | Five tall cards in the agreed order. Desktop, in steps: hover widens the card (the others give way) and eases the photo in, then space opens under the name, then the subcategories rise in one by one; leaving reverses it. Each card has one name, one chip list and one button, so nothing is drawn twice. The photo keeps one width and the name and chip list have fixed widths, so no text re-wraps mid-animation. Phone: swipe row, subcategories always shown. Carpets & Mats also links "Direct collections" | `components/home/Categories.tsx` |
 | 03 | Interactive home décor | Rounded sand panel. Tap a texture swatch, the matching photo cross-fades in; "Enquire about this look" opens WhatsApp naming the texture | `components/home/DecorPicker.tsx` |
 | 04 | Watch & Buy ("Our looks") | Room photos in a carousel with arrows and dots. Each photo has product dots; tapping one shows the product with "Enquire on WhatsApp" (names the product) and a link to its category. No video | `components/home/ShopTheLook.tsx` |
 | 05 | Testimonials | Right after Watch & Buy; hidden when no reviews exist | `components/home/Testimonials.tsx` |
 | 06 | Quick enquiry | Rounded sand panel: WhatsApp, Call, Instagram (once added), address with "Get directions", and the enquiry form (I am: Customer / Business (B2B), firm name for B2B only, name, mobile, optional category and message). Saved to D1; no email or SMS alerts | `components/home/QuickEnquiry.tsx`, `components/EnquiryForm.tsx` |
-| – | Footer | Dark rounded panel inset from the page edges: name, short line, WhatsApp / Call / Directions, explore links, categories, showroom address and phone, ©, GSTIN, "Made by whycreatives.in" (links to https://whycreatives.in) | `components/SiteFooter.tsx` |
+| – | Footer | Dark panel across the full width of the page with rounded top corners; content lines up with the header: name, short line, WhatsApp / Call / Directions, explore links, categories, showroom address and phone, ©, GSTIN, "Made by whycreatives.in" (links to https://whycreatives.in) | `components/SiteFooter.tsx` |
 | – | Floating WhatsApp | Terracotta (brand colour, not WhatsApp green), fixed on the right on every page; label slides out on hover | `components/FloatingWhatsApp.tsx` |
 
-All WhatsApp buttons use the brand terracotta, and all icons share one line style (`components/icons.tsx`). Scroll reveal (fade and rise, and word-by-word headings) runs through one observer (`components/RevealObserver.tsx`). All motion turns off for "reduce motion". Each Home section and the footer sit in their own Suspense boundary, so React hydrates them one at a time instead of in one long task.
+All WhatsApp buttons use the brand terracotta, and all icons share one line style (`components/icons.tsx`). Scroll reveal (fade and rise, and word-by-word headings) runs through one observer (`components/RevealObserver.tsx`). It also picks up sections added after start-up, so Home shows fully when reached through a link or the back button. All motion turns off for "reduce motion". Each Home section and the footer sit in their own Suspense boundary, so React hydrates them one at a time instead of in one long task.
 
 **Enquiry API** (`/api/enquiry`, `lib/enquiry.ts` through `worker/api.ts`; `app/api/enquiry/route.ts` only so the form works under `next dev`): same-site Origin only, JSON only, 8 KB body limit, hidden honeypot field, 5 a minute per visitor (rate limiting binding), field rules shared with the form (`lib/enquiry-rules.ts`), Turnstile once its secret is set.
 
 **Stand-in content (local only)**: `seeds/demo-local.sql` points the page at stock images from Pexels and a public-domain William Morris wallpaper (licences in `docs/stock-images.md`), and adds three testimonials clearly marked "Sample review". None of it goes to the client's database. The décor stand-ins show four different sofas; the client will photograph one product in each fabric.
 
 **Checks (local, OpenNext build on workerd)**:
+Round 3 (2 November 2026: category hover widens again, in steps; Home after a link; full-width footer):
+- Phone profile: LCP 0.65 s, layout shift 0, blocking time 70–75 ms. One visit: 1 Worker request, 26 static files (891 KB). Worker CPU for `/`: about 3.7 ms of its own work.
+- `scripts/interaction-check.mjs`: all 25 checks pass. New: the hovered card widens (403 px against 183 px), subcategories appear one by one, names never re-wrap, no overlapping text in the cards, Home shows every section after a link and after back/forward (before the fix, all 25 animated elements stayed hidden), footer spans the full width. Category hover at 4x slower CPU: p95 16.8 ms, no frames over 50 ms.
+
 Round 2 (31 October 2026):
 - Phone profile (4x slower CPU, fast 4G): LCP 0.67 s, layout shift 0, blocking time 84 ms (Lighthouse definition: after first paint; target under 200).
 - Frame timing at 4x slower CPU: hero cross-fade, category hover (second card and across all five), phone menu and full-page scroll all at about 60 fps (p95 16.7–16.8 ms, no frames over 50 ms).
