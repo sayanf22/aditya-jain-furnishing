@@ -526,6 +526,80 @@ address {
   border-color: #b4412c;
 }
 
+/* Header Call / Enquire: round icon buttons that open into a pill on hover
+   or keyboard focus. Step 1, the button widens (the label's column grows
+   from 0 to its natural width); step 2, the label fades and slides in
+   from behind the icon. Leaving reverses it. */
+.hdr-label {
+  display: grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.45s var(--ease-out-soft);
+}
+.hdr-label > span {
+  min-width: 0;
+  overflow: hidden;
+}
+.hdr-label > span > span {
+  display: block;
+  padding-inline: 0.55rem 0.2rem;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate3d(-8px, 0, 0);
+  transition:
+    opacity 0.2s ease,
+    transform 0.4s var(--ease-out-soft);
+}
+.hdr-pill:focus-visible .hdr-label {
+  grid-template-columns: 1fr;
+}
+.hdr-pill:focus-visible .hdr-label > span > span {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) {
+  .hdr-pill:hover .hdr-label {
+    grid-template-columns: 1fr;
+  }
+  .hdr-pill:hover .hdr-label > span > span {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.35s ease 0.12s,
+      transform 0.45s var(--ease-out-soft) 0.1s;
+  }
+}
+
+/* Page scrollbar: a thin, rounded, soft-coloured bar with no arrow buttons.
+   Chrome, Edge and Safari use the ::-webkit-scrollbar rules; Firefox, which
+   doesn't support them, gets the standard thin scrollbar instead. (Chrome
+   ignores ::-webkit-scrollbar once scrollbar-width is set, hence the
+   @supports split.) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(31 27 23 / 0.28);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(31 27 23 / 0.45);
+}
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(31 27 23 / 0.3) transparent;
+  }
+}
+
 /* Hide horizontal scrollbars on swipe rows while keeping them scrollable. */
 .no-scrollbar {
   scrollbar-width: none;

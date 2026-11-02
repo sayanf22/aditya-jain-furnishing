@@ -101,6 +101,24 @@ const browser = await chromium.launch();
   const heroButtons = await page.locator('section[aria-label="Showroom highlights"] button').evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
   ok("hero has slide dots only (no pause button)", heroButtons.length > 0 && heroButtons.every((l) => l?.startsWith("Show slide")), heroButtons.join(", "));
 
+  // Header Enquire: a round icon that opens to show "Enquire" on hover.
+  const enq = page.locator('header a[aria-label="Enquire on WhatsApp"]');
+  await page.mouse.move(720, 600);
+  await page.waitForTimeout(600);
+  const enqRest = (await enq.boundingBox()).width;
+  await enq.hover();
+  await page.waitForTimeout(800);
+  const enqOpen = (await enq.boundingBox()).width;
+  const enqLabel = await enq.locator(".hdr-label > span > span").evaluate((s) => Number(getComputedStyle(s).opacity));
+  await page.mouse.move(720, 600);
+  await page.waitForTimeout(800);
+  const enqBack = (await enq.boundingBox()).width;
+  ok(
+    "header Enquire opens on hover to show its label",
+    enqRest <= 41 && enqOpen > 90 && enqLabel > 0.95 && enqBack <= 41,
+    `${enqRest.toFixed(0)} px -> ${enqOpen.toFixed(0)} px -> ${enqBack.toFixed(0)} px`,
+  );
+
   // Sections stay visible when React re-renders them. Simulated by having
   // React's own class handling rewrite the class list, as a hot reload or a
   // prop change does: the "shown" mark must survive.
@@ -271,6 +289,21 @@ const browser = await chromium.launch();
 
   const footerGap = await page.locator("footer").evaluate((el) => window.innerWidth - el.getBoundingClientRect().width - (window.innerWidth - document.documentElement.clientWidth));
   ok("footer spans the full width", Math.abs(footerGap) < 1, `${footerGap.toFixed(0)} px short`);
+  const corners = await page.locator("footer").evaluate((f) => {
+    const cs = getComputedStyle(f);
+    return [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomLeftRadius, cs.borderBottomRightRadius].map(parseFloat);
+  });
+  ok("footer has rounded top corners only", corners[0] > 0 && corners[1] > 0 && corners[2] === 0 && corners[3] === 0, `${corners.join("/")} px`);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(600);
+  const creditClear = await page.evaluate(() => {
+    const credit = [...document.querySelectorAll("footer a")].find((a) => a.href.includes("whycreatives.in"))?.getBoundingClientRect();
+    const fab = document.querySelector(".float-wa")?.getBoundingClientRect();
+    if (!credit || !fab) return "missing";
+    const overlap = credit.right > fab.left && credit.left < fab.right && credit.bottom > fab.top && credit.top < fab.bottom;
+    return overlap ? "covered" : "clear";
+  });
+  ok("floating WhatsApp button doesn't cover the footer credit", creditClear === "clear", creditClear);
   await page.close();
 }
 

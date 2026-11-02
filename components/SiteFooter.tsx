@@ -1,5 +1,6 @@
-// Footer: fully dark, edge to edge (no light page showing around or behind
-// it). Its content lines up with the header and the page sections.
+// Footer: fully dark, edge to edge, with its two top corners rounded (the
+// bottom stays square against the screen edge). Its content lines up with
+// the header and the page sections.
 // Brand and the showroom's contact actions on top, links below, then the
 // legal row with the "Made by whycreatives.in" credit.
 import { enquiryMessage, mapsLink, phoneLink, whatsappLink, type ContactInfo } from "@/lib/contact";
@@ -16,7 +17,7 @@ export function SiteFooter({ contact, categories }: Props) {
   const [first, ...rest] = contact.businessName.split(" ");
 
   return (
-    <footer className="bg-night text-ivory">
+    <footer className="overflow-hidden rounded-t-[2rem] bg-night text-ivory sm:rounded-t-[2.5rem] lg:rounded-t-[3rem]">
       <div className="shell pt-16 sm:pt-20 lg:pt-24">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:items-end">
           <div>
@@ -87,7 +88,9 @@ export function SiteFooter({ contact, categories }: Props) {
       </div>
 
       <div className="shell mt-14 lg:mt-16">
-        <div className="flex flex-col items-center gap-3 border-t border-ivory/12 pt-6 pb-24 text-center text-[0.82rem] text-ivory/75 sm:flex-row sm:justify-between sm:pb-8 sm:text-left">
+        {/* Room on the right (sm and up) / below (phones) for the floating
+            WhatsApp button, so it never covers the credit. */}
+        <div className="flex flex-col items-center gap-3 border-t border-ivory/12 pt-6 pb-24 text-center text-[0.82rem] text-ivory/75 sm:flex-row sm:justify-between sm:pr-20 sm:pb-8 sm:text-left">
           <p>
             © {year} {contact.legalName}
             {contact.gstin && <span className="block sm:ml-3 sm:inline">GSTIN {contact.gstin}</span>}

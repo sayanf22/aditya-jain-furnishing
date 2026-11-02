@@ -93,13 +93,17 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
             <span className="mt-1 block text-[0.62rem] font-medium tracking-[0.42em] uppercase opacity-80 sm:text-[0.68rem]">{rest.join(" ")}</span>
           </SiteLink>
 
-          <div className="flex items-center justify-end gap-2 sm:gap-3">
+          {/* Call shows its label as before. Enquire is a round WhatsApp
+              button that opens into a pill on hover (or keyboard focus) and
+              its "Enquire" label slides in; its aria-label names it for
+              screen readers and touch screens. */}
+          <div className="flex items-center justify-end gap-2 sm:gap-2.5">
             {phoneHref && (
               <a
                 href={phoneHref}
                 aria-label="Call the showroom"
                 className={`btn flex h-10 w-10 items-center justify-center gap-2 rounded-full border text-[0.78rem] font-medium tracking-[0.1em] uppercase sm:w-auto sm:px-4 ${
-                  solid ? "border-ink/15 hover:border-ink hover:bg-ink hover:text-ivory" : "border-white/40 hover:bg-white hover:text-ink"
+                  solid ? "border-ink/15 hover:border-ink hover:bg-ink hover:text-ivory" : "border-white/40 hover:border-white hover:bg-white hover:text-ink"
                 }`}
               >
                 <PhoneIcon className="h-4 w-4" />
@@ -112,10 +116,11 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener"
-                className="btn hidden h-10 items-center gap-2 rounded-full bg-terracotta px-4 text-[0.78rem] font-medium tracking-[0.1em] text-white uppercase hover:bg-terracotta-dark sm:flex"
+                aria-label="Enquire on WhatsApp"
+                className="hdr-pill btn hidden h-10 items-center rounded-full border border-transparent bg-terracotta px-[11px] text-[0.78rem] font-medium tracking-[0.1em] text-white uppercase hover:bg-terracotta-dark sm:flex"
               >
-                <WhatsAppIcon className="h-4 w-4" />
-                Enquire
+                <WhatsAppIcon className="h-4 w-4 shrink-0" />
+                <HoverLabel>Enquire</HoverLabel>
               </a>
             )}
           </div>
@@ -175,6 +180,18 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
         </div>
       </div>
     </>
+  );
+}
+
+// Label that takes no width until its button is hovered or focused
+// (see .hdr-label in globals.css).
+function HoverLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="hdr-label" aria-hidden="true">
+      <span>
+        <span>{children}</span>
+      </span>
+    </span>
   );
 }
 
