@@ -113,6 +113,19 @@ const browser = await chromium.launch();
   await page.mouse.move(720, 600);
   await page.waitForTimeout(800);
   const enqBack = (await enq.boundingBox()).width;
+  // At rest it must be an exact circle on every screen, including the wide
+  // ones where the page's rem size scales up (it used to look like an egg).
+  const shapes = [];
+  for (const [w, h] of [[1920, 1080], [2560, 1440]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.mouse.move(w / 2, h - 60);
+    await page.waitForTimeout(700);
+    const box = await enq.boundingBox();
+    shapes.push(`${w}px ${box.width.toFixed(1)}x${box.height.toFixed(1)}`);
+    if (Math.abs(box.width - box.height) > 0.6) shapes.push("NOT ROUND");
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  ok("header Enquire is a circle at rest on wide screens", !shapes.includes("NOT ROUND"), shapes.join(", "));
   ok(
     "header Enquire opens on hover to show its label",
     enqRest <= 41 && enqOpen > 90 && enqLabel > 0.95 && enqBack <= 41,

@@ -117,8 +117,11 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
                 target="_blank"
                 rel="noopener"
                 aria-label="Enquire on WhatsApp"
-                className="hdr-pill btn hidden h-10 items-center rounded-full border border-transparent bg-terracotta px-[11px] text-[0.78rem] font-medium tracking-[0.1em] text-white uppercase hover:bg-terracotta-dark sm:flex"
+                className="hdr-pill btn hidden h-10 min-w-10 items-center rounded-full border border-transparent bg-terracotta px-[calc(0.75rem-1px)] text-[0.78rem] font-medium tracking-[0.1em] text-white uppercase hover:bg-terracotta-dark sm:flex"
               >
+                {/* Padding, icon and height are all in rem (the page scales
+                    rem up on wide screens), so at rest it is an exact circle:
+                    2 × (0.75rem − 1px) + 1rem + 2px border = 2.5rem = h-10. */}
                 <WhatsAppIcon className="h-4 w-4 shrink-0" />
                 <HoverLabel>Enquire</HoverLabel>
               </a>
