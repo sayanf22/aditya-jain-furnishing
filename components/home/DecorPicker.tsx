@@ -45,9 +45,9 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
     : null;
 
   return (
-    <section ref={ref} className="px-3 sm:px-5" aria-labelledby="decor-title">
-      <div className="mx-auto max-w-[90rem] rounded-[2rem] bg-sand">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.35fr_1fr] lg:gap-16 lg:py-24">
+    <section ref={ref} className="px-3 sm:px-5 lg:px-6" aria-labelledby="decor-title">
+      <div className="mx-auto max-w-[108rem] rounded-[2rem] bg-sand lg:rounded-[2.5rem]">
+      <div className="shell grid items-center gap-10 py-16 sm:gap-12 sm:py-20 lg:grid-cols-[1.4fr_1fr] lg:gap-20 lg:py-28 xl:gap-28">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-stone" data-reveal>
           {options.map((opt, i) => {
             const source = imageSource(opt.imageKey);

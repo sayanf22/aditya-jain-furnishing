@@ -15,9 +15,9 @@ export function QuickEnquiry({ contact, categories }: Props) {
   const instagram = instagramLink(contact);
 
   return (
-    <section className="px-3 pb-3 sm:px-5 sm:pb-5" aria-labelledby="enquiry-title" id="enquire">
-      <div className="mx-auto max-w-[90rem] rounded-[2rem] bg-sand">
-        <div className="mx-auto grid max-w-7xl items-start gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1fr_1.15fr] lg:gap-16 lg:py-24">
+    <section className="px-3 pb-12 sm:px-5 sm:pb-16 lg:px-6 lg:pb-20" aria-labelledby="enquiry-title" id="enquire">
+      <div className="mx-auto max-w-[108rem] rounded-[2rem] bg-sand lg:rounded-[2.5rem]">
+        <div className="shell grid items-start gap-12 py-16 sm:py-20 lg:grid-cols-[1fr_1.15fr] lg:gap-20 lg:py-28 xl:gap-28">
           <div>
             <p className="section-label" data-reveal>
               Enquiry
@@ -25,8 +25,8 @@ export function QuickEnquiry({ contact, categories }: Props) {
             <h2 id="enquiry-title" className="section-title mt-3" data-words>
               <Words parts={["Visit or", { accent: "message us" }]} />
             </h2>
-            <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-ink-soft" data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
-              Tell us what you&apos;re looking for, whether it&apos;s for your home or for a client&apos;s project, or come to the showroom in Kirti Nagar.
+            <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-balance text-ink-soft" data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
+              For your home or a client&apos;s project. Message, call or visit us in Kirti Nagar.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row" data-reveal style={{ ["--reveal-delay" as string]: 3 }}>

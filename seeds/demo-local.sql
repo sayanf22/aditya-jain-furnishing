@@ -14,7 +14,7 @@ ON CONFLICT (key) DO UPDATE SET value = excluded.value;
 
 -- Hero slides (JSON array). Copy describes only the confirmed categories.
 INSERT INTO settings (key, value) VALUES ('hero_slides', '[
-  {"image": "demo/hero-upholstery", "alt": "Tan leather sofa in a sunlit room", "title": "Upholstery fabric in velvet, linen, prints and leather.", "cta": "Explore upholstery fabric", "href": "/collection/upholstery-fabric"},
+  {"image": "demo/hero-upholstery", "alt": "Tan leather sofa in a sunlit room", "title": "Upholstery fabric in velvet, linen and leather.", "cta": "Explore upholstery fabric", "href": "/collection/upholstery-fabric"},
   {"image": "demo/hero-curtains", "alt": "Curtain tied back beside a sunlit window", "title": "Curtains and blinds for every window.", "cta": "Explore curtains & blinds", "href": "/collection/curtains-blinds"},
   {"image": "demo/hero-carpets", "alt": "Living room with a large patterned carpet", "title": "Carpets and mats for every room.", "cta": "Explore carpets & mats", "href": "/collection/carpets-mats"}
 ]')

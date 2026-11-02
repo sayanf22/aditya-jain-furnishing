@@ -66,7 +66,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
           solid ? "bg-ivory/95 text-ink shadow-[0_1px_0_rgba(31,27,23,0.08)] backdrop-blur-md" : "bg-transparent text-white"
         }`}
       >
-        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-5 sm:h-20 sm:px-8">
+        <div className="shell grid h-16 grid-cols-[1fr_auto_1fr] items-center sm:h-20">
           <nav aria-label="Main" className="hidden items-center gap-7 text-[0.8rem] font-medium tracking-[0.12em] uppercase lg:flex">
             {NAV.map((item) => (
               <SiteLink key={item.href} href={item.href} className="link-line py-1" aria-current={pathname === item.href ? "page" : undefined}>

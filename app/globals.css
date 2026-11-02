@@ -29,6 +29,47 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Big screens: text, spacing and cards are all sized in rem, so a larger
+   root size scales the whole layout up in proportion instead of leaving a
+   small page in the middle of a wide monitor. Breakpoints stay the same
+   (media queries don't follow the root size). */
+@media (min-width: 1800px) {
+  html {
+    font-size: 112.5%;
+  }
+}
+@media (min-width: 2200px) {
+  html {
+    font-size: 125%;
+  }
+}
+@media (min-width: 2800px) {
+  html {
+    font-size: 150%;
+  }
+}
+
+/* Page width shared by the header, every section and the footer: wide,
+   with side margins that grow gently with the screen. */
+@utility shell {
+  width: 100%;
+  max-width: 104rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  @media (width >= 40rem) {
+    padding-inline: 2rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2.5rem;
+  }
+  @media (width >= 80rem) {
+    padding-inline: 3rem;
+  }
+  @media (width >= 96rem) {
+    padding-inline: 4rem;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-ivory);
@@ -188,6 +229,19 @@ address {
 .hero-slide[data-active="true"] img {
   animation: hero-zoom 8s var(--ease-out-soft) both;
 }
+/* Countdown bar in the active hero dot (components/home/Hero.tsx). */
+@keyframes hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.hero-progress {
+  transform-origin: left center;
+  animation: hero-progress var(--slide-ms, 6000ms) linear both;
+}
 .hero-rise {
   animation: rise-in 1s var(--ease-out-soft) both;
   animation-delay: calc(var(--rise-delay, 0) * 75ms + 120ms);
@@ -242,7 +296,7 @@ address {
   /* Fixed width (the open card's), so the chips wrap the same way at
      every step of the animation. */
   .cat-subs > ul {
-    width: 15rem;
+    width: 14rem;
   }
   .cat-subs {
     grid-template-rows: 0fr;
@@ -257,7 +311,7 @@ address {
   }
   .cat-item:hover,
   .cat-item:focus-within {
-    flex-grow: 1.8;
+    flex-grow: 1.7;
   }
   .cat-item:hover .cat-img,
   .cat-item:focus-within .cat-img {
@@ -306,8 +360,34 @@ address {
 .spot-ring {
   animation: spot-ring 2.4s var(--ease-out-soft) infinite;
 }
-.look-layer {
-  transition: opacity 0.8s var(--ease-out-soft);
+/* Our looks: product dots pop in one by one; the side panel slides in from
+   the direction the visitor is moving (--dx, set in ShopTheLook.tsx). */
+@keyframes spot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.spot-pop {
+  animation: spot-pop 0.55s var(--ease-out-soft) both;
+}
+@keyframes look-slide-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--dx, 24px), 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.look-slide-in {
+  animation: look-slide-in 0.8s var(--ease-out-soft) both;
+  animation-delay: 0.12s;
 }
 .look-panel-in {
   animation: rise-in 0.6s var(--ease-out-soft) both;

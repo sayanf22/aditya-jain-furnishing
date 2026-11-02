@@ -1,5 +1,5 @@
-// Footer: a deep panel across the full width of the page, with rounded top
-// corners. Its content lines up with the header and the page sections.
+// Footer: fully dark, edge to edge (no light page showing around or behind
+// it). Its content lines up with the header and the page sections.
 // Brand and the showroom's contact actions on top, links below, then the
 // legal row with the "Made by whycreatives.in" credit.
 import { enquiryMessage, mapsLink, phoneLink, whatsappLink, type ContactInfo } from "@/lib/contact";
@@ -16,8 +16,8 @@ export function SiteFooter({ contact, categories }: Props) {
   const [first, ...rest] = contact.businessName.split(" ");
 
   return (
-    <footer className="overflow-hidden rounded-t-[1.75rem] bg-night text-ivory sm:rounded-t-[2.5rem]">
-      <div className="mx-auto max-w-7xl px-5 pt-16 sm:px-8 lg:pt-20">
+    <footer className="bg-night text-ivory">
+      <div className="shell pt-16 sm:pt-20 lg:pt-24">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:items-end">
           <div>
             <p className="leading-none">
@@ -25,7 +25,7 @@ export function SiteFooter({ contact, categories }: Props) {
               <span className="mt-2 block text-[0.8rem] font-medium tracking-[0.5em] text-ivory/80 uppercase">{rest.join(" ")}</span>
             </p>
             <p className="mt-6 max-w-sm text-[0.98rem] leading-relaxed text-ivory/80">
-              Upholstery fabric, curtains &amp; blinds, carpets &amp; mats, cushions and wallpaper in Kirti Nagar, New Delhi.
+              Home furnishing showroom in Kirti Nagar, New Delhi.
             </p>
           </div>
 
@@ -86,7 +86,7 @@ export function SiteFooter({ contact, categories }: Props) {
         </div>
       </div>
 
-      <div className="mx-auto mt-14 max-w-7xl px-5 sm:px-8">
+      <div className="shell mt-14 lg:mt-16">
         <div className="flex flex-col items-center gap-3 border-t border-ivory/12 pt-6 pb-24 text-center text-[0.82rem] text-ivory/75 sm:flex-row sm:justify-between sm:pb-8 sm:text-left">
           <p>
             © {year} {contact.legalName}

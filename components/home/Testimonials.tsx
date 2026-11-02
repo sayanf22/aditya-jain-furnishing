@@ -7,8 +7,8 @@ import { Words } from "../Words";
 export function Testimonials({ items }: { items: Testimonial[] }) {
   if (items.length === 0) return null;
   return (
-    <section className="bg-ivory pt-4 pb-20 sm:pb-24" aria-labelledby="testimonials-title">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section className="bg-ivory pt-4 pb-20 sm:pb-28 lg:pb-32" aria-labelledby="testimonials-title">
+      <div className="shell">
         <div className="text-center">
           <p className="section-label" data-reveal>
             Testimonials

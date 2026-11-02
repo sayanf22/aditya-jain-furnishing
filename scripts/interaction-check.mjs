@@ -1,6 +1,8 @@
 // Checks the Home page interactions and animation smoothness in a real
 // browser (run against `npm run preview` on port 8787).
-//   - hero dots change the slide; headline animates word by word
+//   - hero dots change the slide; headline animates word by word; the hero
+//     moves on by itself (mouse over it, after a hidden tab), pause works
+//   - Our looks: the arrow slides the next photo in
 //   - category hover widens the card, then the subcategories appear one by
 //     one; names never re-wrap and nothing overlaps (desktop)
 //   - Home after a client-side link and after back/forward shows everything
@@ -67,6 +69,51 @@ const browser = await chromium.launch();
 
   const wordCount = await page.locator("h1 .word").count();
   ok("hero headline animates word by word", wordCount >= 4, `${wordCount} words`);
+  await page.close();
+}
+
+// Hero timer, at normal speed: it must move on by itself every 6 s, even
+// with the mouse resting on it (it used to stop there), keep going after
+// the tab was in the background, and stop while paused.
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(url, { waitUntil: "load" });
+  const h1 = () => page.locator("h1").innerText();
+  await page.mouse.move(720, 450);
+  const t0 = await h1();
+  await page.waitForTimeout(9000);
+  const t1 = await h1();
+  ok("hero changes by itself with the mouse over it", t0 !== t1, `"${t0.slice(0, 22)}…" -> "${t1.slice(0, 22)}…"`);
+
+  const setVisible = (v) =>
+    page.evaluate((visible) => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (visible ? "visible" : "hidden") });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, v);
+  await setVisible(false);
+  await page.waitForTimeout(7000);
+  const t2 = await h1();
+  await setVisible(true);
+  await page.waitForTimeout(7000);
+  const t3 = await h1();
+  ok("hero waits while the tab is hidden, then carries on", t2 === t1 && t3 !== t2);
+
+  await page.locator('button[aria-label="Pause slides"]').click();
+  const t4 = await h1();
+  await page.waitForTimeout(7000);
+  const t5 = await h1();
+  await page.locator('button[aria-label="Play slides"]').click();
+  await page.waitForTimeout(7000);
+  const t6 = await h1();
+  ok("hero pause button stops and restarts the slides", t4 === t5 && t6 !== t5);
+  await page.close();
+}
+
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const cdp = await page.context().newCDPSession(page);
+  await page.goto(url, { waitUntil: "networkidle" });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
   // Category hover, on the second card (the one reported as not smooth),
   // then moving across all five.
@@ -152,11 +199,27 @@ const browser = await chromium.launch();
   await page.waitForTimeout(700);
   const panelText = await looks.locator('[aria-live="polite"]').innerText();
   ok("look dot shows its product", panelText.includes(dotName) && /Enquire on WhatsApp/.test(panelText), dotName);
-  const lookBefore = await looks.locator("img.look-layer").evaluateAll((imgs) => imgs.find((i) => i.style.opacity === "1")?.alt);
+  const activeLook = () => looks.locator("[data-look] img").evaluateAll((imgs) => imgs.find((i) => i.alt)?.alt);
+  const lookBefore = await activeLook();
+  // Mid-way through the change, the new photo is still sliding in from the
+  // right and the old one is still visible beside it.
+  const lookTiming = frameTiming(page, 1300);
   await looks.locator('button[aria-label="Next look"]').first().click();
-  await page.waitForTimeout(900);
-  const lookAfter = await looks.locator("img.look-layer").evaluateAll((imgs) => imgs.find((i) => i.style.opacity === "1")?.alt);
+  await page.waitForTimeout(160);
+  const mid = await looks.locator("[data-look]").evaluateAll((els) =>
+    els.map((el) => ({ x: new DOMMatrix(getComputedStyle(el).transform).m41, opacity: Number(getComputedStyle(el).opacity), z: el.style.zIndex })),
+  );
+  const lt = await lookTiming;
+  const lookAfter = await activeLook();
+  const incoming = mid.find((m) => m.z === "2");
+  const outgoing = mid.find((m) => m.z === "1");
   ok("next arrow changes the look", lookBefore !== lookAfter, `${lookBefore} -> ${lookAfter}`);
+  ok(
+    "look slides in when the arrow is clicked",
+    Boolean(incoming && outgoing && incoming.x > 5 && outgoing.x < -1 && outgoing.opacity > 0.2),
+    incoming && outgoing ? `new photo at +${incoming.x.toFixed(0)} px, old at ${outgoing.x.toFixed(0)} px (opacity ${outgoing.opacity.toFixed(2)})` : "no animation found",
+  );
+  ok("look change smooth", lt.over50 <= 1, `p95 ${lt.p95.toFixed(1)} ms, max ${lt.max.toFixed(1)} ms, frames >50ms: ${lt.over50}`);
 
   // No video anywhere.
   const videos = await page.locator("video").count();

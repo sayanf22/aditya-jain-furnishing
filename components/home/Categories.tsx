@@ -16,8 +16,8 @@ import { Words } from "../Words";
 export function Categories({ categories }: { categories: Category[] }) {
   if (categories.length === 0) return null;
   return (
-    <section className="bg-ivory py-20 sm:py-24" aria-labelledby="categories-title">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section className="bg-ivory py-20 sm:py-28 lg:py-32" aria-labelledby="categories-title">
+      <div className="shell">
         <div className="text-center">
           <h2 id="categories-title" className="section-title" data-words>
             <Words parts={["Browse", { accent: "by category" }]} />
@@ -29,7 +29,7 @@ export function Categories({ categories }: { categories: Category[] }) {
 
         {/* Desktop: the gaps are padding inside each item, so the pointer is
             always over a card and the row never flickers between states. */}
-        <div className="cat-row no-scrollbar -mx-5 mt-12 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-2 pb-4 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0">
+        <div className="cat-row no-scrollbar -mx-5 mt-12 sm:mt-14 lg:mt-16 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-2 pb-4 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0">
           {categories.map((cat, i) => (
             <CategoryCard key={cat.id} category={cat} index={i} />
           ))}
@@ -50,7 +50,7 @@ function CategoryCard({ category, index }: { category: Category; index: number }
   return (
     <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">
       <article
-        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(31,27,23,0.5)] lg:h-[29rem]"
+        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(31,27,23,0.5)] lg:h-[30rem] xl:h-[32rem]"
         data-reveal
         style={{ ["--reveal-delay" as string]: index }}
       >
@@ -62,13 +62,13 @@ function CategoryCard({ category, index }: { category: Category; index: number }
           <img
             src={source.src}
             srcSet={source.srcSet}
-            sizes="(min-width: 1024px) 28rem, 80vw"
+            sizes="(min-width: 1024px) 34rem, 80vw"
             width={source.width}
             height={source.height}
             alt=""
             loading="lazy"
             decoding="async"
-            className="cat-img absolute inset-y-0 left-1/2 -z-10 h-full w-full max-w-none object-cover lg:w-[28rem]"
+            className="cat-img absolute inset-y-0 left-1/2 -z-10 h-full w-full max-w-none object-cover lg:w-[34rem]"
           />
         )}
         <div
