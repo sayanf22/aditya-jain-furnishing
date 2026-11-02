@@ -1,9 +1,10 @@
 // Checks the Home page interactions and animation smoothness in a real
 // browser (run against `npm run preview` on port 8787).
-//   - category hover widens the card and reveals subcategories (desktop)
+//   - hero dots change the slide; headline animates word by word
+//   - category hover reveals subcategories (desktop)
 //   - décor swatch swaps the photo
-//   - Watch & Buy clip loads only on tap and plays
-//   - hero dots change the slide
+//   - shop-the-look dots and arrows; no <video> anywhere
+//   - enquiry form errors, B2B firm field and submit
 //   - phone menu opens and closes
 //   - frame timing while animations run (long frames = visible stutter)
 import { chromium } from "@playwright/test";
@@ -49,8 +50,9 @@ const browser = await chromium.launch();
   await page.goto(url, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
-  // Hero slide change through a dot, with frame timing during the cross-fade.
-  const dots = page.locator('section[aria-roledescription="carousel"] button[aria-label^="Show slide"]');
+  // Hero slide change through a dot, with frame timing during the cross-fade
+  // and the word-by-word headline.
+  const dots = page.locator('button[aria-label^="Show slide"]');
   const titleBefore = await page.locator("h1").innerText();
   const timingPromise = frameTiming(page, 1600);
   await dots.nth(2).click();
@@ -60,21 +62,30 @@ const browser = await chromium.launch();
   ok("hero dot changes slide", titleBefore !== titleAfter, `"${titleAfter}"`);
   ok("hero cross-fade smooth", heroTiming.over50 <= 2, `p95 ${heroTiming.p95.toFixed(1)} ms, max ${heroTiming.max.toFixed(1)} ms, frames >50ms: ${heroTiming.over50}`);
 
-  // Category hover.
-  const card = page.locator(".cat-card").first();
+  const wordCount = await page.locator("h1 .word").count();
+  ok("hero headline animates word by word", wordCount >= 4, `${wordCount} words`);
+
+  // Category hover, on the second card (the one reported as not smooth),
+  // then moving across all five.
+  const cards = page.locator(".cat-card");
+  const card = cards.nth(1);
   await card.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(1200);
-  const widthBefore = (await card.boundingBox()).width;
-  const hoverTiming = frameTiming(page, 1000);
+  await page.waitForTimeout(1500);
+  const hoverTiming = frameTiming(page, 2600);
+  await card.hover();
+  await page.waitForTimeout(700);
+  for (let i = 0; i < 5; i++) {
+    await cards.nth(i).hover();
+    await page.waitForTimeout(350);
+  }
   await card.hover();
   const catTiming = await hoverTiming;
-  await page.waitForTimeout(300);
-  const widthAfter = (await card.boundingBox()).width;
-  const chipsVisible = await card.locator(".cat-reveal li").first().isVisible();
-  const chipOpacity = await card.locator(".cat-reveal").evaluate((el) => getComputedStyle(el).opacity);
-  ok("category hover widens card", widthAfter > widthBefore * 1.5, `${widthBefore.toFixed(0)} -> ${widthAfter.toFixed(0)} px`);
-  ok("category hover reveals subcategories", chipsVisible && Number(chipOpacity) > 0.9, `opacity ${chipOpacity}`);
-  ok("category hover smooth", catTiming.over50 <= 2, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
+  // The panel fades in over 0.45 s after a 0.08 s delay; wait past that.
+  await page.waitForTimeout(900);
+  const panelOpacity = await card.locator(".cat-panel").evaluate((el) => getComputedStyle(el).opacity);
+  const chipsVisible = await card.locator(".cat-panel li").first().isVisible();
+  ok("category hover reveals subcategories", chipsVisible && Number(panelOpacity) > 0.95, `panel opacity ${panelOpacity}`);
+  ok("category hover smooth", catTiming.over50 <= 1, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
 
   // Décor swatch swap.
   const radios = page.locator('[role="radiogroup"] [role="radio"]');
@@ -89,18 +100,46 @@ const browser = await chromium.launch();
     .evaluateAll((imgs) => imgs.filter((i) => getComputedStyle(i).opacity === "1").map((i) => i.currentSrc.split("/").pop()));
   ok("décor swatch swaps photo", checked === "true" && label === "Tan leather" && visibleImg.length === 1 && visibleImg[0].includes("leather"), `${label}, showing ${visibleImg.join(",")}`);
 
-  // Watch & Buy: no video request before tap, then it plays.
-  const videoRequests = [];
-  page.on("request", (r) => r.url().endsWith(".mp4") && videoRequests.push(r.url()));
-  const play = page.locator('button[aria-label^="Play Curtains clip"]');
-  await play.scrollIntoViewIfNeeded();
+  // Our looks: a dot shows its product, arrows change the look.
+  const looks = page.locator('section[aria-labelledby="looks-title"]');
+  await looks.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(900);
+  const firstDot = looks.locator("button[aria-pressed]").first();
+  const dotName = (await firstDot.getAttribute("aria-label")) ?? "";
+  await firstDot.click();
+  await page.waitForTimeout(700);
+  const panelText = await looks.locator('[aria-live="polite"]').innerText();
+  ok("look dot shows its product", panelText.includes(dotName) && /Enquire on WhatsApp/.test(panelText), dotName);
+  const lookBefore = await looks.locator("img.look-layer").evaluateAll((imgs) => imgs.find((i) => i.style.opacity === "1")?.alt);
+  await looks.locator('button[aria-label="Next look"]').first().click();
+  await page.waitForTimeout(900);
+  const lookAfter = await looks.locator("img.look-layer").evaluateAll((imgs) => imgs.find((i) => i.style.opacity === "1")?.alt);
+  ok("next arrow changes the look", lookBefore !== lookAfter, `${lookBefore} -> ${lookAfter}`);
+
+  // No video anywhere.
+  const videos = await page.locator("video").count();
+  ok("no video on the page", videos === 0, `${videos} video elements`);
+
+  // Enquiry form: errors first, then a B2B submission through the UI.
+  const form = page.locator('section[aria-labelledby="enquiry-title"] form');
+  await form.scrollIntoViewIfNeeded();
   await page.waitForTimeout(800);
-  const beforeTap = videoRequests.length;
-  await play.click();
-  await page.waitForTimeout(2500);
-  const playing = await page.locator("video").first().evaluate((v) => !v.paused && v.currentTime > 0);
-  ok("clip not downloaded before tap", beforeTap === 0);
-  ok("clip plays after tap", playing, `${videoRequests.length} video request(s)`);
+  await form.locator('button[type="submit"]').click();
+  const errorCount = await form.locator('[role="alert"]').count();
+  ok("empty form shows errors", errorCount >= 3, `${errorCount} messages`);
+  await form.locator("#eq-type").selectOption("B2B");
+  await page.waitForTimeout(600);
+  const companyVisible = await form.locator("#eq-company").isVisible();
+  await form.locator("#eq-company").fill("Check Studio");
+  await form.locator("#eq-name").fill("UI Check");
+  await form.locator("#eq-phone").fill("9811000000");
+  await form.locator("#eq-interest").selectOption("curtains-blinds");
+  await form.locator("#eq-message").fill("Submitted by the interaction check script.");
+  await form.locator('button[type="submit"]').click();
+  await page.waitForTimeout(1500);
+  const sent = await page.locator('section[aria-labelledby="enquiry-title"]').innerText();
+  ok("firm field appears for B2B", companyVisible);
+  ok("form submits and thanks the visitor", /enquiry has been sent/.test(sent));
 
   // Scroll-reveal and general scrolling smoothness.
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -117,18 +156,29 @@ const browser = await chromium.launch();
   await page.close();
 }
 
-// Phone: menu.
+// Phone (4x slower CPU): menu smoothness, open and close.
 {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const cdp = await page.context().newCDPSession(page);
   await page.goto(url, { waitUntil: "networkidle" });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await page.waitForTimeout(1500);
   const toggle = page.locator('button[aria-controls="mobile-menu"]');
-  await toggle.click();
-  await page.waitForTimeout(700);
-  const openState = await page.locator("#mobile-menu").evaluate((el) => getComputedStyle(el).opacity);
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(700);
-  const closedState = await page.locator("#mobile-menu").evaluate((el) => getComputedStyle(el).opacity);
-  ok("phone menu opens and closes", openState === "1" && closedState === "0", `opacity ${openState} -> ${closedState}`);
+  const menuTiming = frameTiming(page, 2400);
+  await toggle.tap();
+  await page.waitForTimeout(1000);
+  const panel = page.locator("#mobile-menu");
+  const openState = await panel.evaluate((el) => getComputedStyle(el).opacity);
+  const box = await panel.boundingBox();
+  await toggle.tap();
+  const mt = await menuTiming;
+  await page.waitForTimeout(800);
+  const closedState = await panel.evaluate((el) => `${getComputedStyle(el).opacity}/${getComputedStyle(el).visibility}`);
+  ok("phone menu opens and closes", openState === "1" && closedState === "0/hidden", `opacity ${openState} -> ${closedState}`);
+  ok("phone menu fills the screen", box && box.height > 700, `${box?.height.toFixed(0)} px tall`);
+  ok("phone menu smooth", mt.over50 <= 1, `p95 ${mt.p95.toFixed(1)} ms, max ${mt.max.toFixed(1)} ms, frames >50ms: ${mt.over50}`);
+  const words = await page.locator("h1 .word").count();
+  ok("phone hero animates word by word", words >= 4, `${words} words`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok("no sideways page scroll on phone", overflow <= 0, `${overflow}px extra`);
   await page.close();

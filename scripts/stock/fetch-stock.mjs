@@ -1,17 +1,14 @@
-// Downloads the stand-in stock images and videos listed in
-// scripts/stock/stock-images.json and converts them for the site:
-//   images -> public/demo/<name>-<width>.webp (cropped to the given aspect)
+// Downloads the stand-in stock images listed in scripts/stock/stock-images.json
+// and converts them for the site:
+//   images   -> public/demo/<name>-<width>.webp (cropped to the given aspect)
 //   swatches -> public/demo/<name>-160.webp and -320.webp (cut from an image)
-//   videos -> public/demo/<name>.mp4 (540x960, H.264, no sound, short loop)
-//             + public/demo/<name>-poster-<width>.webp
-// Originals are cached in .stock/originals/ (not committed).
+// Originals are cached in .stock/originals/ (not committed). The site uses
+// no video.
 //
 // Usage: npm run stock
 
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 
 const root = path.resolve(import.meta.dirname, "../..");
@@ -42,8 +39,8 @@ function sourceUrl(item) {
 const sizes = {};
 
 for (const item of manifest.images) {
-  const ext = item.source === "pexels" ? "jpg" : path.extname(new URL(item.url).pathname) || ".jpg";
-  const file = await download(sourceUrl(item), path.join(cacheDir, `${item.name}${ext.startsWith(".") ? ext : "." + ext}`));
+  const ext = item.source === "pexels" ? ".jpg" : path.extname(new URL(item.url).pathname) || ".jpg";
+  const file = await download(sourceUrl(item), path.join(cacheDir, `${item.name}${ext}`));
   const meta = await sharp(file).metadata();
   const [aw, ah] = item.aspect;
   // Largest crop of the requested aspect that fits the original.
@@ -89,41 +86,6 @@ for (const sw of manifest.swatches) {
   }
   sizes[sw.name] = { widths: [160, 320], aspect: [1, 1] };
   console.log(`swatch ${sw.name.padEnd(18)} from ${base.name}`);
-}
-
-for (const v of manifest.videos) {
-  const original = path.join(cacheDir, `${v.name}.mp4`);
-  if (!existsSync(original)) {
-    // Pexels' download endpoint redirects to the original file.
-    const res = await fetch(`https://www.pexels.com/download/video/${v.id}/`, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      redirect: "manual",
-    });
-    const location = res.headers.get("location");
-    if (!location) throw new Error(`no download location for video ${v.id} (${res.status})`);
-    await download(location, original);
-  }
-  const out = path.join(outDir, `${v.name}.mp4`);
-  // Portrait 540x960, centre-cropped, 24 fps, no audio, fast-start for web.
-  execFileSync(
-    ffmpegPath,
-    [
-      "-y", "-loglevel", "error",
-      "-ss", String(v.start), "-t", String(v.seconds), "-i", original,
-      "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24",
-      "-an", "-c:v", "libx264", "-profile:v", "main", "-preset", "slow", "-crf", "28",
-      "-pix_fmt", "yuv420p", "-movflags", "+faststart", out,
-    ],
-    { stdio: "inherit" },
-  );
-  const posterJpg = path.join(cacheDir, `${v.name}-poster.jpg`);
-  execFileSync(ffmpegPath, ["-y", "-loglevel", "error", "-ss", "0.5", "-i", out, "-frames:v", "1", "-q:v", "2", posterJpg]);
-  for (const w of [270, 540]) {
-    await sharp(posterJpg).resize(w, Math.round((w * 16) / 9)).webp({ quality: 74 }).toFile(path.join(outDir, `${v.name}-poster-${w}.webp`));
-  }
-  sizes[`${v.name}-poster`] = { widths: [270, 540], aspect: [9, 16] };
-  const kb = Math.round(readFileSync(out).length / 1024);
-  console.log(`video  ${v.name.padEnd(18)} -> ${kb} KB`);
 }
 
 writeFileSync(path.join(outDir, "sizes.json"), JSON.stringify(sizes, null, 2) + "\n");

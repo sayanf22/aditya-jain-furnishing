@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Instrument_Sans } from "next/font/google";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { RevealObserver } from "@/components/RevealObserver";
@@ -36,15 +37,25 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const whatsapp = whatsappLink(contact, enquiryMessage(contact));
 
   return (
-    <html lang="en-IN" className={instrument.variable}>
+    // suppressHydrationWarning: the inline script below adds the "js" class
+    // before React loads, so the class list differs from the server HTML on
+    // purpose. This only silences that one attribute on <html>.
+    <html lang="en-IN" className={instrument.variable} suppressHydrationWarning>
       <head>
         {/* Marks that JavaScript runs, so scroll-reveal styles only apply then. */}
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>
       <body>
-        <SiteHeader brand={contact.businessName} phoneHref={phoneLink(contact)} whatsappHref={whatsapp} />
+        <SiteHeader
+          brand={contact.businessName}
+          phoneHref={phoneLink(contact)}
+          whatsappHref={whatsapp}
+          address={`${contact.addressLine1}, ${contact.addressLine2}`}
+        />
         {children}
-        <SiteFooter contact={contact} categories={categories} />
+        <Suspense fallback={null}>
+          <SiteFooter contact={contact} categories={categories} />
+        </Suspense>
         <FloatingWhatsApp href={whatsapp} />
         <RevealObserver />
       </body>

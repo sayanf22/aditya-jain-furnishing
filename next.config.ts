@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  // Hide the "N" badge that `next dev` draws in the corner (errors still show).
+  devIndicators: false,
 };
 
 export default nextConfig;

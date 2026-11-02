@@ -1,6 +1,6 @@
 # Delta Furnishings – Home Furnishing Showroom Website
 
-Website for Delta Furnishings Pvt Ltd, Kirti Nagar, New Delhi (client: Aditya Jain). Next.js 16 (App Router) on Cloudflare Workers through the OpenNext adapter (`@opennextjs/cloudflare`). Built by WhyCreatives. The full plan is in [PLAN.md](PLAN.md).
+Website for Delta Furnishings Pvt Ltd, Kirti Nagar, New Delhi (client: Aditya Jain). Next.js 16 (App Router) on Cloudflare Workers through the OpenNext adapter (`@opennextjs/cloudflare`). Made by [whycreatives.in](https://whycreatives.in). The full plan is in [PLAN.md](PLAN.md).
 
 Everything runs locally for now. Nothing is deployed until the client's Cloudflare account exists.
 
@@ -13,7 +13,7 @@ npm run db:migrate:local      # schema, catalogue, business details
 npm run db:seed:demo          # LOCAL ONLY: stand-in images and sample text for the design preview
 ```
 
-Stand-in images and clips are already in `public/demo/`. To download them again: `npm run stock` (sources and licences in [docs/stock-images.md](docs/stock-images.md)).
+Stand-in images are already in `public/demo/`. To download them again: `npm run stock` (sources and licences in [docs/stock-images.md](docs/stock-images.md)).
 
 ## Commands
 
@@ -26,11 +26,12 @@ Stand-in images and clips are already in `public/demo/`. To download them again:
 | `npm run lint` | ESLint |
 | `npm run db:migrate:local` | Applies D1 migrations to the local database |
 | `npm run db:seed:demo` | Fills the local database with the design-preview content |
-| `npm run stock` | Downloads and converts the stand-in stock images and videos |
+| `npm run stock` | Downloads and converts the stand-in stock images (the site has no video) |
 | `npm run perf -- <url>` | Phone-profile speed check (LCP, layout shift, blocking time, bytes) |
 | `npm run cpu -- <routes…>` | Local estimate of Worker CPU time per request (needs `npx wrangler dev --port 8787 --local --inspector-port 9230` after an OpenNext build) |
 | `node scripts/server-timing.mjs <base> <routes…>` | Local Worker response times per route |
 | `node scripts/interaction-check.mjs` | Checks Home page interactions and animation frame timing |
+| `node scripts/enquiry-check.mjs` | Checks `/api/enquiry`: valid B2C and B2B saved, bad input, honeypot, other-site post, non-JSON, oversized body, rate limit, GET. Clean up afterwards with `npx wrangler d1 execute aditya-jain-furnishing-db --local --command "DELETE FROM enquiries WHERE source='check' OR name='UI Check'"` |
 | `node scripts/request-count.mjs` | Worker requests vs free static files for one visit |
 | `node scripts/screens.mjs` | Section-by-section screenshots at 390 px and 1440 px (into `.stock/screens/`) |
 | `npm run deploy` | Deploys to Cloudflare. **Not used until the client's account exists** |

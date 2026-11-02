@@ -38,9 +38,3 @@ export function imageSource(key: string | null | undefined): ImageSource | null 
   // R2 keys: served through the Worker once uploads exist.
   return { src: `/api/media/${key}`, srcSet: "", width: 1600, height: 1200 };
 }
-
-export function videoSource(key: string | null | undefined): string | null {
-  if (!key) return null;
-  if (key.startsWith("demo/")) return `/${key}`;
-  return `/api/media/${key}`;
-}

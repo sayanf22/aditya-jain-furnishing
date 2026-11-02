@@ -1,84 +1,116 @@
-import { mapsLink, phoneLink, type ContactInfo } from "@/lib/contact";
+// Footer: a deep, rounded panel inset from the page edges. Brand and the
+// showroom's contact actions on top, links below, then the legal row with
+// the "Made by whycreatives.in" credit.
+import { enquiryMessage, mapsLink, phoneLink, whatsappLink, type ContactInfo } from "@/lib/contact";
 import type { Category } from "@/lib/content";
 import { NAV } from "@/lib/nav";
-import { MapPinIcon, PhoneIcon } from "./icons";
-import { SiteLink } from "./SiteLink";
+import { ArrowUpRightIcon, MapPinIcon, PhoneIcon, WhatsAppIcon } from "./icons";
 
 type Props = { contact: ContactInfo; categories: Category[] };
 
 export function SiteFooter({ contact, categories }: Props) {
   const tel = phoneLink(contact);
+  const whatsapp = whatsappLink(contact, enquiryMessage(contact));
   const year = new Date().getFullYear();
+  const [first, ...rest] = contact.businessName.split(" ");
+
   return (
-    <footer className="bg-ink text-ivory">
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:py-20">
-        <div>
-          <p className="text-xl font-semibold tracking-[0.24em] uppercase">{contact.businessName}</p>
-          <p className="mt-4 max-w-xs text-[0.95rem] leading-relaxed text-ivory/80">
-            Upholstery fabric, curtains &amp; blinds, carpets &amp; mats, cushions and wallpaper.
-          </p>
-        </div>
+    <footer className="px-3 pb-3 sm:px-5 sm:pb-5">
+      <div className="mx-auto max-w-[90rem] overflow-hidden rounded-[2rem] bg-night text-ivory shadow-[0_30px_60px_-40px_rgba(21,18,16,0.8)]">
+        <div className="mx-auto max-w-7xl px-6 pt-16 sm:px-10 lg:pt-20">
+          <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:items-end">
+            <div>
+              <p className="leading-none">
+                <span className="block text-[2rem] font-semibold tracking-[0.24em] uppercase sm:text-[2.5rem]">{first}</span>
+                <span className="mt-2 block text-[0.8rem] font-medium tracking-[0.5em] text-ivory/80 uppercase">{rest.join(" ")}</span>
+              </p>
+              <p className="mt-6 max-w-sm text-[0.98rem] leading-relaxed text-ivory/80">
+                Upholstery fabric, curtains &amp; blinds, carpets &amp; mats, cushions and wallpaper in Kirti Nagar, New Delhi.
+              </p>
+            </div>
 
-        <div>
-          <p className="text-[0.75rem] font-semibold tracking-[0.18em] text-ivory/70 uppercase">Explore</p>
-          <ul className="mt-5 space-y-3 text-[0.95rem]">
-            {NAV.map((item) => (
-              <li key={item.href}>
-                <SiteLink href={item.href} className="link-line">
-                  {item.label}
-                </SiteLink>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-[0.75rem] font-semibold tracking-[0.18em] text-ivory/70 uppercase">Categories</p>
-          <ul className="mt-5 space-y-3 text-[0.95rem]">
-            {categories.map((c) => (
-              <li key={c.id}>
-                <SiteLink href={`/collection/${c.slug}`} className="link-line">
-                  {c.name}
-                </SiteLink>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-[0.75rem] font-semibold tracking-[0.18em] text-ivory/70 uppercase">Showroom</p>
-          <address className="mt-5 text-[0.95rem] leading-relaxed">
-            <span className="block font-medium">{contact.legalName}</span>
-            <span className="block text-ivory/85">{contact.addressLine1}</span>
-            <span className="block text-ivory/85">{contact.addressLine2}</span>
-          </address>
-          <div className="mt-5 space-y-3 text-[0.95rem]">
-            {tel && contact.phoneDisplay && (
-              <a href={tel} className="flex items-center gap-3">
-                <PhoneIcon className="h-4 w-4 text-ivory/70" />
-                <span className="link-line">{contact.phoneDisplay}</span>
+            <div className="flex flex-wrap gap-3 lg:justify-end">
+              {whatsapp && (
+                <a href={whatsapp} target="_blank" rel="noopener" className="btn inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-5 text-[0.85rem] font-medium text-white hover:bg-terracotta-dark">
+                  <WhatsAppIcon className="h-[1.1rem] w-[1.1rem]" />
+                  WhatsApp
+                </a>
+              )}
+              {tel && (
+                <a href={tel} className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ivory/25 px-5 text-[0.85rem] font-medium hover:border-ivory hover:bg-ivory hover:text-night">
+                  <PhoneIcon className="h-[1.1rem] w-[1.1rem]" />
+                  Call
+                </a>
+              )}
+              <a href={mapsLink(contact)} target="_blank" rel="noopener" className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ivory/25 px-5 text-[0.85rem] font-medium hover:border-ivory hover:bg-ivory hover:text-night">
+                <MapPinIcon className="h-[1.1rem] w-[1.1rem]" />
+                Directions
               </a>
-            )}
-            <a href={mapsLink(contact)} target="_blank" rel="noopener" className="flex items-center gap-3">
-              <MapPinIcon className="h-4 w-4 text-ivory/70" />
-              <span className="link-line">Get directions</span>
-            </a>
+            </div>
           </div>
-          {contact.gstin && <p className="mt-5 text-[0.8rem] tracking-[0.06em] text-ivory/70">GSTIN {contact.gstin}</p>}
-        </div>
-      </div>
 
-      <div className="border-t border-ivory/10">
-        {/* Extra bottom space on phones so the fixed WhatsApp button doesn't cover the credit. */}
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-5 pt-6 pb-24 text-center text-[0.8rem] text-ivory/70 sm:flex-row sm:justify-between sm:px-8 sm:pb-6 sm:text-left">
-          <p>
-            © {year} {contact.legalName}
-          </p>
-          <p>
-            Built by <span className="font-semibold text-ivory">WhyCreatives</span>
-          </p>
+          <div className="mt-14 grid grid-cols-2 gap-x-6 gap-y-10 border-t border-ivory/12 pt-12 lg:grid-cols-[1fr_1fr_1.3fr] lg:gap-16">
+            <FooterColumn title="Explore">
+              {NAV.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} className="link-line">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </FooterColumn>
+
+            <FooterColumn title="Categories">
+              {categories.map((c) => (
+                <li key={c.id}>
+                  <a href={`/collection/${c.slug}`} className="link-line">
+                    {c.name}
+                  </a>
+                </li>
+              ))}
+            </FooterColumn>
+
+            <div className="col-span-2 lg:col-span-1">
+              <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-terracotta-light uppercase">Showroom</p>
+              <address className="mt-5 text-[0.98rem] leading-relaxed">
+                <span className="block font-medium text-ivory">{contact.legalName}</span>
+                <span className="block text-ivory/80">{contact.addressLine1}</span>
+                <span className="block text-ivory/80">{contact.addressLine2}</span>
+              </address>
+              {tel && contact.phoneDisplay && (
+                <a href={tel} className="mt-4 inline-block text-[1.05rem] font-medium">
+                  <span className="link-line">{contact.phoneDisplay}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-14 max-w-7xl px-6 sm:px-10">
+          <div className="flex flex-col items-center gap-3 border-t border-ivory/12 pt-6 pb-24 text-center text-[0.82rem] text-ivory/75 sm:flex-row sm:justify-between sm:pb-8 sm:text-left">
+            <p>
+              © {year} {contact.legalName}
+              {contact.gstin && <span className="block sm:ml-3 sm:inline">GSTIN {contact.gstin}</span>}
+            </p>
+            <p>
+              Made by{" "}
+              <a href="https://whycreatives.in" target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold text-ivory">
+                <span className="link-line">whycreatives.in</span>
+                <ArrowUpRightIcon className="h-3.5 w-3.5" />
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-terracotta-light uppercase">{title}</p>
+      <ul className="mt-5 space-y-3 text-[0.98rem] text-ivory/90">{children}</ul>
+    </div>
   );
 }

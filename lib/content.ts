@@ -28,7 +28,15 @@ export type DecorOption = {
   height: number;
 };
 export type DecorScene = { id: number; name: string; options: DecorOption[] };
-export type WatchItem = { id: number; title: string; videoKey: string; posterKey: string };
+export type LookHotspot = {
+  id: number;
+  x: number;
+  y: number;
+  name: string;
+  categoryName: string | null;
+  categorySlug: string | null;
+};
+export type Look = { id: number; title: string; imageKey: string; hotspots: LookHotspot[] };
 export type Testimonial = { id: number; name: string; text: string };
 
 export type HomeContent = {
@@ -36,9 +44,8 @@ export type HomeContent = {
   heroSlides: HeroSlide[];
   categories: Category[];
   decor: DecorScene | null;
-  watch: WatchItem[];
+  looks: Look[];
   testimonials: Testimonial[];
-  enquiryImageKey: string | null;
 };
 
 function parseSlides(raw: string | undefined): HeroSlide[] {
@@ -102,17 +109,30 @@ export async function getHomeContent(): Promise<HomeContent> {
   const database = await db();
   const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
 
-  const [scenes, options, watch, testimonials] = await database.batch([
+  const [scenes, options, looks, hotspots, testimonials] = await database.batch([
     database.prepare("SELECT id, name FROM decor_scenes WHERE visible = 1 ORDER BY position, id LIMIT 1"),
     database.prepare(
       `SELECT o.id, o.scene_id, o.name, o.swatch_image_key, o.result_image_key, o.width, o.height
        FROM decor_options o ORDER BY o.position, o.id`,
     ),
+    database.prepare("SELECT id, title, image_key FROM looks WHERE visible = 1 ORDER BY position, id"),
     database.prepare(
-      "SELECT id, title, video_key, poster_image_key FROM watch_items WHERE visible = 1 ORDER BY position, id",
+      `SELECT h.id, h.look_id, h.x, h.y, h.name, c.name AS category_name, c.slug AS category_slug
+       FROM look_hotspots h LEFT JOIN categories c ON c.id = h.category_id
+       ORDER BY h.position, h.id`,
     ),
     database.prepare("SELECT id, name, text FROM testimonials WHERE visible = 1 ORDER BY position, id"),
   ]);
+
+  const spotRows = hotspots.results as {
+    id: number;
+    look_id: number;
+    x: number;
+    y: number;
+    name: string;
+    category_name: string | null;
+    category_slug: string | null;
+  }[];
 
   const scene = (scenes.results as { id: number; name: string }[])[0];
   const sceneOptions = scene
@@ -141,13 +161,23 @@ export async function getHomeContent(): Promise<HomeContent> {
     heroSlides: parseSlides(settings.hero_slides),
     categories,
     decor: scene && sceneOptions.length > 0 ? { id: scene.id, name: scene.name, options: sceneOptions } : null,
-    watch: (watch.results as { id: number; title: string; video_key: string; poster_image_key: string }[]).map((w) => ({
-      id: w.id,
-      title: w.title,
-      videoKey: w.video_key,
-      posterKey: w.poster_image_key,
-    })),
+    looks: (looks.results as { id: number; title: string; image_key: string }[])
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        imageKey: l.image_key,
+        hotspots: spotRows
+          .filter((h) => h.look_id === l.id)
+          .map((h) => ({
+            id: h.id,
+            x: h.x,
+            y: h.y,
+            name: h.name,
+            categoryName: h.category_name,
+            categorySlug: h.category_slug,
+          })),
+      }))
+      .filter((l) => l.hotspots.length > 0),
     testimonials: testimonials.results as Testimonial[],
-    enquiryImageKey: settings.enquiry_image ?? null,
   };
 }

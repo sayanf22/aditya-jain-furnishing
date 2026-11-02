@@ -8,11 +8,12 @@
   --color-sand: #f1e8df;
   --color-stone: #e5dbcf;
   --color-ink: #1f1b17;
+  --color-night: #151210;
   --color-ink-soft: #3a332c;
   --color-muted: #5e554c;
   --color-terracotta: #a65a45;
   --color-terracotta-dark: #8a4836;
-  --color-whatsapp: #1fa855;
+  --color-terracotta-light: #d9a48f;
 
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
 
@@ -63,11 +64,18 @@ address {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-terracotta);
+}
 
 /* ---------- Motion ----------------------------------------------------
-   Only transform and opacity are animated (no layout work per frame),
-   except the category cards' width, which is a handful of boxes. Every
-   animation is switched off for visitors who ask for reduced motion. */
+   Only transform and opacity are animated, so the browser can hand the
+   work to the GPU and nothing is laid out again per frame. Every animation
+   is switched off for visitors who ask for reduced motion. */
 
 /* Scroll reveal: elements fade and rise into place once they are on
    screen. Hidden only when JavaScript runs (the .js class), so content is
@@ -85,7 +93,46 @@ address {
   transform: none;
 }
 
-/* Hero: slow zoom on the active slide, text rising in on each slide. */
+/* Word-by-word text: each word is masked and slides up from its baseline,
+   one after another (components/Words.tsx). */
+.word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding: 0.12em 0.02em 0.1em;
+  margin: -0.12em -0.02em -0.1em;
+}
+.word-in {
+  display: inline-block;
+}
+.js [data-words] .word-in {
+  transform: translate3d(0, 110%, 0);
+  opacity: 0;
+  transition:
+    transform 0.95s var(--ease-out-soft),
+    opacity 0.6s ease;
+  transition-delay: calc(var(--w, 0) * 65ms);
+}
+.js [data-words].is-visible .word-in {
+  transform: none;
+  opacity: 1;
+}
+@keyframes word-up {
+  from {
+    transform: translate3d(0, 110%, 0);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.word-in.word-auto {
+  animation: word-up 1s var(--ease-out-soft) both;
+  animation-delay: calc(var(--w, 0) * 75ms + 120ms);
+}
+
+/* Hero: slow zoom on the active slide, small text rising in on each slide. */
 @keyframes hero-zoom {
   from {
     transform: scale(1.08);
@@ -97,19 +144,11 @@ address {
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 32px, 0);
+    transform: translate3d(0, 24px, 0);
   }
   to {
     opacity: 1;
     transform: none;
-  }
-}
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 @keyframes scroll-line {
@@ -150,11 +189,8 @@ address {
   animation: hero-zoom 8s var(--ease-out-soft) both;
 }
 .hero-rise {
-  animation: rise-in 1.1s var(--ease-out-soft) both;
-  animation-delay: calc(var(--rise-delay, 0) * 140ms + 150ms);
-}
-.page-fade {
-  animation: fade-in 0.9s ease-out both;
+  animation: rise-in 1s var(--ease-out-soft) both;
+  animation-delay: calc(var(--rise-delay, 0) * 75ms + 120ms);
 }
 .scroll-line {
   animation: scroll-line 2.4s var(--ease-out-soft) infinite;
@@ -166,64 +202,83 @@ address {
   animation-play-state: paused;
 }
 
-/* Category cards: hovering (or focusing) a card widens it and reveals its
-   subcategories. Images keep a fixed width inside, so they are revealed
-   rather than resized. */
+/* Category cards. Hovering a card (desktop) lifts it, zooms the photo and
+   fades in a panel with the subcategories; the plain name and button fade
+   out underneath. Only opacity and transform change, so it stays smooth.
+   On touch screens the subcategory panel is always shown. */
 .cat-card {
-  /* Keeps each card's repaint inside its own box while widths change. */
-  contain: layout paint;
+  transition: transform 0.6s var(--ease-out-soft);
 }
-@media (min-width: 1024px) {
-  .cat-card {
-    flex: 1 1 0;
-    transition: flex-grow 0.7s var(--ease-out-soft);
-  }
+.cat-img {
+  transition: transform 1.1s var(--ease-out-soft);
+  will-change: transform;
 }
-.cat-card .cat-reveal {
-  opacity: 0;
-  transform: translate3d(0, 14px, 0);
+.cat-base,
+.cat-panel {
   transition:
     opacity 0.45s ease,
     transform 0.6s var(--ease-out-soft);
 }
-/* The subcategory list takes no height until revealed, so every card's
-   name and button line up at the bottom. */
-.cat-reveal-wrap {
-  display: grid;
-  grid-template-rows: 1fr;
+.cat-panel-shade {
+  transition: opacity 0.5s ease;
 }
 @media (hover: hover) and (min-width: 1024px) {
-  .cat-reveal-wrap {
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.6s var(--ease-out-soft);
+  .cat-panel,
+  .cat-panel-shade {
+    opacity: 0;
   }
-  .cat-card:hover .cat-reveal-wrap,
-  .cat-card:focus-within .cat-reveal-wrap {
-    grid-template-rows: 1fr;
+  .cat-panel {
+    transform: translate3d(0, 18px, 0);
   }
-  .cat-row:hover .cat-card:hover,
-  .cat-row .cat-card:focus-within {
-    flex-grow: 2.3;
+  .cat-card:hover,
+  .cat-card:focus-within {
+    transform: translate3d(0, -6px, 0);
   }
-  .cat-card:hover .cat-reveal,
-  .cat-card:focus-within .cat-reveal {
+  .cat-card:hover .cat-img,
+  .cat-card:focus-within .cat-img {
+    transform: scale(1.06);
+  }
+  .cat-card:hover .cat-base,
+  .cat-card:focus-within .cat-base {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+  .cat-card:hover .cat-panel,
+  .cat-card:focus-within .cat-panel {
     opacity: 1;
     transform: none;
-    transition-delay: 0.12s;
+    transition-delay: 0.08s;
   }
-  .cat-card:hover .cat-img {
-    transform: translate3d(-50%, 0, 0) scale(1.04);
+  .cat-card:hover .cat-panel-shade,
+  .cat-card:focus-within .cat-panel-shade {
+    opacity: 1;
   }
 }
 @media not ((hover: hover) and (min-width: 1024px)) {
-  .cat-card .cat-reveal {
-    opacity: 1;
-    transform: none;
+  .cat-base {
+    display: none;
   }
 }
-.cat-img {
-  transform: translate3d(-50%, 0, 0);
-  transition: transform 1.2s var(--ease-out-soft);
+
+/* Shop-the-look dots: a soft ring that keeps expanding and fading. */
+@keyframes spot-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+.spot-ring {
+  animation: spot-ring 2.4s var(--ease-out-soft) infinite;
+}
+.look-layer {
+  transition: opacity 0.8s var(--ease-out-soft);
+}
+.look-panel-in {
+  animation: rise-in 0.6s var(--ease-out-soft) both;
 }
 
 /* Buttons: soft lift on hover, press-in on tap. */
@@ -231,6 +286,7 @@ address {
   transition:
     transform 0.35s var(--ease-out-soft),
     background-color 0.3s ease,
+    border-color 0.3s ease,
     color 0.3s ease,
     box-shadow 0.35s ease;
 }
@@ -246,6 +302,32 @@ address {
 }
 .btn:hover .btn-arrow {
   transform: translate3d(4px, 0, 0);
+}
+
+/* Floating WhatsApp: a gentle double pulse shortly after the page loads. */
+@keyframes float-attention {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: scale(1.08);
+  }
+  40% {
+    transform: none;
+  }
+  60% {
+    transform: scale(1.06);
+  }
+}
+.float-wa {
+  animation: float-attention 1.6s ease 2.5s 1 both;
+  transition:
+    transform 0.35s var(--ease-out-soft),
+    background-color 0.3s ease;
+}
+.float-wa:hover {
+  background-color: var(--color-terracotta-dark);
 }
 
 /* Underline that draws in from the left on link hover. */
@@ -264,6 +346,72 @@ address {
 /* Interactive décor: the chosen look cross-fades in. */
 .decor-layer {
   transition: opacity 0.7s var(--ease-out-soft);
+}
+
+/* Phone menu: the panel fades and settles, the links follow one by one,
+   and the menu icon's lines turn into a cross. */
+.menu-panel {
+  transition:
+    opacity 0.45s ease,
+    transform 0.55s var(--ease-out-soft),
+    visibility 0s linear 0.55s;
+  will-change: transform, opacity;
+}
+.menu-panel[data-open="true"] {
+  transition:
+    opacity 0.45s ease,
+    transform 0.55s var(--ease-out-soft),
+    visibility 0s;
+}
+.menu-item {
+  transition:
+    opacity 0.45s ease,
+    transform 0.6s var(--ease-out-soft);
+  transition-delay: 0s;
+}
+.menu-panel[data-open="true"] .menu-item {
+  transition-delay: calc(var(--i, 0) * 55ms + 90ms);
+}
+.burger span {
+  transition:
+    transform 0.45s var(--ease-out-soft),
+    opacity 0.25s ease;
+  transform-origin: center;
+}
+.burger[aria-expanded="true"] span:nth-child(1) {
+  transform: translate3d(0, 5px, 0) rotate(45deg);
+}
+.burger[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.4);
+}
+.burger[aria-expanded="true"] span:nth-child(3) {
+  transform: translate3d(0, -5px, 0) rotate(-45deg);
+}
+
+/* Form fields. */
+.field {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid rgb(31 27 23 / 0.14);
+  background: #fff;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  color: var(--color-ink);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.field::placeholder {
+  color: rgb(94 85 76 / 0.7);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-terracotta);
+  box-shadow: 0 0 0 3px rgb(166 90 69 / 0.15);
+}
+.field[aria-invalid="true"] {
+  border-color: #b4412c;
 }
 
 /* Hide horizontal scrollbars on swipe rows while keeping them scrollable. */
@@ -286,11 +434,13 @@ address {
     transition-duration: 0.01ms !important;
     transition-delay: 0s !important;
   }
-  .js [data-reveal] {
+  .js [data-reveal],
+  .js [data-words] .word-in {
     opacity: 1;
     transform: none;
   }
-  .marquee-track {
+  .marquee-track,
+  .spot-ring {
     animation: none;
   }
 }

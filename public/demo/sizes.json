@@ -145,6 +145,28 @@
       5
     ]
   },
+  "look-living": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
+  "look-bedroom": {
+    "widths": [
+      640,
+      1080,
+      1600
+    ],
+    "aspect": [
+      4,
+      3
+    ]
+  },
   "swatch-velvet": {
     "widths": [
       160,
@@ -183,46 +205,6 @@
     "aspect": [
       1,
       1
-    ]
-  },
-  "watch-cushions-poster": {
-    "widths": [
-      270,
-      540
-    ],
-    "aspect": [
-      9,
-      16
-    ]
-  },
-  "watch-curtains-poster": {
-    "widths": [
-      270,
-      540
-    ],
-    "aspect": [
-      9,
-      16
-    ]
-  },
-  "watch-fabric-poster": {
-    "widths": [
-      270,
-      540
-    ],
-    "aspect": [
-      9,
-      16
-    ]
-  },
-  "watch-rugs-poster": {
-    "widths": [
-      270,
-      540
-    ],
-    "aspect": [
-      9,
-      16
     ]
   }
 }

@@ -20,10 +20,6 @@ INSERT INTO settings (key, value) VALUES ('hero_slides', '[
 ]')
 ON CONFLICT (key) DO UPDATE SET value = excluded.value;
 
--- Image beside the quick-enquiry block.
-INSERT INTO settings (key, value) VALUES ('enquiry_image', 'demo/enquiry-showroom')
-ON CONFLICT (key) DO UPDATE SET value = excluded.value;
-
 -- Category tile images.
 UPDATE categories SET image_key = 'demo/cat-upholstery' WHERE slug = 'upholstery-fabric';
 UPDATE categories SET image_key = 'demo/cat-curtains'   WHERE slug = 'curtains-blinds';
@@ -43,13 +39,23 @@ INSERT INTO decor_options (scene_id, kind, name, swatch_image_key, result_image_
   (1, 'fabric', 'Grey weave',   'demo/swatch-grey',    'demo/decor-grey',    1600, 1200, 3),
   (1, 'fabric', 'Ivory linen',  'demo/swatch-ivory',   'demo/decor-ivory',   1600, 1200, 4);
 
--- Watch & Buy clips (stand-in Pexels videos).
-DELETE FROM watch_items;
-INSERT INTO watch_items (title, video_key, poster_image_key, position) VALUES
-  ('Cushions',          'demo/watch-cushions.mp4', 'demo/watch-cushions-poster', 1),
-  ('Curtains',          'demo/watch-curtains.mp4', 'demo/watch-curtains-poster', 2),
-  ('Upholstery fabric', 'demo/watch-fabric.mp4',   'demo/watch-fabric-poster',   3),
-  ('Carpets',           'demo/watch-rugs.mp4',     'demo/watch-rugs-poster',     4);
+-- Shop the look (Watch & Buy, photo based): room photos with dots on the
+-- products. Names describe what the stand-in photos show.
+DELETE FROM look_hotspots;
+DELETE FROM looks;
+INSERT INTO looks (id, title, image_key, width, height, position) VALUES
+  (1, 'Living room',  'demo/look-living',  1600, 1200, 1),
+  (2, 'Velvet lounge', 'demo/decor-velvet', 1600, 1200, 2),
+  (3, 'Bedroom',      'demo/look-bedroom', 1600, 1200, 3);
+INSERT INTO look_hotspots (look_id, x, y, name, category_id, position) VALUES
+  (1, 31, 58, 'Grey upholstery fabric', 1, 1),
+  (1, 17, 64, 'Cushion',                4, 2),
+  (1, 64, 85, 'Patterned carpet',       3, 3),
+  (2, 26, 72, 'Green velvet',           1, 1),
+  (2, 51, 66, 'Printed cushion',        4, 2),
+  (3, 52, 51, 'Blush upholstery fabric', 1, 1),
+  (3, 44, 64, 'Grey cushions',          4, 2),
+  (3, 50, 90, 'Upholstered bench',      1, 3);
 
 -- Testimonials: SAMPLE placeholders only, to show the layout. Real reviews
 -- come from the client.

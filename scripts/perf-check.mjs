@@ -36,7 +36,7 @@ page.on("response", async (res) => {
 });
 
 await page.addInitScript(() => {
-  window.__perf = { lcp: 0, cls: 0, longTasks: 0, tbt: 0 };
+  window.__perf = { lcp: 0, cls: 0, longTasks: 0, tbt: 0, tasks: [] };
   new PerformanceObserver((list) => {
     for (const e of list.getEntries()) window.__perf.lcp = e.startTime;
   }).observe({ type: "largest-contentful-paint", buffered: true });
@@ -47,6 +47,7 @@ await page.addInitScript(() => {
     for (const e of list.getEntries()) {
       window.__perf.longTasks += 1;
       window.__perf.tbt += Math.max(0, e.duration - 50);
+      window.__perf.tasks.push([e.startTime, e.duration]);
     }
   }).observe({ type: "longtask", buffered: true });
 });
@@ -65,7 +66,19 @@ const result = await page.evaluate(() => {
     lcp: Math.round(window.__perf.lcp),
     cls: Number(window.__perf.cls.toFixed(3)),
     longTasks: window.__perf.longTasks,
-    tbt: Math.round(window.__perf.tbt),
+    // All long-task time over 50 ms, from the start of loading.
+    allBlocking: Math.round(window.__perf.tbt),
+    // Lighthouse's Total Blocking Time: only the part of each long task
+    // after first contentful paint (before it, nothing can be tapped yet).
+    tbt: Math.round(
+      window.__perf.tasks.reduce((sum, [start, dur]) => {
+        const f = fcp?.startTime ?? 0;
+        const end = start + dur;
+        if (end <= f) return sum;
+        const counted = end - Math.max(start, f);
+        return sum + Math.max(0, counted - 50);
+      }, 0),
+    ),
   };
 });
 
@@ -75,7 +88,8 @@ console.log(`  Time to first byte     ${result.ttfb} ms`);
 console.log(`  First contentful paint ${result.fcp} ms`);
 console.log(`  Largest contentful     ${result.lcp} ms   (target < 2000)`);
 console.log(`  Layout shift (CLS)     ${result.cls}       (target < 0.1)`);
-console.log(`  Blocking time (TBT)    ${result.tbt} ms    (target < 200), long tasks: ${result.longTasks}`);
+console.log(`  Blocking time (TBT)    ${result.tbt} ms    (target < 200; Lighthouse definition, after first paint)`);
+console.log(`  All long-task time     ${result.allBlocking} ms    (including before first paint), long tasks: ${result.longTasks}`);
 console.log(`  Load event             ${loadMs} ms`);
 console.log(`  Transferred: HTML ${kb(bytes.document)}, JS ${kb(bytes.script)}, CSS ${kb(bytes.stylesheet)}, images ${kb(bytes.image)}, fonts ${kb(bytes.font)}`);
 

@@ -10,8 +10,9 @@ import type { HeroSlide } from "@/lib/content";
 import { imageSource } from "@/lib/media";
 import { ArrowRightIcon } from "../icons";
 import { SiteLink } from "../SiteLink";
+import { Words } from "../Words";
 
-const SLIDE_MS = 6500;
+const SLIDE_MS = 7000;
 
 // The brand name is left out of the eyebrow on phones (the header shows it).
 type Props = { slides: HeroSlide[]; eyebrow: { brand: string; place: string } };
@@ -100,13 +101,11 @@ export function Hero({ slides, eyebrow }: Props) {
             <span className="hidden sm:inline">{eyebrow.brand} · </span>
             {eyebrow.place}
           </p>
-          <h1
-            className="hero-rise mt-4 text-[2.35rem] leading-[1.06] font-medium tracking-[-0.01em] sm:text-6xl lg:text-[4.4rem]"
-            style={{ ["--rise-delay" as string]: 1 }}
-          >
-            {current.title}
+          {/* Headline words rise in one by one on every slide. */}
+          <h1 className="mt-4 text-[2.35rem] leading-[1.08] font-medium tracking-[-0.01em] sm:text-6xl lg:text-[4.4rem]">
+            <Words parts={[current.title]} delay={1} mode="auto" />
           </h1>
-          <div className="hero-rise mt-8" style={{ ["--rise-delay" as string]: 2 }}>
+          <div className="hero-rise mt-8" style={{ ["--rise-delay" as string]: current.title.split(/\s+/).length + 3 }}>
             <SiteLink
               href={current.href}
               className="btn inline-flex h-12 items-center gap-3 rounded-full bg-terracotta px-7 text-[0.85rem] font-medium tracking-[0.06em] text-white hover:bg-terracotta-dark"

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DecorScene } from "@/lib/content";
 import { imageSource } from "@/lib/media";
 import { WhatsAppIcon } from "../icons";
+import { Words } from "../Words";
 
 type Props = { scene: DecorScene; whatsappBase: string | null };
 
@@ -44,9 +45,10 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
     : null;
 
   return (
-    <section ref={ref} className="bg-sand" aria-labelledby="decor-title">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[1.35fr_1fr] lg:gap-16">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone" data-reveal>
+    <section ref={ref} className="px-3 sm:px-5" aria-labelledby="decor-title">
+      <div className="mx-auto max-w-[90rem] rounded-[2rem] bg-sand">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.35fr_1fr] lg:gap-16 lg:py-24">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-stone" data-reveal>
           {options.map((opt, i) => {
             const source = imageSource(opt.imageKey);
             if (!source) return null;
@@ -74,10 +76,14 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
           </p>
         </div>
 
-        <div data-reveal style={{ ["--reveal-delay" as string]: 1 }}>
-          <h2 id="decor-title" className="section-title">
-            Interactive <span className="text-terracotta">home décor</span>
+        <div>
+          <p className="section-label" data-reveal>
+            Try a look
+          </p>
+          <h2 id="decor-title" className="section-title mt-3" data-words>
+            <Words parts={["Interactive", { accent: "home décor" }]} />
           </h2>
+          <div data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
           <p className="mt-5 max-w-md text-[1.02rem] leading-relaxed text-ink-soft">
             Tap a texture to see the {scene.name.toLowerCase()} in it.
           </p>
@@ -125,13 +131,15 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
               href={whatsappHref}
               target="_blank"
               rel="noopener"
-              className="btn mt-10 inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[0.85rem] font-medium tracking-[0.04em] text-ivory hover:bg-terracotta"
+              className="btn mt-10 inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-6 text-[0.85rem] font-medium tracking-[0.04em] text-white hover:bg-terracotta-dark"
             >
               <WhatsAppIcon className="h-4 w-4" />
               Enquire about this look
             </a>
           )}
+          </div>
         </div>
+      </div>
       </div>
     </section>
   );
