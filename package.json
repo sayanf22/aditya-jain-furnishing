@@ -7,8 +7,9 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run cf-typegen && npm run db:migrate:local",
-    "build": "next build",
+    "build": "opennextjs-cloudflare build",
+    "prebuild:next": "npm run cf-typegen && npm run db:migrate:local",
+    "build:next": "next build",
     "lint": "eslint",
     "typecheck": "npm run cf-typegen && tsc --noEmit",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

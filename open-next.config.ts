@@ -9,7 +9,17 @@ import staticAssetsIncrementalCache from "@opennextjs/cloudflare/overrides/incre
 // When the site later needs on-demand updates (revalidatePath) or more
 // server-side rendering, switch incrementalCache to the R2 cache with a D1
 // tag cache, as described in https://opennext.js.org/cloudflare/caching.
-export default defineCloudflareConfig({
+const config = defineCloudflareConfig({
   incrementalCache: staticAssetsIncrementalCache,
   enableCacheInterception: true,
 });
+
+export default {
+  ...config,
+  // `npm run build` runs the whole OpenNext build (so Cloudflare Workers
+  // Builds' default "npm run build" + "npx wrangler deploy" work). OpenNext
+  // would otherwise call `npm run build` itself for the Next.js step and loop,
+  // so point it at the plain Next.js build. `prebuild:next` (binding types +
+  // D1 migrations on the build machine's local database) runs before it.
+  buildCommand: "npm run build:next",
+};

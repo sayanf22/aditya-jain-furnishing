@@ -20,7 +20,8 @@ Stand-in images are already in `public/demo/`. To download them again: `npm run 
 | Command | Does |
 |---|---|
 | `npm run dev` | Next.js dev server on http://localhost:3000, with local D1 and R2 |
-| `npm run build` | Next.js production build (pages are pre-rendered from the local D1) |
+| `npm run build` | Full OpenNext build into `.open-next/` (binding types, D1 migrations on the local database, `next build`, Worker bundle). Cloudflare Workers Builds runs this, then `npx wrangler deploy` |
+| `npm run build:next` | Only the Next.js build (pages are pre-rendered from the local D1) |
 | `npm run preview` | OpenNext build, then serves the Worker locally (workerd) on http://localhost:8787 |
 | `npm run typecheck` | Regenerates binding types, then type-checks |
 | `npm run lint` | ESLint |
