@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run cf-typegen",
+    "prebuild": "npm run cf-typegen && npm run db:migrate:local",
     "build": "next build",
     "lint": "eslint",
     "typecheck": "npm run cf-typegen && tsc --noEmit",
