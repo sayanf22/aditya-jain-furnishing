@@ -26,13 +26,10 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Product photos, décor images and Watch & Buy look photos (no video).
-  "r2_buckets": [
-    {
-      "binding": "MEDIA",
-      "bucket_name": "aditya-jain-furnishing-media"
-    }
-  ],
+  // R2 (photo uploads from the admin dashboard) is added back with the
+  // dashboard step: "r2_buckets": [{ "binding": "MEDIA", "bucket_name":
+  // "aditya-jain-furnishing-media" }]. It is left out for now because the
+  // site doesn't use it yet and the deploy fails on accounts without R2.
   // Enquiry form: at most 5 submissions a minute per visitor (free plan).
   "ratelimits": [
     {
