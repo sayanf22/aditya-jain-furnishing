@@ -208,7 +208,7 @@ export function ShopTheLook({ looks, whatsappBase }: Props) {
                         className="btn inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-6 text-[0.85rem] font-medium text-white hover:bg-terracotta-dark"
                       >
                         <WhatsAppIcon className="h-4 w-4" />
-                        Enquire on WhatsApp
+                        Enquire
                       </a>
                     )}
                     {spot.categorySlug && (

@@ -34,7 +34,7 @@ export function SiteFooter({ contact, categories }: Props) {
             {whatsapp && (
               <a href={whatsapp} target="_blank" rel="noopener" className="btn inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-5 text-[0.85rem] font-medium text-white hover:bg-terracotta-dark">
                 <WhatsAppIcon className="h-[1.1rem] w-[1.1rem]" />
-                WhatsApp
+                Enquire
               </a>
             )}
             {tel && (

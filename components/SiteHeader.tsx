@@ -116,7 +116,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener"
-                aria-label="Enquire on WhatsApp"
+                aria-label="Enquire"
                 className="hdr-pill btn hidden h-10 min-w-10 items-center rounded-full border border-transparent bg-terracotta px-[calc(0.75rem-1px)] text-[0.78rem] font-medium tracking-[0.1em] text-white uppercase hover:bg-terracotta-dark sm:flex"
               >
                 {/* Padding, icon and height are all in rem (the page scales
@@ -175,7 +175,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
                 className="btn flex h-14 items-center justify-center gap-2 rounded-2xl bg-terracotta text-[0.85rem] font-medium text-white"
               >
                 <WhatsAppIcon className="h-5 w-5" />
-                WhatsApp
+                Enquire
               </a>
             )}
           </div>

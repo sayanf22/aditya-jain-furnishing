@@ -102,7 +102,7 @@ const browser = await chromium.launch();
   ok("hero has slide dots only (no pause button)", heroButtons.length > 0 && heroButtons.every((l) => l?.startsWith("Show slide")), heroButtons.join(", "));
 
   // Header Enquire: a round icon that opens to show "Enquire" on hover.
-  const enq = page.locator('header a[aria-label="Enquire on WhatsApp"]');
+  const enq = page.locator('header a.hdr-pill');
   await page.mouse.move(720, 600);
   await page.waitForTimeout(600);
   const enqRest = (await enq.boundingBox()).width;
@@ -254,7 +254,7 @@ const browser = await chromium.launch();
   await firstDot.click();
   await page.waitForTimeout(700);
   const panelText = await looks.locator('[aria-live="polite"]').innerText();
-  ok("look dot shows its product", panelText.includes(dotName) && /Enquire on WhatsApp/.test(panelText), dotName);
+  ok("look dot shows its product", panelText.includes(dotName) && /Enquire/.test(panelText), dotName);
   const activeLook = () => looks.locator("[data-look] img").evaluateAll((imgs) => imgs.find((i) => i.alt)?.alt);
   const lookBefore = await activeLook();
   // Mid-way through the change, the new photo is still sliding in from the
@@ -332,6 +332,17 @@ const browser = await chromium.launch();
     return overlap ? "covered" : "clear";
   });
   ok("floating WhatsApp button doesn't cover the footer credit", creditClear === "clear", creditClear);
+
+  // No visible text or button name on the page says "WhatsApp" (the buttons
+  // show the WhatsApp icon and say "Enquire" / "Message us").
+  const waText = await page.evaluate(() => {
+    const hits = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/whatsapp/i.test(n.textContent) && !n.parentElement.closest("script,style")) hits.push(n.textContent.trim());
+    document.querySelectorAll("[aria-label]").forEach((el) => /whatsapp/i.test(el.getAttribute("aria-label")) && hits.push(el.getAttribute("aria-label")));
+    return hits;
+  });
+  ok("no 'WhatsApp' wording on the page", waText.length === 0, waText.join(" | ") || "none");
   await page.close();
 }
 

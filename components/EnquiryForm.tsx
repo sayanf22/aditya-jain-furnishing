@@ -71,7 +71,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
         <p className="mt-3 max-w-sm text-[0.95rem] leading-relaxed text-muted">The showroom has your details and message.</p>
         {whatsappHref && (
           <a href={whatsappHref} target="_blank" rel="noopener" className="link-line mt-6 text-[0.85rem] font-semibold tracking-[0.08em] text-terracotta uppercase">
-            Or chat on WhatsApp
+            Or message us
           </a>
         )}
       </div>

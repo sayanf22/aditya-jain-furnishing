@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Delta Furnishings",
   },
   description:
-    "Delta Furnishings, Kirti Nagar, New Delhi: upholstery fabric, curtains & blinds, carpets & mats, cushions and wallpaper. Enquire on WhatsApp or call the showroom.",
+    "Delta Furnishings, Kirti Nagar, New Delhi: upholstery fabric, curtains & blinds, carpets & mats, cushions and wallpaper. Enquire or call the showroom.",
 };
 
 export const viewport: Viewport = {

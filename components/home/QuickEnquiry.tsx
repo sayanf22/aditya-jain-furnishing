@@ -38,7 +38,7 @@ export function QuickEnquiry({ contact, categories }: Props) {
                   className="btn flex h-14 items-center sm:flex-1 lg:flex-none xl:flex-1 justify-center gap-2.5 rounded-full bg-terracotta px-6 text-[0.9rem] font-medium text-white hover:bg-terracotta-dark"
                 >
                   <WhatsAppIcon className="h-5 w-5" />
-                  WhatsApp us
+                  Message us
                 </a>
               )}
               {tel && (
