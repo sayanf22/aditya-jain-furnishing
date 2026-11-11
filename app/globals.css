@@ -282,6 +282,17 @@ address {
   min-height: 0;
   overflow: hidden;
 }
+/* Phones and tablets: inside the sideways row the cards come in from the
+   right (the swipe direction) instead of rising from below, so nothing
+   moves vertically inside the row. */
+@media (max-width: 1023.98px) {
+  .js .cat-card[data-reveal] {
+    transform: translate3d(32px, 0, 0);
+  }
+  .js .cat-card[data-reveal][data-shown] {
+    transform: none;
+  }
+}
 @media (min-width: 1024px) {
   .cat-item {
     flex: 1 1 0;
@@ -455,9 +466,106 @@ address {
   background-size: 100% 1px;
 }
 
-/* Interactive décor: the chosen look cross-fades in. */
-.decor-layer {
-  transition: opacity 0.7s var(--ease-out-soft);
+/* Interactive décor: the chosen texture is wiped in over the previous one
+   (components/home/DecorPicker.tsx). One clean vertical edge travels across
+   the photo; a soft light line rides on it; the new photo settles from a
+   slight zoom; the name label slides up. */
+@keyframes decor-wipe-ltr {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes decor-wipe-rtl {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.decor-wipe-ltr {
+  animation: decor-wipe-ltr 0.95s cubic-bezier(0.77, 0, 0.18, 1) both;
+}
+.decor-wipe-rtl {
+  animation: decor-wipe-rtl 0.95s cubic-bezier(0.77, 0, 0.18, 1) both;
+}
+@keyframes decor-settle {
+  from {
+    transform: scale(1.07);
+  }
+  to {
+    transform: none;
+  }
+}
+.decor-settle {
+  animation: decor-settle 1.4s var(--ease-out-soft) both;
+}
+/* The light line: a frame-wide layer whose left edge carries the line,
+   moved with transform (no layout per frame). */
+.decor-wipe-edge {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.decor-wipe-edge::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: -1px;
+  width: 2px;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 0 24px 6px rgb(255 255 255 / 0.35);
+}
+@keyframes decor-edge-ltr {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+}
+@keyframes decor-edge-rtl {
+  0% {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+}
+.decor-edge-ltr {
+  animation: decor-edge-ltr 0.95s cubic-bezier(0.77, 0, 0.18, 1) both;
+}
+.decor-edge-rtl {
+  animation: decor-edge-rtl 0.95s cubic-bezier(0.77, 0, 0.18, 1) both;
+}
+@keyframes decor-label-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.decor-label-in {
+  animation: decor-label-in 0.5s var(--ease-out-soft) both;
 }
 
 /* Phone menu: the panel fades and settles, the links follow one by one,

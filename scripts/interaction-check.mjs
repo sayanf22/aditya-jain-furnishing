@@ -221,14 +221,29 @@ const browser = await chromium.launch();
   const radios = page.locator('[role="radiogroup"] [role="radio"]');
   await radios.first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(800);
+  // Mid-way, the new photo is only partly revealed (a wipe, not a fade), the
+  // old one is still showing beside it, and the light edge is on screen.
+  const decor = page.locator('section[aria-labelledby="decor-title"]');
+  const wipeTiming = frameTiming(page, 1400);
   await radios.nth(1).click();
+  await page.waitForTimeout(380);
+  const midWipe = await decor.evaluate((s) => {
+    const layers = [...s.querySelectorAll(".aspect-\\[4\\/3\\] > div")].map((d) => ({ z: d.style.zIndex, op: d.style.opacity, clip: getComputedStyle(d).clipPath }));
+    const top = layers.find((l) => l.z === "2");
+    const under = layers.find((l) => l.z === "1");
+    const m = /inset\(0px ([\d.]+)%|inset\(0px ([\d.]+)px/.exec(top?.clip ?? "");
+    return { clip: top?.clip ?? "", under: under?.op ?? "none", edge: Boolean(s.querySelector(".decor-wipe-edge")), hidden: m ? Number(m[1] ?? m[2]) : 0 };
+  });
+  const wt = await wipeTiming;
   await page.waitForTimeout(900);
   const checked = await radios.nth(1).getAttribute("aria-checked");
-  const label = await page.locator('section[aria-labelledby="decor-title"] [aria-live="polite"]').innerText();
-  const visibleImg = await page
-    .locator('section[aria-labelledby="decor-title"] img.decor-layer')
-    .evaluateAll((imgs) => imgs.filter((i) => getComputedStyle(i).opacity === "1").map((i) => i.currentSrc.split("/").pop()));
-  ok("décor swatch swaps photo", checked === "true" && label === "Tan leather" && visibleImg.length === 1 && visibleImg[0].includes("leather"), `${label}, showing ${visibleImg.join(",")}`);
+  const label = await decor.locator('[aria-live="polite"]').innerText();
+  const shown = await decor.evaluate((s) =>
+    [...s.querySelectorAll(".aspect-\\[4\\/3\\] > div")].filter((d) => d.style.opacity === "1").map((d) => d.querySelector("img").currentSrc.split("/").pop()),
+  );
+  ok("décor swatch swaps photo", checked === "true" && label === "Tan leather" && shown.length === 1 && shown[0].includes("leather"), `${label}, showing ${shown.join(",")}`);
+  ok("décor change is a wipe", midWipe.hidden > 2 && midWipe.under === "1" && midWipe.edge, `mid-way: ${midWipe.clip}, old photo still under it, edge line ${midWipe.edge ? "on" : "off"}`);
+  ok("décor wipe smooth", wt.over50 <= 1, `p95 ${wt.p95.toFixed(1)} ms, max ${wt.max.toFixed(1)} ms, frames >50ms: ${wt.over50}`);
 
   // Our looks: a dot shows its product, arrows change the look.
   const looks = page.locator('section[aria-labelledby="looks-title"]');
@@ -376,6 +391,17 @@ const browser = await chromium.launch();
   ok("phone hero animates word by word", words >= 4, `${words} words`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok("no sideways page scroll on phone", overflow <= 0, `${overflow}px extra`);
+
+  // Phone: the category row scrolls sideways only. Scrolling the page with
+  // a finger on the cards used to move the cards up and down in their row.
+  const catRow = page.locator(".cat-row");
+  await catRow.scrollIntoViewIfNeeded();
+  const rb = await catRow.boundingBox();
+  await page.mouse.move(rb.x + 80, rb.y + 150);
+  await page.mouse.wheel(0, 80);
+  await page.waitForTimeout(1600);
+  const rowState = await catRow.evaluate((el) => ({ y: el.scrollTop, oy: getComputedStyle(el).overflowY, extra: el.scrollHeight - el.clientHeight }));
+  ok("phone category row never scrolls up and down", rowState.y === 0 && rowState.oy === "hidden", `scrollTop ${rowState.y}, overflow-y ${rowState.oy}`);
   await page.close();
 }
 

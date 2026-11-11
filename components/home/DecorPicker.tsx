@@ -16,6 +16,13 @@ const SIZES = "(min-width: 1024px) 58vw, 100vw";
 
 export function DecorPicker({ scene, whatsappBase }: Props) {
   const [active, setActive] = useState(0);
+  // The photo being wiped over, and which way the wipe runs (towards the
+  // swatch picked: a swatch to the right wipes left to right).
+  const [prev, setPrev] = useState<number | null>(null);
+  const [dir, setDir] = useState<1 | -1>(1);
+  // After the first change the active layer keeps its wipe/zoom classes, so
+  // they finish on their own (and the first photo on load doesn't animate).
+  const [changed, setChanged] = useState(false);
   const [warm, setWarm] = useState(false);
   const ref = useRef<HTMLElement>(null);
   const options = scene.options;
@@ -48,31 +55,49 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
     <section ref={ref} className="px-3 sm:px-5 lg:px-6" aria-labelledby="decor-title">
       <div className="mx-auto max-w-[108rem] rounded-[2rem] bg-sand lg:rounded-[2.5rem]">
       <div className="shell grid items-center gap-10 py-16 sm:gap-12 sm:py-20 lg:grid-cols-[1.4fr_1fr] lg:gap-20 lg:py-28 xl:gap-28">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-stone" data-reveal>
+        {/* Changing texture: the new photo is wiped in over the old one by a
+            clean vertical edge (clip-path), with a soft light line riding on
+            the edge, while the new photo settles from a slight zoom. */}
+        <div
+          className="relative isolate aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-stone"
+          data-reveal
+        >
           {options.map((opt, i) => {
             const source = imageSource(opt.imageKey);
             if (!source) return null;
-            const render = i === active || warm;
+            const render = i === active || i === prev || warm;
+            const isActive = i === active;
+            const wiping = isActive && changed;
             return render ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <div
                 key={opt.id}
-                src={source.src}
-                srcSet={source.srcSet}
-                sizes={SIZES}
-                width={source.width}
-                height={source.height}
-                alt={i === active ? `${scene.name} in ${opt.name}` : ""}
-                aria-hidden={i !== active}
-                loading={i === active ? "lazy" : "eager"}
-                decoding="async"
-                className="decor-layer absolute inset-0 h-full w-full object-cover"
-                style={{ opacity: i === active ? 1 : 0 }}
-              />
+                aria-hidden={!isActive}
+                className={`absolute inset-0 ${wiping ? (dir === 1 ? "decor-wipe-ltr" : "decor-wipe-rtl") : ""}`}
+                style={{ opacity: isActive || i === prev ? 1 : 0, zIndex: isActive ? 2 : i === prev ? 1 : 0 }}
+                onAnimationEnd={(e) => {
+                  if (e.target === e.currentTarget && isActive) setPrev(null);
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={source.src}
+                  srcSet={source.srcSet}
+                  sizes={SIZES}
+                  width={source.width}
+                  height={source.height}
+                  alt={isActive ? `${scene.name} in ${opt.name}` : ""}
+                  loading={isActive ? "lazy" : "eager"}
+                  decoding="async"
+                  className={`h-full w-full object-cover ${wiping ? "decor-settle" : ""}`}
+                />
+              </div>
             ) : null;
           })}
-          <p className="absolute bottom-4 left-4 rounded-full bg-ivory/90 px-4 py-2 text-[0.8rem] font-medium text-ink backdrop-blur-sm" aria-live="polite">
-            {current.name}
+          {prev !== null && <span key={`edge-${active}`} aria-hidden="true" className={`decor-wipe-edge ${dir === 1 ? "decor-edge-ltr" : "decor-edge-rtl"}`} />}
+          <p className="absolute bottom-4 left-4 z-10 overflow-hidden rounded-full bg-ivory/90 px-4 py-2 text-[0.8rem] font-medium text-ink backdrop-blur-sm" aria-live="polite">
+            <span key={current.id} className="decor-label-in block">
+              {current.name}
+            </span>
           </p>
         </div>
 
@@ -98,7 +123,13 @@ export function DecorPicker({ scene, whatsappBase }: Props) {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => setActive(i)}
+                  onClick={() => {
+                    if (i === active) return;
+                    setDir(i > active ? 1 : -1);
+                    setPrev(active);
+                    setChanged(true);
+                    setActive(i);
+                  }}
                   className="group flex w-[4.4rem] flex-col items-center gap-2 text-center sm:w-[4.75rem]"
                 >
                   <span
