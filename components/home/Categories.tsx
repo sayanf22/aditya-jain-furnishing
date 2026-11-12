@@ -34,7 +34,7 @@ export function Categories({ categories }: { categories: Category[] }) {
             and down, so the cards slid inside their row while the page was
             scrolled. Bottom padding leaves room for the card shadows; the
             negative margin keeps the spacing below the same. */}
-        <div className="cat-row no-scrollbar -mx-5 mt-12 -mb-6 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pt-2 pb-10 sm:-mx-8 sm:mt-14 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:mt-16 lg:mb-0 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-4">
+        <div className="cat-row no-scrollbar -mx-5 mt-12 -mb-6 flex snap-x snap-proximity scroll-px-5 gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pt-2 pb-10 sm:-mx-8 sm:mt-14 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:mt-16 lg:mb-0 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-4">
           {categories.map((cat, i) => (
             <CategoryCard key={cat.id} category={cat} index={i} />
           ))}
