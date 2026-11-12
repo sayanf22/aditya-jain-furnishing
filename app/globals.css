@@ -282,15 +282,31 @@ address {
   min-height: 0;
   overflow: hidden;
 }
-/* Phones and tablets: inside the sideways row the cards come in from the
-   right (the swipe direction) instead of rising from below, so nothing
-   moves vertically inside the row. */
+/* Phones and tablets: the row is a sideways scroller, so a finger moving up
+   or down must hand over to the page at once. touch-action says the row
+   only pans sideways or lets the page scroll (never both inside the row),
+   overscroll-behavior-y lets the page keep the vertical scroll, and the
+   photo is pinned to its own layer so it cannot shift by a pixel while the
+   page scrolls. Cards fade in (no movement) so nothing travels inside the
+   row while it is being scrolled. */
 @media (max-width: 1023.98px) {
-  .js .cat-card[data-reveal] {
-    transform: translate3d(32px, 0, 0);
+  .cat-row {
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-stop: normal;
   }
+  .cat-card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  .cat-img {
+    will-change: auto;
+    backface-visibility: hidden;
+  }
+  .js .cat-card[data-reveal],
   .js .cat-card[data-reveal][data-shown] {
-    transform: none;
+    transform: translateZ(0);
   }
 }
 @media (min-width: 1024px) {
