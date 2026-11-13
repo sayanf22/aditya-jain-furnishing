@@ -65,27 +65,11 @@ INSERT INTO testimonials (name, text, position) VALUES
   ('Sample interior designer', 'Sample review. A real review from an interior designer goes here.', 2),
   ('Sample customer', 'Sample review. A third real review goes here.', 3);
 
--- Gallery: stand-in stock photos (docs/stock-images.md), shown uncropped.
--- Titles describe what each photo shows. Real photos come from the client.
-DELETE FROM gallery_items;
-INSERT INTO gallery_items (title, image_key, width, height, category_id, position) VALUES
-  ('Sheer curtains',                'demo/gal-curtains-sheer',       2566, 3458, 2, 1),
-  ('Trellis wallpaper',             'demo/gal-wallpaper-trellis',    3069, 3857, 5, 2),
-  ('Fabric swatches',               'demo/gal-fabric-swatches',      3000, 2000, 1, 3),
-  ('Patterned carpet',              'demo/gal-carpet-pattern',       3000, 3995, 3, 4),
-  ('Mustard cushion',               'demo/gal-cushion-mustard',      3000, 4500, 4, 5),
-  ('Wooden blinds',                 'demo/gal-blinds-wood',          1826, 2737, 2, 6),
-  ('Printed fabric rolls',          'demo/gal-fabric-rolls',         3000, 2000, 1, 7),
-  ('Pomegranate wallpaper',         'demo/gal-wallpaper-fruit',      1609, 2000, 5, 8),
-  ('Geometric rug in a living room','demo/gal-carpet-room',          3000, 2003, 3, 9),
-  ('Patterned curtains',            'demo/gal-curtains-print',       2056, 3657, 2, 10),
-  ('Cushions on a sofa',            'demo/gal-cushion-sofa',         1728, 2592, 4, 11),
-  ('Woven fabric',                  'demo/gal-fabric-weave',         3000, 2000, 1, 12),
-  ('Tulip wallpaper',               'demo/gal-wallpaper-tulip',      1513, 1913, 5, 13),
-  ('Amber curtains',                'demo/gal-curtains-amber',       3000, 3750, 2, 14),
-  ('Large carpet in a living room', 'demo/gal-carpet-large',         3000, 2000, 3, 15),
-  ('Folded fabrics',                'demo/gal-fabric-stack',         3000, 1688, 1, 16),
-  ('Cushions in a lounge',          'demo/gal-cushion-lounge',       3000, 2000, 4, 17),
-  ('Vertical blinds',               'demo/gal-blinds-vertical',      3000, 2250, 2, 18),
-  ('Blackthorn wallpaper',          'demo/gal-wallpaper-blackthorn', 1100, 1460, 5, 19),
-  ('White sheer curtains',          'demo/gal-curtains-white',       3000, 2000, 2, 20);
+-- About Us and Contact page photos (stand-ins, docs/stock-images.md).
+INSERT INTO settings (key, value) VALUES
+  ('about_hero_image',     'demo/about-hero'),
+  ('about_story_image',    'demo/about-story'),
+  ('about_showroom_image', 'demo/about-showroom'),
+  ('about_band_image',     'demo/about-band'),
+  ('contact_hero_image',   'demo/contact-hero')
+ON CONFLICT (key) DO UPDATE SET value = excluded.value;

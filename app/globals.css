@@ -568,65 +568,129 @@ address {
   animation: decor-label-in 0.5s var(--ease-out-soft) both;
 }
 
-/* Gallery (components/gallery/Gallery.tsx). The first photos rise in on
-   load with CSS alone; on hover a card lifts, the photo dims a touch and a
-   "see larger" badge pops in. The photo itself never scales, so no part of
-   it is cut off. */
-.gal-in {
-  animation: rise-in 0.8s var(--ease-out-soft) both;
-  animation-delay: calc(var(--i, 0) * 70ms + 60ms);
+/* Page header with a photo (components/PageHero.tsx). On load the photo
+   settles from a slight zoom; while scrolling it drifts down slower than
+   the page and the text fades up and away. The scroll part uses CSS
+   scroll-driven animations, which the compositor runs in step with the
+   scroll; browsers without them keep a still photo. */
+@keyframes page-hero-settle {
+  from {
+    transform: scale(1.1);
+  }
+  to {
+    transform: scale(1);
+  }
 }
-.gal-card > span:first-child {
-  transition:
-    transform 0.5s var(--ease-out-soft),
-    box-shadow 0.5s ease;
+.page-hero-img {
+  animation: page-hero-settle 2.6s var(--ease-out-soft) both;
 }
-.gal-img {
-  transition: filter 0.5s ease;
+
+/* Accent words on a photo use the lighter terracotta, so they stay
+   readable on dark or warm photos. */
+.on-photo .text-terracotta {
+  color: var(--color-terracotta-light);
 }
-.gal-zoom {
+
+/* Photo reveal (components/RevealImage.tsx): a panel in the page colour
+   slides up and away while the photo settles from a gentle zoom. */
+.img-reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--cover, var(--color-ivory));
+  transform: scaleY(0);
+  transform-origin: top center;
+  pointer-events: none;
+}
+.js .img-reveal[data-reveal] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.js .img-reveal[data-reveal]::after {
+  transform: scaleY(1);
+  transition: transform 1.25s cubic-bezier(0.77, 0, 0.18, 1);
+  transition-delay: calc(var(--reveal-delay, 0) * 90ms);
+}
+.js .img-reveal[data-reveal][data-shown]::after {
+  transform: scaleY(0);
+}
+.img-reveal-inner {
+  transition: transform 1.9s var(--ease-out-soft);
+}
+.js .img-reveal[data-reveal]:not([data-shown]) .img-reveal-inner {
+  transform: scale(1.18);
+}
+
+@supports (animation-timeline: scroll()) {
+  @keyframes page-hero-drift {
+    to {
+      transform: translate3d(0, 16%, 0);
+    }
+  }
+  @keyframes page-hero-away {
+    to {
+      opacity: 0;
+      transform: translate3d(0, -3rem, 0);
+    }
+  }
+  @keyframes img-drift {
+    from {
+      transform: translate3d(0, -6%, 0) scale(1.14);
+    }
+    to {
+      transform: translate3d(0, 6%, 0) scale(1.14);
+    }
+  }
+  .page-hero-media {
+    animation: page-hero-drift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100vh;
+  }
+  .page-hero-text {
+    animation: page-hero-away linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 60vh;
+  }
+  .img-parallax {
+    animation: img-drift linear both;
+    animation-timeline: view();
+    animation-range: cover;
+  }
+}
+
+/* About Us: category tiles and the "who we work with" cards. */
+.about-tile .img-reveal-inner {
+  transition: transform 1.9s var(--ease-out-soft);
+}
+.about-tile-arrow {
   opacity: 0;
-  transform: scale(0.7);
+  transform: translate3d(-6px, 0, 0);
   transition:
-    opacity 0.3s ease,
-    transform 0.45s var(--ease-out-soft);
+    opacity 0.35s ease,
+    transform 0.5s var(--ease-out-soft);
 }
 @media (hover: hover) {
-  .gal-card:hover > span:first-child {
-    transform: translate3d(0, -4px, 0);
-    box-shadow: 0 22px 40px -22px rgb(31 27 23 / 0.45);
+  .about-tile:hover .img-reveal-inner {
+    transform: scale(1.06);
+    transition-duration: 1.2s;
   }
-  .gal-card:hover .gal-img {
-    filter: brightness(0.93);
-  }
-  .gal-card:hover .gal-zoom {
+  .about-tile:hover .about-tile-arrow {
     opacity: 1;
     transform: none;
   }
 }
-.gal-card:focus-visible .gal-zoom {
-  opacity: 1;
-  transform: none;
+.about-card {
+  transition:
+    transform 0.5s var(--ease-out-soft),
+    box-shadow 0.5s ease;
 }
-/* Full-screen photo viewer: the dialog fills the screen and draws its own
-   dark layer (so it can fade), instead of the default backdrop. */
-.gal-dialog {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #fff;
-  overflow: hidden;
-  overscroll-behavior: contain;
-}
-.gal-dialog::backdrop {
-  background: transparent;
+@media (hover: hover) {
+  .about-card:hover {
+    transform: translate3d(0, -4px, 0);
+    box-shadow: 0 26px 50px -34px rgb(31 27 23 / 0.45);
+  }
 }
 
 /* Contact options (app/contact/page.tsx): on hover the card lifts and
@@ -830,7 +894,16 @@ address {
     transform: none;
   }
   .marquee-track,
-  .spot-ring {
+  .spot-ring,
+  .page-hero-media,
+  .page-hero-text,
+  .img-parallax {
     animation: none;
+  }
+  .js .img-reveal[data-reveal]::after {
+    transform: scaleY(0);
+  }
+  .js .img-reveal[data-reveal] .img-reveal-inner {
+    transform: none;
   }
 }

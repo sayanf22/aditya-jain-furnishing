@@ -1,12 +1,13 @@
 // Contact: the enquiry form plus every way to reach the showroom
-// (agreement §02: enquiry form, chat, Instagram, phone). Pre-rendered at
-// build time from D1. The Instagram option appears once a handle is added
-// in the settings.
+// (agreement §02: enquiry form, chat, Instagram, phone). Opens with a
+// full-width photo like the other pages. Pre-rendered at build time from
+// D1. The Instagram option appears once a handle is added in the settings.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { EnquiryForm } from "@/components/EnquiryForm";
 import { ArrowRightIcon, ArrowUpRightIcon, InstagramIcon, MapPinIcon, PhoneIcon, WhatsAppIcon } from "@/components/icons";
-import { Words } from "@/components/Words";
+import { PageHero } from "@/components/PageHero";
+import { RevealImage } from "@/components/RevealImage";
 import { enquiryMessage, instagramLink, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
 import { contactFrom, getCategories, getSettings } from "@/lib/content";
 
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
   description:
     "Call, message or visit the Delta Furnishings showroom in Kirti Nagar, New Delhi, or send an enquiry for your home or a client's project.",
 };
+
+const delay = (n: number) => ({ ["--reveal-delay" as string]: n });
 
 export default async function ContactPage() {
   const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
@@ -33,23 +36,23 @@ export default async function ContactPage() {
   options.push({ href: directions, external: true, icon: <MapPinIcon className="h-5 w-5" />, title: "Get directions", detail: contact.addressLine2 });
 
   return (
-    <main className="pt-16 sm:pt-20">
-      <section className="shell pt-12 pb-20 sm:pt-16 sm:pb-28 lg:pt-20" aria-labelledby="contact-title">
+    <main>
+      <PageHero
+        id="contact-title"
+        label="Contact"
+        title={["Talk to", { accent: "the showroom" }]}
+        intro="Ask about a fabric, a product or a visit. For your home or a client's project."
+        image={settings.contact_hero_image ?? null}
+        alt="White sheer curtains at a window"
+        size="short"
+      />
+
+      <section className="shell py-16 sm:py-24 lg:py-28" aria-label="Ways to reach us">
         <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-16 xl:gap-24">
           <div>
-            <p className="section-label hero-rise">
-              Contact
-            </p>
-            <h1 id="contact-title" className="mt-3 text-[2.1rem] leading-[1.1] font-medium sm:text-[2.8rem] lg:text-[3.3rem]">
-              <Words parts={["Talk to", { accent: "the showroom" }]} mode="auto" />
-            </h1>
-            <p className="mt-4 max-w-md text-[1.02rem] leading-relaxed text-ink-soft hero-rise" style={{ ["--rise-delay" as string]: 2 }}>
-              Ask about a fabric, a product or a visit. For your home or a client&apos;s project.
-            </p>
-
-            <ul className="mt-10 grid gap-3">
+            <ul className="grid gap-3">
               {options.map((o, i) => (
-                <li key={o.title} className="hero-rise" style={{ ["--rise-delay" as string]: i + 3 }}>
+                <li key={o.title} data-reveal style={delay(i)}>
                   <a
                     href={o.href}
                     {...(o.external ? { target: "_blank", rel: "noopener" } : {})}
@@ -74,18 +77,32 @@ export default async function ContactPage() {
               ))}
             </ul>
 
-            <div className="mt-8 rounded-[1.5rem] bg-night p-6 text-ivory sm:p-8 hero-rise" style={{ ["--rise-delay" as string]: options.length + 3 }}>
-              <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-terracotta-light uppercase">Showroom</p>
-              <address className="mt-4 text-[1rem] leading-relaxed">
-                <span className="block text-[1.15rem] font-medium">{contact.legalName}</span>
-                <span className="block text-ivory/80">{contact.addressLine1}</span>
-                <span className="block text-ivory/80">{contact.addressLine2}</span>
-              </address>
-              {contact.gstin && <p className="mt-4 text-[0.82rem] tracking-[0.06em] text-ivory/60">GSTIN {contact.gstin}</p>}
+            {/* Showroom card: a photo of the showroom on top, so visitors
+                know what to look for. */}
+            <div className="mt-8 overflow-hidden rounded-[1.5rem] bg-night text-ivory" data-reveal style={delay(options.length)}>
+              {settings.about_showroom_image && (
+                <RevealImage
+                  image={settings.about_showroom_image}
+                  alt="Inside a furnished room"
+                  sizes="(min-width: 1024px) 40vw, 100vw"
+                  className="aspect-[16/9]"
+                  cover="var(--color-night)"
+                  delay={options.length + 1}
+                />
+              )}
+              <div className="p-6 sm:p-8">
+                <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-terracotta-light uppercase">Showroom</p>
+                <address className="mt-4 text-[1rem] leading-relaxed">
+                  <span className="block text-[1.15rem] font-medium">{contact.legalName}</span>
+                  <span className="block text-ivory/80">{contact.addressLine1}</span>
+                  <span className="block text-ivory/80">{contact.addressLine2}</span>
+                </address>
+                {contact.gstin && <p className="mt-4 text-[0.82rem] tracking-[0.06em] text-ivory/60">GSTIN {contact.gstin}</p>}
+              </div>
             </div>
           </div>
 
-          <div className="rounded-[2rem] bg-sand p-3 sm:p-5 lg:sticky lg:top-28 hero-rise" style={{ ["--rise-delay" as string]: 2 }}>
+          <div className="rounded-[2rem] bg-sand p-3 sm:p-5 lg:sticky lg:top-28" data-reveal style={delay(1)}>
             <EnquiryForm categories={categories.map((c) => ({ slug: c.slug, name: c.name }))} source="contact" whatsappHref={whatsapp} />
           </div>
         </div>

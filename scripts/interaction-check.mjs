@@ -12,7 +12,7 @@
 //   - enquiry form errors, B2B firm field and submit
 //   - phone menu opens and closes
 //   - frame timing while animations run (long frames = visible stutter)
-//   - Gallery: photos uncropped, filter, search, viewer open / next / close
+//   - About Us: photo header, reveals, smooth scrolling, links; Gallery gone
 //   - Contact: links, hover, the enquiry form sends with source "contact"
 import { chromium } from "@playwright/test";
 
@@ -418,67 +418,49 @@ const browser = await chromium.launch();
   await page.close();
 }
 
-// Gallery (desktop, 4x slower CPU): photos uncropped, filter, search, the
-// viewer opens smoothly, steps with the arrow key and closes with Escape.
+// About Us (desktop, 4x slower CPU): the header sits on the photo, the
+// photo drifts with the scroll (scroll-driven animation), every section and
+// photo is uncovered once scrolled to, and scrolling stays smooth.
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const cdp = await page.context().newCDPSession(page);
-  await page.goto(new URL("/gallery", url).href, { waitUntil: "networkidle" });
+  const res = await page.goto(new URL("/about", url).href, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.waitForTimeout(1200);
-  const items = page.locator("[data-gal-id]");
-  const total = await items.count();
-  const shape = await page.evaluate(async () => {
-    for (let y = 0; y < document.body.scrollHeight; y += 450) {
+  const top = await page.evaluate(() => ({
+    header: getComputedStyle(document.querySelector("header")).backgroundColor,
+    h1: document.querySelector("h1")?.textContent.replace(/\s+/g, " ").trim(),
+    heroImg: document.querySelector(".page-hero-img")?.complete,
+    scrollDriven: CSS.supports("animation-timeline: scroll()") ? getComputedStyle(document.querySelector(".page-hero-media")).animationName : "not supported",
+  }));
+  ok("About Us page loads with its photo header", res.status() === 200 && top.heroImg && /Kirti Nagar/.test(top.h1), `"${top.h1}"`);
+  ok("header is transparent over the About Us photo", top.header === "rgba(0, 0, 0, 0)", top.header);
+  ok("About Us photo drifts with the scroll", top.scrollDriven === "page-hero-drift" || top.scrollDriven === "not supported", top.scrollDriven);
+
+  const scrollTiming = frameTiming(page, 3500);
+  const after = await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 30) {
       window.scrollTo(0, y);
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => requestAnimationFrame(r));
     }
-    await new Promise((r) => setTimeout(r, 1200));
-    window.scrollTo(0, 0);
-    const diffs = [...document.querySelectorAll("[data-gal-id] img")].map((img) => {
-      const r = img.getBoundingClientRect();
-      const natural = img.naturalWidth / img.naturalHeight;
-      return Math.abs(r.width / r.height - natural) / natural;
-    });
-    return { max: Math.max(...diffs), hidden: document.querySelectorAll(".js [data-reveal]:not([data-shown])").length };
+    await new Promise((r) => setTimeout(r, 2200));
+    const covers = [...document.querySelectorAll(".img-reveal")].filter((el) => getComputedStyle(el, "::after").transform !== "matrix(1, 0, 0, 0, 0, 0)").length;
+    return {
+      hidden: document.querySelectorAll(".js [data-reveal]:not([data-shown]), .js [data-words]:not([data-shown])").length,
+      covers,
+      header: getComputedStyle(document.querySelector("header")).backgroundColor,
+    };
   });
-  ok("gallery photos are never cropped", total > 0 && shape.max < 0.01, `${total} photos, frame vs photo shape differs by at most ${(shape.max * 100).toFixed(2)}%`);
-  ok("gallery shows every photo once scrolled", shape.hidden === 0, `${shape.hidden} hidden`);
+  const st = await scrollTiming;
+  ok("About Us shows every section once scrolled", after.hidden === 0, `${after.hidden} hidden`);
+  ok("About Us photos are uncovered once scrolled", after.covers === 0, `${after.covers} still covered`);
+  ok("About Us scrolling smooth", st.over50 <= 2, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
+  ok("header turns solid after scrolling", after.header !== "rgba(0, 0, 0, 0)", after.header);
 
-  const chips = page.locator('[aria-label="Filter by category"] button');
-  const second = chips.nth(1);
-  const expected = Number((await second.locator("span").innerText()).trim());
-  await second.click();
-  await page.waitForTimeout(700);
-  const filtered = await items.count();
-  ok("gallery category filter", filtered === expected && filtered < total, `${filtered} of ${total}`);
-  await chips.first().click();
-  const firstTitle = (await items.first().locator("button").getAttribute("aria-label")).replace(/, see larger$/, "");
-  await page.fill('input[type="search"]', firstTitle.split(" ")[0]);
-  await page.waitForTimeout(400);
-  const searched = await items.count();
-  await page.fill('input[type="search"]', "qqqq");
-  await page.waitForTimeout(300);
-  const none = await page.getByText("No photos match that search.").isVisible();
-  await page.fill('input[type="search"]', "");
-  await page.waitForTimeout(400);
-  ok("gallery search", searched >= 1 && searched < total && none, `"${firstTitle.split(" ")[0]}" -> ${searched}, nonsense -> empty message`);
-
-  const viewerTiming = frameTiming(page, 1200);
-  await items.nth(1).locator("button").click();
-  const vt = await viewerTiming;
-  const opened = await page.evaluate(() => ({ open: document.querySelector("dialog").open, lock: document.documentElement.style.overflow, label: document.querySelector("dialog").getAttribute("aria-label") }));
-  ok("gallery viewer opens on the tapped photo", opened.open && opened.lock === "hidden", `"${opened.label}"`);
-  ok("gallery viewer opens smoothly", vt.over50 <= 2, `p95 ${vt.p95.toFixed(1)} ms, max ${vt.max.toFixed(1)} ms, frames >50ms: ${vt.over50}`);
-  await page.keyboard.press("ArrowRight");
-  await page.waitForTimeout(900);
-  const stepped = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
-  const enquire = await page.locator('dialog a[href*="wa.me"]').getAttribute("href");
-  ok("gallery viewer steps to the next photo", stepped !== opened.label && decodeURIComponent(enquire).includes(stepped), `"${stepped}", Enquire message names it`);
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(900);
-  const closed = await page.evaluate(() => ({ open: document.querySelector("dialog").open, lock: document.documentElement.style.overflow }));
-  ok("gallery viewer closes with Escape", !closed.open && closed.lock === "", `open ${closed.open}`);
+  const tiles = await page.$$eval(".about-tile", (els) => els.map((a) => a.getAttribute("href")));
+  ok("About Us links to all five collections", tiles.length === 5 && tiles.every((h) => h.startsWith("/collection/")), tiles.join(", "));
+  const nav = await page.$$eval('nav[aria-label="Main"] a', (els) => els.map((a) => a.textContent.trim()));
+  ok("menu shows About Us instead of Gallery", nav.includes("About Us") && !nav.includes("Gallery"), nav.join(" · "));
   const waText = await page.evaluate(() => {
     const hits = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -486,7 +468,28 @@ const browser = await chromium.launch();
     document.querySelectorAll("[aria-label]").forEach((el) => /whatsapp/i.test(el.getAttribute("aria-label")) && hits.push(el.getAttribute("aria-label")));
     return hits;
   });
-  ok("gallery has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
+  ok("About Us has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
+  const gallery = await page.goto(new URL("/gallery", url).href);
+  ok("old Gallery page is gone", gallery.status() === 404, `status ${gallery.status()}`);
+  await page.close();
+}
+
+// About Us on a phone: no sideways scroll, every section shows.
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await page.goto(new URL("/about", url).href, { waitUntil: "networkidle" });
+  const r = await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 300) {
+      window.scrollTo(0, y);
+      await new Promise((res) => setTimeout(res, 120));
+    }
+    await new Promise((res) => setTimeout(res, 2000));
+    return {
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      hidden: document.querySelectorAll(".js [data-reveal]:not([data-shown]), .js [data-words]:not([data-shown])").length,
+    };
+  });
+  ok("About Us on phone: no sideways scroll, all sections shown", r.overflow <= 0 && r.hidden === 0, `${r.overflow}px extra, ${r.hidden} hidden`);
   await page.close();
 }
 
@@ -525,26 +528,6 @@ const browser = await chromium.launch();
     return hits;
   });
   ok("contact has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
-  await page.close();
-}
-
-// Gallery on a phone: no sideways page scroll; the viewer's arrows work.
-{
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await page.goto(new URL("/gallery", url).href, { waitUntil: "networkidle" });
-  await page.waitForTimeout(800);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  ok("gallery: no sideways page scroll on phone", overflow <= 0, `${overflow}px extra`);
-  await page.locator("[data-gal-id] button").first().tap();
-  await page.waitForTimeout(800);
-  const before = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
-  await page.locator("dialog").getByRole("button", { name: "Next photo" }).tap();
-  await page.waitForTimeout(900);
-  const after = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
-  await page.locator("dialog").getByRole("button", { name: "Close" }).tap();
-  await page.waitForTimeout(800);
-  const open = await page.evaluate(() => document.querySelector("dialog").open);
-  ok("gallery viewer on phone: next and close", before !== after && !open, `"${before}" -> "${after}", closed ${!open}`);
   await page.close();
 }
 

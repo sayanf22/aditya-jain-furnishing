@@ -1,315 +1,378 @@
 {
-    "_comment":  "Stand-in stock images for the local design preview, used until the client sends real photos. Pexels photos: Pexels License (free for commercial use, no attribution required). Wikimedia items: CC0 / public domain. No video is used anywhere on the site. Run `npm run stock` to download and convert them into public/demo/.",
-    "images":  [
-                   {
-                       "name":  "hero-curtains",
-                       "source":  "pexels",
-                       "id":  18228697,
-                       "aspect":  [
-                                      16,
-                                      9
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600,
-                                      2048
-                                  ],
-                       "position":  "attention",
-                       "use":  "Hero slide: curtains"
-                   },
-                   {
-                       "name":  "hero-upholstery",
-                       "source":  "pexels",
-                       "id":  1866149,
-                       "aspect":  [
-                                      16,
-                                      9
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600,
-                                      2048
-                                  ],
-                       "position":  "centre",
-                       "use":  "Hero slide: upholstery (leather sofa)"
-                   },
-                   {
-                       "name":  "hero-carpets",
-                       "source":  "pexels",
-                       "id":  6969866,
-                       "aspect":  [
-                                      16,
-                                      9
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600,
-                                      2048
-                                  ],
-                       "position":  "centre",
-                       "use":  "Hero slide: carpets"
-                   },
-                   {
-                       "name":  "cat-upholstery",
-                       "source":  "pexels",
-                       "id":  5824901,
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "attention",
-                       "use":  "Category tile: Upholstery Fabric"
-                   },
-                   {
-                       "name":  "cat-curtains",
-                       "source":  "pexels",
-                       "id":  19300022,
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "centre",
-                       "use":  "Category tile: Curtains \u0026 Blinds"
-                   },
-                   {
-                       "name":  "cat-carpets",
-                       "source":  "pexels",
-                       "id":  1571468,
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "south",
-                       "use":  "Category tile: Carpets \u0026 Mats"
-                   },
-                   {
-                       "name":  "cat-cushions",
-                       "source":  "pexels",
-                       "id":  5490356,
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "attention",
-                       "use":  "Category tile: Cushions"
-                   },
-                   {
-                       "name":  "cat-wallpaper",
-                       "source":  "wikimedia",
-                       "url":  "https://upload.wikimedia.org/wikipedia/commons/2/2f/Willow_MET_DP306739.jpg",
-                       "credit":  "William Morris, Willow (Metropolitan Museum of Art, CC0)",
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "centre",
-                       "use":  "Category tile: Wallpaper"
-                   },
-                   {
-                       "name":  "decor-velvet",
-                       "source":  "pexels",
-                       "id":  1918291,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "centre",
-                       "use":  "Interactive dÃ©cor: green velvet look"
-                   },
-                   {
-                       "name":  "decor-leather",
-                       "source":  "pexels",
-                       "id":  1866149,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "centre",
-                       "use":  "Interactive dÃ©cor: tan leather look"
-                   },
-                   {
-                       "name":  "decor-grey",
-                       "source":  "pexels",
-                       "id":  1571471,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "centre",
-                       "use":  "Interactive dÃ©cor: grey weave look"
-                   },
-                   {
-                       "name":  "decor-ivory",
-                       "source":  "pexels",
-                       "id":  4352247,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "attention",
-                       "use":  "Interactive dÃ©cor: ivory linen look"
-                   },
-                   {
-                       "name":  "enquiry-showroom",
-                       "source":  "pexels",
-                       "id":  2079249,
-                       "aspect":  [
-                                      4,
-                                      5
-                                  ],
-                       "widths":  [
-                                      480,
-                                      800,
-                                      1200
-                                  ],
-                       "position":  "centre",
-                       "use":  "Quick enquiry band image"
-                   },
-                   {
-                       "name":  "look-living",
-                       "source":  "pexels",
-                       "id":  1571460,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "centre",
-                       "use":  "Shop the look: living room"
-                   },
-                   {
-                       "name":  "look-bedroom",
-                       "source":  "pexels",
-                       "id":  6782567,
-                       "aspect":  [
-                                      4,
-                                      3
-                                  ],
-                       "widths":  [
-                                      640,
-                                      1080,
-                                      1600
-                                  ],
-                       "position":  "centre",
-                       "use":  "Shop the look: bedroom"
-                   },
-                   { "name": "gal-curtains-sheer", "source": "pexels", "id": 14095427, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: sheer curtains in evening light" },
-                   { "name": "gal-curtains-print", "source": "pexels", "id": 9298743, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: patterned curtains" },
-                   { "name": "gal-curtains-white", "source": "pexels", "id": 9980246, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: white sheer curtains" },
-                   { "name": "gal-curtains-amber", "source": "pexels", "id": 18252187, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: amber curtains" },
-                   { "name": "gal-blinds-wood", "source": "pexels", "id": 18622213, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wooden blinds" },
-                   { "name": "gal-blinds-vertical", "source": "pexels", "id": 4220436, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: vertical blinds" },
-                   { "name": "gal-fabric-swatches", "source": "pexels", "id": 6766365, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: fabric swatch book" },
-                   { "name": "gal-fabric-rolls", "source": "pexels", "id": 10579084, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: printed fabric rolls" },
-                   { "name": "gal-fabric-weave", "source": "pexels", "id": 6634450, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: woven fabric close-up" },
-                   { "name": "gal-fabric-stack", "source": "pexels", "id": 365067, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: folded fabrics" },
-                   { "name": "gal-carpet-pattern", "source": "pexels", "id": 36687249, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: patterned carpet" },
-                   { "name": "gal-carpet-room", "source": "pexels", "id": 1571468, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: carpet in a living room" },
-                   { "name": "gal-carpet-large", "source": "pexels", "id": 6969866, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: large patterned carpet" },
-                   { "name": "gal-cushion-mustard", "source": "pexels", "id": 6312024, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: mustard cushion" },
-                   { "name": "gal-cushion-lounge", "source": "pexels", "id": 17331180, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: cushions in a lounge" },
-                   { "name": "gal-cushion-sofa", "source": "pexels", "id": 5490356, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: cushions on a sofa" },
-                   { "name": "gal-wallpaper-trellis", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Trellis_MET_DP306738.jpg", "credit": "William Morris, Trellis (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
-                   { "name": "gal-wallpaper-fruit", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Fruit_or_Pomegranate_MET_DP109416.jpg", "credit": "William Morris, Fruit or Pomegranate (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
-                   { "name": "gal-wallpaper-tulip", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Wild_Tulip_MET_DP146520.jpg", "credit": "William Morris, Wild Tulip (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
-                   { "name": "gal-wallpaper-blackthorn", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/7/78/Blackthorn_MET_ES8433.jpg", "credit": "William Morris, Blackthorn (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" }
-               ],
-    "swatches":  [
-                     {
-                         "name":  "swatch-velvet",
-                         "from":  "decor-velvet",
-                         "box":  [
-                                     0.32,
-                                     0.55,
-                                     0.12,
-                                     0.12
-                                 ],
-                         "use":  "Velvet swatch, cut from the sofa in decor-velvet"
-                     },
-                     {
-                         "name":  "swatch-leather",
-                         "from":  "decor-leather",
-                         "box":  [
-                                     0.42,
-                                     0.42,
-                                     0.1,
-                                     0.1
-                                 ],
-                         "use":  "Leather swatch, cut from the sofa in decor-leather"
-                     },
-                     {
-                         "name":  "swatch-grey",
-                         "from":  "decor-grey",
-                         "box":  [
-                                     0.06,
-                                     0.6,
-                                     0.1,
-                                     0.1
-                                 ],
-                         "use":  "Grey weave swatch, cut from the sofa in decor-grey"
-                     },
-                     {
-                         "name":  "swatch-ivory",
-                         "from":  "decor-ivory",
-                         "box":  [
-                                     0.3,
-                                     0.45,
-                                     0.12,
-                                     0.12
-                                 ],
-                         "use":  "Ivory linen swatch, cut from the sofa in decor-ivory"
-                     }
-                 ]
+  "_comment": "Stand-in stock images for the local design preview, used until the client sends real photos. Pexels photos: Pexels License (free for commercial use, no attribution required). Wikimedia items: CC0 / public domain. No video is used anywhere on the site. Run `npm run stock` to download and convert them into public/demo/.",
+  "images": [
+    {
+      "name": "hero-curtains",
+      "source": "pexels",
+      "id": 18228697,
+      "aspect": [
+        16,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "attention",
+      "use": "Hero slide: curtains"
+    },
+    {
+      "name": "hero-upholstery",
+      "source": "pexels",
+      "id": 1866149,
+      "aspect": [
+        16,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "centre",
+      "use": "Hero slide: upholstery (leather sofa)"
+    },
+    {
+      "name": "hero-carpets",
+      "source": "pexels",
+      "id": 6969866,
+      "aspect": [
+        16,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "centre",
+      "use": "Hero slide: carpets"
+    },
+    {
+      "name": "cat-upholstery",
+      "source": "pexels",
+      "id": 5824901,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "attention",
+      "use": "Category tile: Upholstery Fabric"
+    },
+    {
+      "name": "cat-curtains",
+      "source": "pexels",
+      "id": 19300022,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "centre",
+      "use": "Category tile: Curtains & Blinds"
+    },
+    {
+      "name": "cat-carpets",
+      "source": "pexels",
+      "id": 1571468,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "south",
+      "use": "Category tile: Carpets & Mats"
+    },
+    {
+      "name": "cat-cushions",
+      "source": "pexels",
+      "id": 5490356,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "attention",
+      "use": "Category tile: Cushions"
+    },
+    {
+      "name": "cat-wallpaper",
+      "source": "wikimedia",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Willow_MET_DP306739.jpg",
+      "credit": "William Morris, Willow (Metropolitan Museum of Art, CC0)",
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "centre",
+      "use": "Category tile: Wallpaper"
+    },
+    {
+      "name": "decor-velvet",
+      "source": "pexels",
+      "id": 1918291,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "Interactive dÃ©cor: green velvet look"
+    },
+    {
+      "name": "decor-leather",
+      "source": "pexels",
+      "id": 1866149,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "Interactive dÃ©cor: tan leather look"
+    },
+    {
+      "name": "decor-grey",
+      "source": "pexels",
+      "id": 1571471,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "Interactive dÃ©cor: grey weave look"
+    },
+    {
+      "name": "decor-ivory",
+      "source": "pexels",
+      "id": 4352247,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "attention",
+      "use": "Interactive dÃ©cor: ivory linen look"
+    },
+    {
+      "name": "enquiry-showroom",
+      "source": "pexels",
+      "id": 2079249,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "centre",
+      "use": "Quick enquiry band image"
+    },
+    {
+      "name": "look-living",
+      "source": "pexels",
+      "id": 1571460,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "Shop the look: living room"
+    },
+    {
+      "name": "look-bedroom",
+      "source": "pexels",
+      "id": 6782567,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "Shop the look: bedroom"
+    },
+    {
+      "name": "about-hero",
+      "source": "pexels",
+      "id": 365067,
+      "aspect": [
+        16,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "centre",
+      "use": "About Us: header photo (folded fabrics)"
+    },
+    {
+      "name": "about-story",
+      "source": "pexels",
+      "id": 6766365,
+      "aspect": [
+        4,
+        5
+      ],
+      "widths": [
+        480,
+        800,
+        1200
+      ],
+      "position": "attention",
+      "use": "About Us: intro photo (fabric swatches)"
+    },
+    {
+      "name": "about-showroom",
+      "source": "pexels",
+      "id": 17331180,
+      "aspect": [
+        4,
+        3
+      ],
+      "widths": [
+        640,
+        1080,
+        1600
+      ],
+      "position": "centre",
+      "use": "About Us and Contact: showroom photo (stand-in interior)"
+    },
+    {
+      "name": "about-band",
+      "source": "pexels",
+      "id": 18252187,
+      "aspect": [
+        21,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "centre",
+      "use": "About Us: bottom photo band (amber curtains)"
+    },
+    {
+      "name": "contact-hero",
+      "source": "pexels",
+      "id": 9980246,
+      "aspect": [
+        16,
+        9
+      ],
+      "widths": [
+        640,
+        1080,
+        1600,
+        2048
+      ],
+      "position": "centre",
+      "use": "Contact: header photo (white sheer curtains)"
+    }
+  ],
+  "swatches": [
+    {
+      "name": "swatch-velvet",
+      "from": "decor-velvet",
+      "box": [
+        0.32,
+        0.55,
+        0.12,
+        0.12
+      ],
+      "use": "Velvet swatch, cut from the sofa in decor-velvet"
+    },
+    {
+      "name": "swatch-leather",
+      "from": "decor-leather",
+      "box": [
+        0.42,
+        0.42,
+        0.1,
+        0.1
+      ],
+      "use": "Leather swatch, cut from the sofa in decor-leather"
+    },
+    {
+      "name": "swatch-grey",
+      "from": "decor-grey",
+      "box": [
+        0.06,
+        0.6,
+        0.1,
+        0.1
+      ],
+      "use": "Grey weave swatch, cut from the sofa in decor-grey"
+    },
+    {
+      "name": "swatch-ivory",
+      "from": "decor-ivory",
+      "box": [
+        0.3,
+        0.45,
+        0.12,
+        0.12
+      ],
+      "use": "Ivory linen swatch, cut from the sofa in decor-ivory"
+    }
+  ]
 }

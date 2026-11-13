@@ -1,7 +1,8 @@
 "use client";
 
-// Site header. On the Home page it sits transparent over the hero and turns
-// solid ivory once the visitor scrolls; on other pages it is solid.
+// Site header. On pages that open with a full-width photo (Home, About Us,
+// Contact) it sits transparent over the photo and turns solid ivory once
+// the visitor scrolls; on other pages it is solid.
 //
 // Phone menu: a full-screen panel below the header. It fades and settles
 // into place, the links follow one by one, and the menu icon's three lines
@@ -10,7 +11,7 @@
 // trap the fixed panel inside the header's own box.
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type CSSProperties } from "react";
-import { NAV } from "@/lib/nav";
+import { NAV, PHOTO_HEADER_PAGES } from "@/lib/nav";
 import { ArrowRightIcon, PhoneIcon, WhatsAppIcon } from "./icons";
 import { SiteLink } from "./SiteLink";
 
@@ -23,7 +24,7 @@ type Props = {
 
 export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
   const pathname = usePathname();
-  const overlay = pathname === "/";
+  const overlay = PHOTO_HEADER_PAGES.includes(pathname);
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -63,7 +64,10 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
     <>
       <header
         className={`fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,color] duration-500 ${
-          solid ? "bg-ivory/95 text-ink shadow-[0_1px_0_rgba(31,27,23,0.08)] backdrop-blur-md" : "bg-transparent text-white"
+          // Solid colour, no backdrop blur: a blur behind a fixed header is
+          // redrawn on every scroll frame and makes scrolling stutter on
+          // slower phones and laptops.
+          solid ? "bg-ivory text-ink shadow-[0_1px_0_rgba(31,27,23,0.08)]" : "bg-transparent text-white"
         }`}
       >
         <div className="shell grid h-16 grid-cols-[1fr_auto_1fr] items-center sm:h-20">

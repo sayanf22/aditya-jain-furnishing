@@ -1,4 +1,4 @@
-# Aditya Jain – Home Furnishing Showroom Website: Build Plan
+﻿# Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
 Status: plan v8. Home page revision rounds 2 to 4 built locally with stand-in images (no video, photo-based "Our looks", enquiry form, full-width footer, category cards that widen on hover); waiting for your review before the Collection page.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
@@ -53,7 +53,7 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 | Category order | Meeting notes give two different orders | 1 Upholstery Fabric, 2 Curtains & Blinds, 3 Carpets & Mats, 4 Cushions, 5 Wallpaper |
 | Wallpaper | 5–6 categories | One collection |
 | Carpets | Single collection | Carpets, Mats, Direct collections |
-| Pages | Home, Categories, Subcategories, Gallery, About, Contact | Home, Collection, Gallery, Contact (no About page) |
+| Pages | Home, Categories, Subcategories, Gallery, About, Contact | Home, Collection, About Us, Contact. Gallery was built, then replaced by About Us on 13 Nov 2026 (your call: Gallery and Collection showed the same thing) |
 | Enquiry form | Excluded (12 Oct) | Included, with B2C / B2B dropdown; shown in the dashboard; no email or SMS alerts |
 | Instagram | Not mentioned | Quick-enquiry link, plus tap-to-call |
 | Interactive décor | "Choose curtain, then fabric" game (meeting) | Admin uploads ready images; visitor taps a texture; the image swaps |
@@ -66,7 +66,7 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 **Pages**, built in this order, one at a time:
 1. **Home**: Hero (2–3 animations) → Five main categories (hover expands subcategories) → Interactive home décor → Watch & Buy ("Our looks": room photos with tappable product dots, no video) → Customer testimonials → Quick enquiry with the enquiry form.
 2. **Collection**: browse by category and subcategory, with images and descriptions.
-3. **Gallery**: products and décor, with zoom and search.
+3. **About Us** (replaced Gallery, 13 Nov 2026): photo header, who we are, the five collections, who we work with (homes, interior designers and businesses), visit the showroom, closing photo band. Copy uses only confirmed facts; the client's own story comes later.
 4. **Contact**: enquiry form, WhatsApp, Instagram, phone.
 5. **Admin dashboard** (secure login): categories, subcategories, products and images, décor images, Watch & Buy looks (photo and product dots), testimonials, enquiries (B2C/B2B), contact details.
 
@@ -253,7 +253,7 @@ Each step ends with a check before the next one starts.
 | 4 | **Home page**, section by section in the agreed order, with its animations (see §11a) | Screenshots; `scripts/interaction-check.mjs` all PASS; your approval | Built, waiting for your review |
 | 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | Done (§11a) |
 | 6 | **Collection pages** | Your approval | |
-| 7 | **Gallery** | Your approval | Built with 20 stand-in photos (uncropped masonry grid, category filter, search, zoom viewer with Enquire); checks in `scripts/interaction-check.mjs`; phone LCP 1.5 s, CLS 0 |
+| 7 | **About Us** (replaced Gallery) | Your approval | Built with stand-in photos; photo header on About Us and Contact; scroll-driven photo drift and photo reveals; checks in `scripts/interaction-check.mjs`; phone LCP 1.0 s, CLS 0 |
 | 8 | **Contact** page. The enquiry form and `/api/enquiry` were already built with the Home page (round 2) and are reused here | Test enquiry saved; bad input rejected (`scripts/enquiry-check.mjs` already passes) | Built: Message us, Call, Instagram (once a handle is set), Get directions, showroom address with GSTIN, and the enquiry form (source "contact"); checks in `scripts/interaction-check.mjs`; phone LCP 0.7 s, CLS 0 |
 | 9 | **Admin dashboard** and Publish button | Full add, edit, reorder, delete and rebuild cycle locally | |
 | 10 | Performance and basic SEO | Lighthouse mobile 95+; sitemap valid | |
