@@ -134,70 +134,6 @@
       "use": "Category tile: Wallpaper"
     },
     {
-      "name": "decor-velvet",
-      "source": "pexels",
-      "id": 1918291,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "centre",
-      "use": "Interactive dÃ©cor: green velvet look"
-    },
-    {
-      "name": "decor-leather",
-      "source": "pexels",
-      "id": 1866149,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "centre",
-      "use": "Interactive dÃ©cor: tan leather look"
-    },
-    {
-      "name": "decor-grey",
-      "source": "pexels",
-      "id": 1571471,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "centre",
-      "use": "Interactive dÃ©cor: grey weave look"
-    },
-    {
-      "name": "decor-ivory",
-      "source": "pexels",
-      "id": 4352247,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "attention",
-      "use": "Interactive dÃ©cor: ivory linen look"
-    },
-    {
       "name": "enquiry-showroom",
       "source": "pexels",
       "id": 2079249,
@@ -212,38 +148,6 @@
       ],
       "position": "centre",
       "use": "Quick enquiry band image"
-    },
-    {
-      "name": "look-living",
-      "source": "pexels",
-      "id": 1571460,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "centre",
-      "use": "Shop the look: living room"
-    },
-    {
-      "name": "look-bedroom",
-      "source": "pexels",
-      "id": 6782567,
-      "aspect": [
-        4,
-        3
-      ],
-      "widths": [
-        640,
-        1080,
-        1600
-      ],
-      "position": "centre",
-      "use": "Shop the look: bedroom"
     },
     {
       "name": "about-hero",
@@ -329,50 +233,5 @@
       "use": "Contact: header photo (white sheer curtains)"
     }
   ],
-  "swatches": [
-    {
-      "name": "swatch-velvet",
-      "from": "decor-velvet",
-      "box": [
-        0.32,
-        0.55,
-        0.12,
-        0.12
-      ],
-      "use": "Velvet swatch, cut from the sofa in decor-velvet"
-    },
-    {
-      "name": "swatch-leather",
-      "from": "decor-leather",
-      "box": [
-        0.42,
-        0.42,
-        0.1,
-        0.1
-      ],
-      "use": "Leather swatch, cut from the sofa in decor-leather"
-    },
-    {
-      "name": "swatch-grey",
-      "from": "decor-grey",
-      "box": [
-        0.06,
-        0.6,
-        0.1,
-        0.1
-      ],
-      "use": "Grey weave swatch, cut from the sofa in decor-grey"
-    },
-    {
-      "name": "swatch-ivory",
-      "from": "decor-ivory",
-      "box": [
-        0.3,
-        0.45,
-        0.12,
-        0.12
-      ],
-      "use": "Ivory linen swatch, cut from the sofa in decor-ivory"
-    }
-  ]
+  "swatches": []
 }

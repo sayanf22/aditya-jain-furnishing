@@ -19,32 +19,31 @@ export type Category = {
 };
 
 export type HeroSlide = { image: string; alt: string; title: string; cta: string; href: string };
-export type DecorOption = {
+export type RoomSlug = "wall" | "curtains" | "blind" | "sofa" | "armchair" | "cushions" | "rug";
+export type RoomOption = {
   id: number;
   name: string;
-  swatchKey: string;
-  imageKey: string;
-  width: number;
-  height: number;
+  description: string | null;
+  textureKey: string;
+  tile: number;
+  colour: string;
 };
-export type DecorScene = { id: number; name: string; options: DecorOption[] };
-export type LookHotspot = {
+export type RoomElement = {
   id: number;
-  x: number;
-  y: number;
+  slug: RoomSlug;
   name: string;
+  description: string | null;
   categoryName: string | null;
   categorySlug: string | null;
+  options: RoomOption[];
 };
-export type Look = { id: number; title: string; imageKey: string; hotspots: LookHotspot[] };
 export type Testimonial = { id: number; name: string; text: string };
 
 export type HomeContent = {
   contact: ContactInfo;
   heroSlides: HeroSlide[];
   categories: Category[];
-  decor: DecorScene | null;
-  looks: Look[];
+  room: RoomElement[];
   testimonials: Testimonial[];
 };
 
@@ -109,75 +108,62 @@ export async function getHomeContent(): Promise<HomeContent> {
   const database = await db();
   const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
 
-  const [scenes, options, looks, hotspots, testimonials] = await database.batch([
-    database.prepare("SELECT id, name FROM decor_scenes WHERE visible = 1 ORDER BY position, id LIMIT 1"),
+  const [elements, options, testimonials] = await database.batch([
     database.prepare(
-      `SELECT o.id, o.scene_id, o.name, o.swatch_image_key, o.result_image_key, o.width, o.height
-       FROM decor_options o ORDER BY o.position, o.id`,
+      `SELECT e.id, e.slug, e.name, e.description, c.name AS category_name, c.slug AS category_slug
+       FROM room_elements e LEFT JOIN categories c ON c.id = e.category_id
+       WHERE e.visible = 1 ORDER BY e.position, e.id`,
     ),
-    database.prepare("SELECT id, title, image_key FROM looks WHERE visible = 1 ORDER BY position, id"),
     database.prepare(
-      `SELECT h.id, h.look_id, h.x, h.y, h.name, c.name AS category_name, c.slug AS category_slug
-       FROM look_hotspots h LEFT JOIN categories c ON c.id = h.category_id
-       ORDER BY h.position, h.id`,
+      `SELECT id, element_id, name, description, texture_key, tile, colour
+       FROM room_options WHERE visible = 1 ORDER BY position, id`,
     ),
     database.prepare("SELECT id, name, text FROM testimonials WHERE visible = 1 ORDER BY position, id"),
   ]);
 
-  const spotRows = hotspots.results as {
+  const optionRows = options.results as {
     id: number;
-    look_id: number;
-    x: number;
-    y: number;
+    element_id: number;
     name: string;
-    category_name: string | null;
-    category_slug: string | null;
+    description: string | null;
+    texture_key: string;
+    tile: number;
+    colour: string;
   }[];
 
-  const scene = (scenes.results as { id: number; name: string }[])[0];
-  const sceneOptions = scene
-    ? (options.results as {
-        id: number;
-        scene_id: number;
-        name: string;
-        swatch_image_key: string;
-        result_image_key: string;
-        width: number;
-        height: number;
-      }[])
-        .filter((o) => o.scene_id === scene.id)
-        .map((o) => ({
-          id: o.id,
-          name: o.name,
-          swatchKey: o.swatch_image_key,
-          imageKey: o.result_image_key,
-          width: o.width,
-          height: o.height,
-        }))
-    : [];
+  const room = (
+    elements.results as {
+      id: number;
+      slug: RoomSlug;
+      name: string;
+      description: string | null;
+      category_name: string | null;
+      category_slug: string | null;
+    }[]
+  ).map((e) => ({
+    id: e.id,
+    slug: e.slug,
+    name: e.name,
+    description: e.description,
+    categoryName: e.category_name,
+    categorySlug: e.category_slug,
+    options: optionRows
+      .filter((o) => o.element_id === e.id)
+      .map((o) => ({
+        id: o.id,
+        name: o.name,
+        description: o.description,
+        textureKey: o.texture_key,
+        tile: o.tile,
+        colour: o.colour,
+      })),
+  }));
 
   return {
     contact: contactFrom(settings),
     heroSlides: parseSlides(settings.hero_slides),
     categories,
-    decor: scene && sceneOptions.length > 0 ? { id: scene.id, name: scene.name, options: sceneOptions } : null,
-    looks: (looks.results as { id: number; title: string; image_key: string }[])
-      .map((l) => ({
-        id: l.id,
-        title: l.title,
-        imageKey: l.image_key,
-        hotspots: spotRows
-          .filter((h) => h.look_id === l.id)
-          .map((h) => ({
-            id: h.id,
-            x: h.x,
-            y: h.y,
-            name: h.name,
-            categoryName: h.category_name,
-            categorySlug: h.category_slug,
-          })),
-      }))
-      .filter((l) => l.hotspots.length > 0),
+    room,
     testimonials: testimonials.results as Testimonial[],
   };
 }

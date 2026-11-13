@@ -5,7 +5,7 @@
 //   1. Apply the migrations (schema, catalogue, business details).
 //   2. On Cloudflare Workers Builds only (WORKERS_CI=1, set by Cloudflare):
 //      load the stand-in design content (seeds/demo-local.sql: stock photos
-//      for the hero, décor and looks) so the live preview matches the local
+//      for the hero, categories and interactive room) so the live preview matches the local
 //      one, then remove the "Sample review" testimonials, which must not go
 //      on a public site. Real content comes from the admin dashboard later.
 //      On this computer the local database is left as it is.

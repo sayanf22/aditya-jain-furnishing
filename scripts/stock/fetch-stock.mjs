@@ -3,7 +3,8 @@
 //   images   -> public/demo/<name>-<width>.webp (cropped to the given aspect)
 //   swatches -> public/demo/<name>-160.webp and -320.webp (cut from an image)
 // Originals are cached in .stock/originals/ (not committed). The site uses
-// no video.
+// no video. The interactive room's textures come from make-textures.mjs;
+// their sizes.json entries are kept.
 //
 // Usage: npm run stock
 
@@ -36,7 +37,10 @@ function sourceUrl(item) {
   return item.url;
 }
 
-const sizes = {};
+// Keep the room textures, which scripts/stock/make-textures.mjs adds.
+const sizesFile = path.join(outDir, "sizes.json");
+const previous = existsSync(sizesFile) ? JSON.parse(readFileSync(sizesFile, "utf8")) : {};
+const sizes = Object.fromEntries(Object.entries(previous).filter(([name]) => /^(tex|rug)-/.test(name)));
 
 for (const item of manifest.images) {
   const ext = item.source === "pexels" ? ".jpg" : path.extname(new URL(item.url).pathname) || ".jpg";
@@ -105,5 +109,5 @@ for (const sw of manifest.swatches) {
   console.log(`swatch ${sw.name.padEnd(18)} from ${base.name}`);
 }
 
-writeFileSync(path.join(outDir, "sizes.json"), JSON.stringify(sizes, null, 2) + "\n");
+writeFileSync(sizesFile, JSON.stringify(sizes, null, 2) + "\n");
 console.log("done: public/demo/sizes.json written");

@@ -90,50 +90,6 @@
       5
     ]
   },
-  "decor-velvet": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
-    ]
-  },
-  "decor-leather": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
-    ]
-  },
-  "decor-grey": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
-    ]
-  },
-  "decor-ivory": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
-    ]
-  },
   "enquiry-showroom": {
     "widths": [
       480,
@@ -143,28 +99,6 @@
     "aspect": [
       4,
       5
-    ]
-  },
-  "look-living": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
-    ]
-  },
-  "look-bedroom": {
-    "widths": [
-      640,
-      1080,
-      1600
-    ],
-    "aspect": [
-      4,
-      3
     ]
   },
   "about-hero": {
@@ -225,9 +159,8 @@
       9
     ]
   },
-  "swatch-velvet": {
+  "tex-wall-sage-trellis": {
     "widths": [
-      160,
       320
     ],
     "aspect": [
@@ -235,9 +168,8 @@
       1
     ]
   },
-  "swatch-leather": {
+  "tex-wall-ivory-damask": {
     "widths": [
-      160,
       320
     ],
     "aspect": [
@@ -245,9 +177,8 @@
       1
     ]
   },
-  "swatch-grey": {
+  "tex-wall-terracotta-stripe": {
     "widths": [
-      160,
       320
     ],
     "aspect": [
@@ -255,14 +186,274 @@
       1
     ]
   },
-  "swatch-ivory": {
+  "tex-wall-navy-floral": {
     "widths": [
-      160,
       320
     ],
     "aspect": [
       1,
       1
+    ]
+  },
+  "tex-wall-plaster": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cur-ivory-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cur-sage-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cur-rust-velvet": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cur-navy-velvet": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cur-grey-stripe": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-bl-natural-weave": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-bl-white-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-bl-charcoal-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-bl-mustard": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-sofa-green-velvet": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-sofa-grey-weave": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-sofa-ivory-boucle": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-sofa-tan-leather": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-sofa-blue-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-arm-mustard-velvet": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-arm-floral-print": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-arm-grey-herringbone": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-arm-blush-linen": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cush-terracotta": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cush-geometric": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cush-stripe": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cush-olive-velvet": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-cush-check": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "tex-floor-oak": {
+    "widths": [
+      320
+    ],
+    "aspect": [
+      1,
+      1
+    ]
+  },
+  "rug-classic-red": {
+    "widths": [
+      1000
+    ],
+    "aspect": [
+      1320,
+      800
+    ]
+  },
+  "rug-jute": {
+    "widths": [
+      1000
+    ],
+    "aspect": [
+      1320,
+      800
+    ]
+  },
+  "rug-grey-geometric": {
+    "widths": [
+      1000
+    ],
+    "aspect": [
+      1320,
+      800
+    ]
+  },
+  "rug-ivory-shag": {
+    "widths": [
+      1000
+    ],
+    "aspect": [
+      1320,
+      800
     ]
   }
 }

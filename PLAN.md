@@ -1,6 +1,6 @@
 ﻿# Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
-Status: plan v8. Home page revision rounds 2 to 4 built locally with stand-in images (no video, photo-based "Our looks", enquiry form, full-width footer, category cards that widen on hover); waiting for your review before the Collection page.
+Status: plan v9. Home, About Us and Contact built with stand-in images. On 13 Nov 2026 the décor picker and "Our looks" were merged into one interactive room on the Home page, at the client's request; waiting for review before the Collection page.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
 Client PDFs: `docs/client-pdfs/` (kept out of git).
 
@@ -15,7 +15,7 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 | Local-only | Built and tested on this computer. Nothing is deployed or connected to Cloudflare until the client's account exists. Code is pushed to GitHub only |
 | Way of working | One page at a time: Home first, get approval, then the next page |
 | Footer credit | "Made by whycreatives.in", linked to https://whycreatives.in, in the bottom row of the dark footer |
-| Video | None anywhere on the site (your instruction, round 2). Watch & Buy uses room photos instead |
+| Video | None anywhere on the site (your instruction, round 2). Watch & Buy was merged into the interactive room (13 Nov 2026) |
 | Upholstery Fabric | Flat list as in the revised agreement: Fabric, Velvet, Linen, Prints, Leather |
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
 | Code repository | Private GitHub repo `sayanf22/aditya-jain-furnishing` |
@@ -64,11 +64,11 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 ## 4. What we are building
 
 **Pages**, built in this order, one at a time:
-1. **Home**: Hero (2–3 animations) → Five main categories (hover expands subcategories) → Interactive home décor → Watch & Buy ("Our looks": room photos with tappable product dots, no video) → Customer testimonials → Quick enquiry with the enquiry form.
+1. **Home**: Hero (2–3 animations) → Five main categories (hover expands subcategories) → Interactive home décor (one interactive room; Watch & Buy "Our looks" merged into it on 13 Nov 2026) → Customer testimonials → Quick enquiry with the enquiry form.
 2. **Collection**: browse by category and subcategory, with images and descriptions.
 3. **About Us** (replaced Gallery, 13 Nov 2026): photo header, who we are, the five collections, who we work with (homes, interior designers and businesses), visit the showroom, closing photo band. Copy uses only confirmed facts; the client's own story comes later.
 4. **Contact**: enquiry form, WhatsApp, Instagram, phone.
-5. **Admin dashboard** (secure login): categories, subcategories, products and images, décor images, Watch & Buy looks (photo and product dots), testimonials, enquiries (B2C/B2B), contact details.
+5. **Admin dashboard** (secure login): categories, subcategories, products and images, the interactive room's fabrics, wallpapers and rugs (photo, name, description), testimonials, enquiries (B2C/B2B), contact details.
 
 **Catalogue** (seeded in the local database)
 | # | Category | Inside |
@@ -186,8 +186,8 @@ Node.js 22.16.0 meets every package's requirement; `.node-version` pins 22 for C
 | `subcategories` | Category, optional parent group, slug, name, one line, image, position, visible |
 | `products` | Category, optional subcategory, slug, name, description, position, visible |
 | `product_images` | R2 key, width, height, alt text, position |
-| `decor_scenes`, `decor_options` | A scene and its texture options, each with a swatch and a ready image |
-| `looks`, `look_hotspots` | Watch & Buy: a room photo, and the product dots on it (position, name, linked category or product). Replaced `watch_items` in `migrations/0004_looks_and_enquiry_fields.sql` |
+| `room_elements` | The seven parts of the interactive room (curtains, blind, sofa, armchair, cushions, rug, wallpaper): name, description, linked category, position, visible. Replaced `decor_scenes`, `decor_options`, `looks` and `look_hotspots` in `migrations/0005_interactive_room.sql` |
+| `room_options` | The fabrics (or wallpapers, rugs) for an element: name, description, texture image, repeat size, fallback colour, optional product, position, visible |
 | `testimonials` | Name, text, position, visible |
 | `enquiries` | Date, B2C or B2B, name, firm (B2B, added in 0004), phone, message, product or category, source page (added in 0004), read or unread |
 | `settings` | WhatsApp number, Instagram handle, phone, address, hero images |
@@ -271,10 +271,9 @@ Sections in the agreed order, all pre-rendered from D1 at build time:
 | 01 | Hero | Full-screen photo slides: cross-fade, slow zoom on the active photo. The headline rises in word by word on every slide, on desktop and phone. A new slide every 6 s, shown as a bar filling the active dot (the slide changes when the bar ends, so they never drift apart). The timer waits while the hero is scrolled away or the tab is in the background; it no longer stops while the mouse rests on the photo. Dots only, no pause button (your choice, round 5). No auto-advance for "reduce motion". Only the first photo loads with the page | `components/home/Hero.tsx`, `components/Words.tsx` |
 | – | Ribbon | Terracotta strip with the five category names scrolling (CSS only), pauses on hover | `components/home/Marquee.tsx` |
 | 02 | Main categories | Five tall cards in the agreed order. Desktop, in steps: hover widens the card (the others give way) and eases the photo in, then space opens under the name, then the subcategories rise in one by one; leaving reverses it. Each card has one name, one chip list and one button, so nothing is drawn twice. The photo keeps one width and the name and chip list have fixed widths, so no text re-wraps mid-animation. Phone: swipe row, subcategories always shown. Carpets & Mats also links "Direct collections" | `components/home/Categories.tsx` |
-| 03 | Interactive home décor | Rounded sand panel. Tap a texture swatch, the matching photo cross-fades in; "Enquire about this look" opens WhatsApp naming the texture | `components/home/DecorPicker.tsx` |
-| 04 | Watch & Buy ("Our looks") | Room photos in a carousel with arrows and dots. Changing look plays in steps: the new photo slides in from the side you're heading to while the old one drifts away and dims, the photo settles from a slight zoom, the product dots pop in one by one, and the side panel (look number, name, product names) slides in from the same side. Tapping a dot shows the product with "Enquire on WhatsApp" (names the product) and a link to its category. No video | `components/home/ShopTheLook.tsx` |
-| 05 | Testimonials | Right after Watch & Buy; hidden when no reviews exist | `components/home/Testimonials.tsx` |
-| 06 | Quick enquiry | Rounded sand panel: WhatsApp, Call, Instagram (once added), address with "Get directions", and the enquiry form (I am: Customer / Business (B2B), firm name for B2B only, name, mobile, optional category and message). Saved to D1; no email or SMS alerts | `components/home/QuickEnquiry.tsx`, `components/EnquiryForm.tsx` |
+| 03 | Interactive home décor (one interactive room, 13 Nov 2026) | Merges the old texture picker and Watch & Buy ("Our looks"), as the client asked. One drawn room (wallpaper, window with blind and curtains, sofa, cushions, armchair, rug on a wooden floor), large on the left with a panel on the right (below it on phones). Every element has a pulsing tap point and can also be tapped directly; the panel then shows its collection, name and description, the fabrics (or wallpapers, rugs) to pick from, the chosen one's name and description, "Enquire" (names the fabric) and a link to its collection. Picking a fabric changes it in the room: curtains and blind wipe down, the wallpaper wipes across, the rest fade. With nothing picked the panel lists everything in the room with its current fabric and offers "Enquire about this room". The floor and rug are real perspective planes (CSS 3D). On phones the room pans to the picked element and can be swiped sideways. Data: `room_elements`, `room_options`; textures are square tiles (rug: a top-down photo). No video | `components/home/room/RoomStudio.tsx`, `components/home/room/shapes.tsx` |
+| 04 | Testimonials | Right after the interactive room; hidden when no reviews exist | `components/home/Testimonials.tsx` |
+| 05 | Quick enquiry | Rounded sand panel: WhatsApp, Call, Instagram (once added), address with "Get directions", and the enquiry form (I am: Customer / Business (B2B), firm name for B2B only, name, mobile, optional category and message). Saved to D1; no email or SMS alerts | `components/home/QuickEnquiry.tsx`, `components/EnquiryForm.tsx` |
 | – | Footer | Fully dark, edge to edge, with its two top corners rounded (bottom square); content lines up with the header; the legal row leaves room so the floating WhatsApp button never covers the credit: name, "Home furnishing showroom in Kirti Nagar, New Delhi.", WhatsApp / Call / Directions, explore links, categories, showroom address and phone, ©, GSTIN, "Made by whycreatives.in" (links to https://whycreatives.in) | `components/SiteFooter.tsx` |
 | – | Floating WhatsApp | Terracotta (brand colour, not WhatsApp green), fixed on the right on every page; label slides out on hover | `components/FloatingWhatsApp.tsx` |
 
@@ -282,7 +281,7 @@ All WhatsApp buttons use the brand terracotta, and all icons share one line styl
 
 **Enquiry API** (`/api/enquiry`, `lib/enquiry.ts` through `worker/api.ts`; `app/api/enquiry/route.ts` only so the form works under `next dev`): same-site Origin only, JSON only, 8 KB body limit, hidden honeypot field, 5 a minute per visitor (rate limiting binding), field rules shared with the form (`lib/enquiry-rules.ts`), Turnstile once its secret is set.
 
-**Stand-in content (local only)**: `seeds/demo-local.sql` points the page at stock images from Pexels and a public-domain William Morris wallpaper (licences in `docs/stock-images.md`), and adds three testimonials clearly marked "Sample review". None of it goes to the client's database. The décor stand-ins show four different sofas; the client will photograph one product in each fabric.
+**Stand-in content (local only)**: `seeds/demo-local.sql` points the page at stock images from Pexels and a public-domain William Morris wallpaper (licences in `docs/stock-images.md`), and adds three testimonials clearly marked "Sample review". None of it goes to the client's database. The interactive room's fabrics, wallpapers and rugs are drawn stand-in textures (`scripts/stock/make-textures.mjs`); the client sends a square photo of each real fabric (and a top-down photo of each rug), with a name and a line of description.
 
 **Page width**: one shared width (`shell` in `app/globals.css`) for the header, every section and the footer: up to 104rem wide, side margins 20 px on phones, 32 px on tablets, 40–64 px on desktops. From 1800 px wide screens up, the root text size grows (18, 20, then 24 px), and since everything is sized in rem the whole page scales up with it. A 2560 px screen now uses about 75% of its width for content (it was 47%). Sections have more space above and below (up to 128 px on desktop), and the longer lines of text were shortened.
 

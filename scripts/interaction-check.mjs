@@ -2,13 +2,14 @@
 // browser (run against `npm run preview` on port 8787).
 //   - hero dots change the slide; headline animates word by word; the hero
 //     moves on by itself (mouse over it, after a hidden tab), dots only
-//   - Our looks: the arrow slides the next photo in
 //   - category hover widens the card, then the subcategories appear one by
 //     one; names never re-wrap and nothing overlaps (desktop)
 //   - Home after a client-side link and after back/forward shows everything
 //   - footer spans the full width
-//   - décor swatch swaps the photo
-//   - shop-the-look dots and arrows; no <video> anywhere
+//   - interactive room: tap points and shapes pick an element, its
+//     description shows, every element changes fabric (wipe or fade),
+//     smoothly; on a phone it pans to the element and can be swiped
+//   - no <video> anywhere
 //   - enquiry form errors, B2B firm field and submit
 //   - phone menu opens and closes
 //   - frame timing while animations run (long frames = visible stutter)
@@ -219,65 +220,80 @@ const browser = await chromium.launch();
   ok("no overlapping text in category cards", overlaps(rest) === 0 && overlaps(open) === 0, `rest ${overlaps(rest)}, open ${overlaps(open)}`);
   ok("category hover smooth", catTiming.over50 <= 1, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
 
-  // Décor swatch swap.
-  const radios = page.locator('[role="radiogroup"] [role="radio"]');
-  await radios.first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(800);
-  // Mid-way, the new photo is only partly revealed (a wipe, not a fade), the
-  // old one is still showing beside it, and the light edge is on screen.
-  const decor = page.locator('section[aria-labelledby="decor-title"]');
-  const wipeTiming = frameTiming(page, 1400);
-  await radios.nth(1).click();
-  await page.waitForTimeout(380);
-  const midWipe = await decor.evaluate((s) => {
-    const layers = [...s.querySelectorAll(".aspect-\\[4\\/3\\] > div")].map((d) => ({ z: d.style.zIndex, op: d.style.opacity, clip: getComputedStyle(d).clipPath }));
-    const top = layers.find((l) => l.z === "2");
-    const under = layers.find((l) => l.z === "1");
-    const m = /inset\(0px ([\d.]+)%|inset\(0px ([\d.]+)px/.exec(top?.clip ?? "");
-    return { clip: top?.clip ?? "", under: under?.op ?? "none", edge: Boolean(s.querySelector(".decor-wipe-edge")), hidden: m ? Number(m[1] ?? m[2]) : 0 };
-  });
-  const wt = await wipeTiming;
-  await page.waitForTimeout(900);
-  const checked = await radios.nth(1).getAttribute("aria-checked");
-  const label = await decor.locator('[aria-live="polite"]').innerText();
-  const shown = await decor.evaluate((s) =>
-    [...s.querySelectorAll(".aspect-\\[4\\/3\\] > div")].filter((d) => d.style.opacity === "1").map((d) => d.querySelector("img").currentSrc.split("/").pop()),
-  );
-  ok("décor swatch swaps photo", checked === "true" && label === "Tan leather" && shown.length === 1 && shown[0].includes("leather"), `${label}, showing ${shown.join(",")}`);
-  ok("décor change is a wipe", midWipe.hidden > 2 && midWipe.under === "1" && midWipe.edge, `mid-way: ${midWipe.clip}, old photo still under it, edge line ${midWipe.edge ? "on" : "off"}`);
-  ok("décor wipe smooth", wt.over50 <= 1, `p95 ${wt.p95.toFixed(1)} ms, max ${wt.max.toFixed(1)} ms, frames >50ms: ${wt.over50}`);
+  // Interactive room (Home 03): every element can be tapped and changed.
+  const room = page.locator('section[aria-labelledby="room-title"]');
+  await room.locator(".room-frame").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1400);
+  const spots = await room.locator("[data-spot]").evaluateAll((els) => els.map((e) => e.dataset.spot));
+  const ALL = ["curtains", "blind", "sofa", "armchair", "cushions", "rug", "wall"];
+  ok("room has a tap point on every element", ALL.every((s) => spots.includes(s)), spots.join(", "));
+  const frameBox = await room.locator(".room-frame").boundingBox();
+  // On a desktop the stage fills the frame, so canvas units map straight on.
+  const at = (x, y) => [frameBox.x + (x / 1600) * frameBox.width, frameBox.y + (y / 1000) * frameBox.height];
+  const heading = () => room.locator("h3").innerText().catch(() => "");
+  const layerIds = (slug) =>
+    room
+      .locator(slug === "rug" ? ".room-rug-img[data-option]" : `[data-room="${slug}"] svg[data-option]`)
+      .evaluateAll((els) => els.map((e) => e.dataset.option));
 
-  // Our looks: a dot shows its product, arrows change the look.
-  const looks = page.locator('section[aria-labelledby="looks-title"]');
-  await looks.scrollIntoViewIfNeeded();
+  // Tap the curtain fabric itself (the right-hand panel, away from its dot).
+  await page.mouse.click(...at(930, 300));
   await page.waitForTimeout(900);
-  const firstDot = looks.locator("button[aria-pressed]").first();
-  const dotName = (await firstDot.getAttribute("aria-label")) ?? "";
-  await firstDot.click();
+  const roomText = await room.innerText();
+  ok("tapping the curtains shows them with a description", (await heading()) === "Curtains" && /Floor-length curtains/.test(roomText), await heading());
+  const hint = await room.locator(".room-hint").evaluate((e) => Number(getComputedStyle(e).opacity));
+  ok("room hint goes once something is tapped", hint < 0.1, `opacity ${hint}`);
+
+  // Pick a fabric: mid-way the new one is wiping down over the old one.
+  const radios = room.locator('[role="radio"]');
+  const before = await layerIds("curtains");
+  const changeTiming = frameTiming(page, 1500);
+  await radios.nth(2).click();
+  await page.waitForTimeout(380);
+  const midLayers = await layerIds("curtains");
+  const midClip = await room.locator('[data-room="curtains"] svg.room-tex-in').evaluate((e) => getComputedStyle(e).clipPath).catch(() => "none");
+  const ct = await changeTiming;
+  await page.waitForTimeout(800);
+  const after = await layerIds("curtains");
+  const checkedName = await room.locator('[role="radio"][aria-checked="true"]').innerText();
+  ok("picking a fabric changes the curtains", after.length === 1 && after[0] !== before[0], `${before.join(",")} -> ${after.join(",")} (${checkedName})`);
+  ok("curtain fabric wipes down over the old one", midLayers.length === 2 && /inset\(0px 0px [1-9]/.test(midClip), `mid-way: ${midLayers.length} layers, ${midClip}`);
+  ok("fabric change smooth", ct.over50 <= 1, `p95 ${ct.p95.toFixed(1)} ms, max ${ct.max.toFixed(1)} ms, frames >50ms: ${ct.over50}`);
+  const panelText = await room.innerText();
+  const enquireHref = decodeURIComponent((await room.getByRole("link", { name: "Enquire", exact: true }).getAttribute("href")) ?? "");
+  ok("the chosen fabric's name and description show", panelText.includes(checkedName) && /smooth velvet pile/.test(panelText), checkedName);
+  ok("Enquire names the chosen fabric", enquireHref.includes(`"${checkedName}"`) && enquireHref.includes("curtains"), enquireHref.split("text=")[1] ?? "");
+
+  // Tap the sofa fabric and the rug (a 3D plane) directly.
+  await page.mouse.click(...at(1150, 770));
   await page.waitForTimeout(700);
-  const panelText = await looks.locator('[aria-live="polite"]').innerText();
-  ok("look dot shows its product", panelText.includes(dotName) && /Enquire/.test(panelText), dotName);
-  const activeLook = () => looks.locator("[data-look] img").evaluateAll((imgs) => imgs.find((i) => i.alt)?.alt);
-  const lookBefore = await activeLook();
-  // Mid-way through the change, the new photo is still sliding in from the
-  // right and the old one is still visible beside it.
-  const lookTiming = frameTiming(page, 1300);
-  await looks.locator('button[aria-label="Next look"]').first().click();
-  await page.waitForTimeout(160);
-  const mid = await looks.locator("[data-look]").evaluateAll((els) =>
-    els.map((el) => ({ x: new DOMMatrix(getComputedStyle(el).transform).m41, opacity: Number(getComputedStyle(el).opacity), z: el.style.zIndex })),
-  );
-  const lt = await lookTiming;
-  const lookAfter = await activeLook();
-  const incoming = mid.find((m) => m.z === "2");
-  const outgoing = mid.find((m) => m.z === "1");
-  ok("next arrow changes the look", lookBefore !== lookAfter, `${lookBefore} -> ${lookAfter}`);
-  ok(
-    "look slides in when the arrow is clicked",
-    Boolean(incoming && outgoing && incoming.x > 5 && outgoing.x < -1 && outgoing.opacity > 0.2),
-    incoming && outgoing ? `new photo at +${incoming.x.toFixed(0)} px, old at ${outgoing.x.toFixed(0)} px (opacity ${outgoing.opacity.toFixed(2)})` : "no animation found",
-  );
-  ok("look change smooth", lt.over50 <= 1, `p95 ${lt.p95.toFixed(1)} ms, max ${lt.max.toFixed(1)} ms, frames >50ms: ${lt.over50}`);
+  const sofaHead = await heading();
+  await page.mouse.click(...at(700, 930));
+  await page.waitForTimeout(700);
+  const rugHead = await heading();
+  ok("tapping the sofa and the rug picks them", sofaHead === "Sofa" && rugHead === "Rug", `${sofaHead}, ${rugHead}`);
+
+  // Every element changes when a fabric is picked from the list.
+  const changed = [];
+  for (const slug of ALL) {
+    await room.getByRole("button", { name: "Back to the whole room" }).click();
+    await page.waitForTimeout(250);
+    await room.locator(`[data-room-item="${slug}"]`).click();
+    await page.waitForTimeout(450);
+    const was = await layerIds(slug);
+    const target = room.locator('[role="radio"][aria-checked="false"]').first();
+    await target.click();
+    await page.waitForTimeout(1400);
+    const now = await layerIds(slug);
+    if (now.length === 1 && now[0] !== was[was.length - 1]) changed.push(slug);
+  }
+  ok("every element in the room can be changed", changed.length === ALL.length, changed.join(", "));
+  await room.getByRole("button", { name: "Back to the whole room" }).click();
+  await page.waitForTimeout(400);
+  const roomHref = decodeURIComponent((await room.getByRole("link", { name: "Enquire about this room" }).getAttribute("href")) ?? "");
+  ok("room enquiry lists every element", ["Curtains", "Blind", "Sofa", "Armchair", "Cushions", "Rug", "Wallpaper"].every((n) => roomHref.includes(`${n}:`)), `${roomHref.split("\n").length - 1} lines`);
+  const oldSections = await page.locator('section[aria-labelledby="looks-title"], section[aria-labelledby="decor-title"]').count();
+  ok("Our looks is merged into the room (old sections gone)", oldSections === 0, `${oldSections} old sections`);
 
   // No video anywhere.
   const videos = await page.locator("video").count();
@@ -404,6 +420,35 @@ const browser = await chromium.launch();
   ok("phone hero animates word by word", words >= 4, `${words} words`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok("no sideways page scroll on phone", overflow <= 0, `${overflow}px extra`);
+
+  // Phone: the room pans to what is picked, and can be swiped sideways.
+  const room = page.locator('section[aria-labelledby="room-title"]');
+  await room.locator(".room-frame").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1200);
+  const stageX = () => room.locator(".room-stage").evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).m41);
+  const x0 = await stageX();
+  await room.locator('[data-room-item="armchair"]').click();
+  await page.waitForTimeout(1300);
+  const x1 = await stageX();
+  const fb = await room.locator(".room-frame").boundingBox();
+  const sb = await room.locator('[data-spot="armchair"]').boundingBox();
+  ok("phone: picking the armchair pans the room to it", x1 > x0 + 20 && sb.x >= fb.x && sb.x + sb.width <= fb.x + fb.width, `stage moved ${(x1 - x0).toFixed(0)} px`);
+  // A finger swipe to the left (real touch events).
+  const fb2 = await room.locator(".room-frame").boundingBox();
+  const ty = fb2.y + fb2.height * 0.3;
+  let tx = fb2.x + fb2.width * 0.75;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: tx, y: ty }] });
+  for (let i = 1; i <= 10; i++) {
+    tx -= 20;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: tx, y: ty }] });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(300);
+  const x2 = await stageX();
+  ok("phone: the room can be swiped sideways", x2 < x1 - 60, `swiped ${(x2 - x1).toFixed(0)} px`);
+  const roomOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok("phone: room causes no sideways page scroll", roomOverflow <= 0, `${roomOverflow}px extra`);
 
   // Phone: the category row scrolls sideways only. Scrolling the page with
   // a finger on the cards used to move the cards up and down in their row.

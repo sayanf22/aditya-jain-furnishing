@@ -1,16 +1,16 @@
 // Home page, in the order set by the revised agreement (§02):
-// 01 Hero · 02 Main categories · 03 Interactive home décor ·
-// 04 Watch & Buy (photo-based "Our looks", no video) ·
-// 05 Customer testimonials · 06 Quick enquiry (with the enquiry form).
+// 01 Hero · 02 Main categories · 03 Interactive home décor, as one
+// interactive room (13 Nov 2026: the client asked for the "Our looks"
+// Watch & Buy section to be merged into it) · 04 Customer testimonials ·
+// 05 Quick enquiry (with the enquiry form).
 // Pre-rendered at build time from D1, so a visit doesn't render anything on
 // the Worker.
 import { Suspense } from "react";
 import { Categories } from "@/components/home/Categories";
-import { DecorPicker } from "@/components/home/DecorPicker";
 import { Hero } from "@/components/home/Hero";
 import { Marquee } from "@/components/home/Marquee";
 import { QuickEnquiry } from "@/components/home/QuickEnquiry";
-import { ShopTheLook } from "@/components/home/ShopTheLook";
+import { RoomStudio } from "@/components/home/room/RoomStudio";
 import { Testimonials } from "@/components/home/Testimonials";
 import { whatsappLink } from "@/lib/contact";
 import { getHomeContent } from "@/lib/content";
@@ -33,13 +33,8 @@ export default async function Home() {
       <Suspense fallback={null}>
         <Categories categories={home.categories} />
       </Suspense>
-      {home.decor && (
-        <Suspense fallback={null}>
-          <DecorPicker scene={home.decor} whatsappBase={whatsappBase} />
-        </Suspense>
-      )}
       <Suspense fallback={null}>
-        <ShopTheLook looks={home.looks} whatsappBase={whatsappBase} />
+        <RoomStudio room={home.room} whatsappBase={whatsappBase} />
       </Suspense>
       <Suspense fallback={null}>
         <Testimonials items={home.testimonials} />

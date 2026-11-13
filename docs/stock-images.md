@@ -16,12 +16,6 @@ Licences:
 | cat-carpets | Category: Carpets & Mats | [Pexels 1571468](https://www.pexels.com/photo/1571468/) |
 | cat-cushions | Category: Cushions | [Pexels 5490356](https://www.pexels.com/photo/5490356/) |
 | cat-wallpaper | Category: Wallpaper | William Morris, Willow (Met Museum, CC0) |
-| decor-velvet, swatch-velvet | Décor: Green velvet; also the "Velvet lounge" look | [Pexels 1918291](https://www.pexels.com/photo/1918291/) |
-| decor-leather, swatch-leather | Décor: Tan leather | [Pexels 1866149](https://www.pexels.com/photo/1866149/) |
-| decor-grey, swatch-grey | Décor: Grey weave | [Pexels 1571471](https://www.pexels.com/photo/1571471/) |
-| decor-ivory, swatch-ivory | Décor: Ivory linen | [Pexels 4352247](https://www.pexels.com/photo/4352247/) |
-| look-living | Our looks: "Living room" | [Pexels 1571460](https://www.pexels.com/photo/1571460/) |
-| look-bedroom | Our looks: "Bedroom" | [Pexels 6782567](https://www.pexels.com/photo/6782567/) |
 | enquiry-showroom | Spare, not shown on the page since the enquiry form replaced the photo | [Pexels 2079249](https://www.pexels.com/photo/2079249/) |
 
 ## About Us and Contact
@@ -36,4 +30,17 @@ Licences:
 
 The Gallery page was removed on 13 Nov 2026 (replaced by About Us), with its photos.
 
-The décor stand-ins show four different sofas. For the real feature, the client photographs one product (for example, one sofa) in each fabric, so only the fabric changes when a visitor taps a swatch.
+## Interactive room textures
+
+The interactive room on the Home page (13 Nov 2026) replaced the photo-swap décor section and "Our looks", and their photos were removed. The room is drawn in code (`components/home/room/shapes.tsx`); only the materials are images:
+
+| Files in `public/demo/` | Used for | Source |
+|---|---|---|
+| tex-cur-*, tex-bl-*, tex-sofa-*, tex-arm-*, tex-cush-*, tex-wall-* | Fabrics and wallpapers: square tiles, 320 px, repeated across the element | Drawn by `node scripts/stock/make-textures.mjs` (no third-party content) |
+| rug-* | Rugs: one top-down picture of the whole rug | Same script |
+| tex-floor-oak | The wooden floor (not changeable) | Same script |
+
+For the real room, each option needs:
+- **Fabric or wallpaper:** one straight-on, evenly lit photo of the material, cut square (about 1000 x 1000 px), showing a few repeats of any pattern. It is repeated across the element, so a photo whose edges match up looks best.
+- **Rug:** one photo of the whole rug from directly above, edges straight.
+- A name and a one-line description.
