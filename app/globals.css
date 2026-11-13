@@ -629,6 +629,41 @@ address {
   background: transparent;
 }
 
+/* Contact options (app/contact/page.tsx): on hover the card lifts and
+   turns white, and its arrow fills and nudges towards where it leads. */
+.contact-option {
+  transition:
+    transform 0.45s var(--ease-out-soft),
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.45s ease;
+}
+.contact-arrow {
+  transition:
+    transform 0.45s var(--ease-out-soft),
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+.contact-option:active {
+  transform: scale(0.985);
+  transition-duration: 0.12s;
+}
+@media (hover: hover) {
+  .contact-option:hover {
+    transform: translate3d(0, -3px, 0);
+    background-color: #fff;
+    border-color: transparent;
+    box-shadow: 0 20px 40px -26px rgb(31 27 23 / 0.4);
+  }
+  .contact-option:hover .contact-arrow {
+    transform: translate3d(3px, 0, 0);
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-ivory);
+  }
+}
+
 /* Phone menu: the panel fades and settles, the links follow one by one,
    and the menu icon's lines turn into a cross. */
 .menu-panel {

@@ -254,7 +254,7 @@ Each step ends with a check before the next one starts.
 | 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | Done (§11a) |
 | 6 | **Collection pages** | Your approval | |
 | 7 | **Gallery** | Your approval | Built with 20 stand-in photos (uncropped masonry grid, category filter, search, zoom viewer with Enquire); checks in `scripts/interaction-check.mjs`; phone LCP 1.5 s, CLS 0 |
-| 8 | **Contact** page. The enquiry form and `/api/enquiry` were already built with the Home page (round 2) and are reused here | Test enquiry saved; bad input rejected (`scripts/enquiry-check.mjs` already passes) | Form done; page to do |
+| 8 | **Contact** page. The enquiry form and `/api/enquiry` were already built with the Home page (round 2) and are reused here | Test enquiry saved; bad input rejected (`scripts/enquiry-check.mjs` already passes) | Built: Message us, Call, Instagram (once a handle is set), Get directions, showroom address with GSTIN, and the enquiry form (source "contact"); checks in `scripts/interaction-check.mjs`; phone LCP 0.7 s, CLS 0 |
 | 9 | **Admin dashboard** and Publish button | Full add, edit, reorder, delete and rebuild cycle locally | |
 | 10 | Performance and basic SEO | Lighthouse mobile 95+; sitemap valid | |
 | 11 | Once the client's account exists: deploy to `workers.dev` behind Access; connect Workers Builds; read real CPU per request | Preview opens for approved emails only; CPU per request known | |

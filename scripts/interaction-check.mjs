@@ -13,6 +13,7 @@
 //   - phone menu opens and closes
 //   - frame timing while animations run (long frames = visible stutter)
 //   - Gallery: photos uncropped, filter, search, viewer open / next / close
+//   - Contact: links, hover, the enquiry form sends with source "contact"
 import { chromium } from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:8787/";
@@ -486,6 +487,44 @@ const browser = await chromium.launch();
     return hits;
   });
   ok("gallery has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
+  await page.close();
+}
+
+// Contact: every way to reach the showroom links to the right place, the
+// cards respond to hover, and the enquiry form sends with source "contact".
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(new URL("/contact", url).href, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1200);
+  const hrefs = await page.$$eval(".contact-option", (els) => els.map((a) => a.getAttribute("href")));
+  const has = (re) => hrefs.some((h) => re.test(h));
+  ok("contact: message, call and directions links", has(/^https:\/\/wa\.me\/\d+/) && has(/^tel:\+\d+/) && has(/^https:\/\/www\.google\.com\/maps\//), hrefs.map((h) => h.split("?")[0]).join(", "));
+  const card = page.locator(".contact-option").nth(1);
+  const before = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await card.hover();
+  await page.waitForTimeout(700);
+  const after = await card.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, t: getComputedStyle(el).transform }));
+  ok("contact cards lift and turn white on hover", after.bg !== before && after.t !== "none", `${before} -> ${after.bg}, ${after.t}`);
+  const address = await page.locator("main address").innerText();
+  ok("contact shows the showroom address and GSTIN", /Kirti Nagar/.test(address) && (await page.getByText(/^GSTIN /).first().isVisible()), address.replace(/\n/g, ", "));
+
+  let sent = null;
+  page.on("request", (r) => r.url().endsWith("/api/enquiry") && r.method() === "POST" && (sent = r.postDataJSON()));
+  await page.selectOption("#eq-type", "B2C");
+  await page.fill("#eq-name", "UI Check");
+  await page.fill("#eq-phone", "9876543210");
+  await page.getByRole("button", { name: "Send enquiry" }).click();
+  await page.getByText("Thank you, your enquiry has been sent.").waitFor({ timeout: 8000 }).catch(() => {});
+  const thanked = await page.getByText("Thank you, your enquiry has been sent.").isVisible();
+  ok("contact form sends and thanks the visitor", thanked && sent?.source === "contact", `source "${sent?.source}"`);
+  const waText = await page.evaluate(() => {
+    const hits = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/whatsapp/i.test(n.textContent) && !n.parentElement.closest("script,style")) hits.push(n.textContent.trim());
+    document.querySelectorAll("[aria-label]").forEach((el) => /whatsapp/i.test(el.getAttribute("aria-label")) && hits.push(el.getAttribute("aria-label")));
+    return hits;
+  });
+  ok("contact has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
   await page.close();
 }
 

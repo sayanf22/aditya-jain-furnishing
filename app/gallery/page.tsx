@@ -23,13 +23,13 @@ export default async function GalleryPage() {
     <main className="pt-16 sm:pt-20">
       <section className="shell pt-12 pb-20 sm:pt-16 sm:pb-28 lg:pt-20" aria-labelledby="gallery-title">
         <div className="max-w-2xl">
-          <p className="section-label" data-reveal>
+          <p className="section-label hero-rise">
             Gallery
           </p>
-          <h1 id="gallery-title" className="mt-3 text-[2.1rem] leading-[1.1] font-medium sm:text-[2.8rem] lg:text-[3.3rem]" data-words>
-            <Words parts={["Ideas for", { accent: "every room" }]} />
+          <h1 id="gallery-title" className="mt-3 text-[2.1rem] leading-[1.1] font-medium sm:text-[2.8rem] lg:text-[3.3rem]">
+            <Words parts={["Ideas for", { accent: "every room" }]} mode="auto" />
           </h1>
-          <p className="mt-4 max-w-lg text-[1.02rem] leading-relaxed text-ink-soft" data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
+          <p className="mt-4 max-w-lg text-[1.02rem] leading-relaxed text-ink-soft hero-rise" style={{ ["--rise-delay" as string]: 2 }}>
             Browse by category or search. Tap a photo to see it larger and enquire about it.
           </p>
         </div>
