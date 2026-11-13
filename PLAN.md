@@ -27,7 +27,7 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 |---|---|---|
 | Name | Delta Furnishings (legal: Delta Furnishings Pvt Ltd) | Header logo, hero, footer, page title |
 | Address | 77, First Floor, Furniture Block, Kirti Nagar, New Delhi 110015 | Quick enquiry, footer, "Get directions" (Google Maps search) |
-| Mobile | +91 98112 68268 | Call buttons, footer |
+| Mobile and WhatsApp | +91 92124 56021 (confirmed 13 Nov 2026, replaces 98112 68268) | Call and WhatsApp buttons, footer |
 | GSTIN | 07AAECD7008E1ZZ | Footer |
 
 Stored in `migrations/0003_business_settings.sql` (editable later from the dashboard).
@@ -313,7 +313,7 @@ Links to Collection, Gallery and Contact point at pages that come in the next st
 
 ## 12. Needed from the client (by the time we reach each step)
 
-Confirmation that 98112 68268 is on WhatsApp; Instagram handle; logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
+Instagram handle; logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
 
 ## 13. Sources checked (October 2026)
 

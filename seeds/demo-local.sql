@@ -7,10 +7,8 @@
 --
 -- Apply with: npm run db:seed:demo
 
--- WhatsApp: assumed to be the showroom mobile. NOT CONFIRMED by the client.
-INSERT INTO settings (key, value) VALUES
-  ('whatsapp_number', '919811268268')
-ON CONFLICT (key) DO UPDATE SET value = excluded.value;
+-- The phone and WhatsApp number (+91 92124 56021, confirmed 13 Nov 2026)
+-- are set by migrations/0006_contact_number.sql, not here.
 
 -- Hero slides (JSON array). Copy describes only the confirmed categories.
 INSERT INTO settings (key, value) VALUES ('hero_slides', '[
