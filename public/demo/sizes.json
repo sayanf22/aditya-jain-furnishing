@@ -167,6 +167,225 @@
       3
     ]
   },
+  "gal-curtains-sheer": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      2566,
+      3458
+    ]
+  },
+  "gal-curtains-print": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      2056,
+      3657
+    ]
+  },
+  "gal-curtains-white": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-curtains-amber": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      3750
+    ]
+  },
+  "gal-blinds-wood": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      1826,
+      2737
+    ]
+  },
+  "gal-blinds-vertical": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2250
+    ]
+  },
+  "gal-fabric-swatches": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-fabric-rolls": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-fabric-weave": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-fabric-stack": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      1688
+    ]
+  },
+  "gal-carpet-pattern": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      3995
+    ]
+  },
+  "gal-carpet-room": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2003
+    ]
+  },
+  "gal-carpet-large": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-cushion-mustard": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      4500
+    ]
+  },
+  "gal-cushion-lounge": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3000,
+      2000
+    ]
+  },
+  "gal-cushion-sofa": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      1728,
+      2592
+    ]
+  },
+  "gal-wallpaper-trellis": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      3069,
+      3857
+    ]
+  },
+  "gal-wallpaper-fruit": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      1609,
+      2000
+    ]
+  },
+  "gal-wallpaper-tulip": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      1513,
+      1913
+    ]
+  },
+  "gal-wallpaper-blackthorn": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      1100,
+      1460
+    ]
+  },
   "swatch-velvet": {
     "widths": [
       160,

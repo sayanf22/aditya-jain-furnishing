@@ -42,6 +42,23 @@ for (const item of manifest.images) {
   const ext = item.source === "pexels" ? ".jpg" : path.extname(new URL(item.url).pathname) || ".jpg";
   const file = await download(sourceUrl(item), path.join(cacheDir, `${item.name}${ext}`));
   const meta = await sharp(file).metadata();
+  if (item.aspect === "original") {
+    // Gallery photos keep their whole frame: resized, never cropped.
+    const upright = await sharp(file).rotate().toBuffer();
+    const { width: ow, height: oh } = await sharp(upright).metadata();
+    const made = [];
+    for (const w of item.widths) {
+      if (w > ow) continue;
+      await sharp(upright)
+        .resize(w)
+        .webp({ quality: 74, effort: 6 })
+        .toFile(path.join(outDir, `${item.name}-${w}.webp`));
+      made.push(w);
+    }
+    sizes[item.name] = { widths: made, aspect: [ow, oh] };
+    console.log(`image  ${item.name.padEnd(18)} ${ow}x${oh} (uncropped) -> ${made.join(", ")}`);
+    continue;
+  }
   const [aw, ah] = item.aspect;
   // Largest crop of the requested aspect that fits the original.
   let cw = meta.width;

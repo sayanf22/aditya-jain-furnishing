@@ -12,6 +12,7 @@
 //   - enquiry form errors, B2B firm field and submit
 //   - phone menu opens and closes
 //   - frame timing while animations run (long frames = visible stutter)
+//   - Gallery: photos uncropped, filter, search, viewer open / next / close
 import { chromium } from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:8787/";
@@ -413,6 +414,98 @@ const browser = await chromium.launch();
   await page.waitForTimeout(1600);
   const rowState = await catRow.evaluate((el) => ({ y: el.scrollTop, oy: getComputedStyle(el).overflowY, extra: el.scrollHeight - el.clientHeight }));
   ok("phone category row never scrolls up and down", rowState.y === 0 && rowState.oy === "hidden", `scrollTop ${rowState.y}, overflow-y ${rowState.oy}`);
+  await page.close();
+}
+
+// Gallery (desktop, 4x slower CPU): photos uncropped, filter, search, the
+// viewer opens smoothly, steps with the arrow key and closes with Escape.
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const cdp = await page.context().newCDPSession(page);
+  await page.goto(new URL("/gallery", url).href, { waitUntil: "networkidle" });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await page.waitForTimeout(1200);
+  const items = page.locator("[data-gal-id]");
+  const total = await items.count();
+  const shape = await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 450) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+    window.scrollTo(0, 0);
+    const diffs = [...document.querySelectorAll("[data-gal-id] img")].map((img) => {
+      const r = img.getBoundingClientRect();
+      const natural = img.naturalWidth / img.naturalHeight;
+      return Math.abs(r.width / r.height - natural) / natural;
+    });
+    return { max: Math.max(...diffs), hidden: document.querySelectorAll(".js [data-reveal]:not([data-shown])").length };
+  });
+  ok("gallery photos are never cropped", total > 0 && shape.max < 0.01, `${total} photos, frame vs photo shape differs by at most ${(shape.max * 100).toFixed(2)}%`);
+  ok("gallery shows every photo once scrolled", shape.hidden === 0, `${shape.hidden} hidden`);
+
+  const chips = page.locator('[aria-label="Filter by category"] button');
+  const second = chips.nth(1);
+  const expected = Number((await second.locator("span").innerText()).trim());
+  await second.click();
+  await page.waitForTimeout(700);
+  const filtered = await items.count();
+  ok("gallery category filter", filtered === expected && filtered < total, `${filtered} of ${total}`);
+  await chips.first().click();
+  const firstTitle = (await items.first().locator("button").getAttribute("aria-label")).replace(/, see larger$/, "");
+  await page.fill('input[type="search"]', firstTitle.split(" ")[0]);
+  await page.waitForTimeout(400);
+  const searched = await items.count();
+  await page.fill('input[type="search"]', "qqqq");
+  await page.waitForTimeout(300);
+  const none = await page.getByText("No photos match that search.").isVisible();
+  await page.fill('input[type="search"]', "");
+  await page.waitForTimeout(400);
+  ok("gallery search", searched >= 1 && searched < total && none, `"${firstTitle.split(" ")[0]}" -> ${searched}, nonsense -> empty message`);
+
+  const viewerTiming = frameTiming(page, 1200);
+  await items.nth(1).locator("button").click();
+  const vt = await viewerTiming;
+  const opened = await page.evaluate(() => ({ open: document.querySelector("dialog").open, lock: document.documentElement.style.overflow, label: document.querySelector("dialog").getAttribute("aria-label") }));
+  ok("gallery viewer opens on the tapped photo", opened.open && opened.lock === "hidden", `"${opened.label}"`);
+  ok("gallery viewer opens smoothly", vt.over50 <= 2, `p95 ${vt.p95.toFixed(1)} ms, max ${vt.max.toFixed(1)} ms, frames >50ms: ${vt.over50}`);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(900);
+  const stepped = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
+  const enquire = await page.locator('dialog a[href*="wa.me"]').getAttribute("href");
+  ok("gallery viewer steps to the next photo", stepped !== opened.label && decodeURIComponent(enquire).includes(stepped), `"${stepped}", Enquire message names it`);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(900);
+  const closed = await page.evaluate(() => ({ open: document.querySelector("dialog").open, lock: document.documentElement.style.overflow }));
+  ok("gallery viewer closes with Escape", !closed.open && closed.lock === "", `open ${closed.open}`);
+  const waText = await page.evaluate(() => {
+    const hits = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/whatsapp/i.test(n.textContent) && !n.parentElement.closest("script,style")) hits.push(n.textContent.trim());
+    document.querySelectorAll("[aria-label]").forEach((el) => /whatsapp/i.test(el.getAttribute("aria-label")) && hits.push(el.getAttribute("aria-label")));
+    return hits;
+  });
+  ok("gallery has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
+  await page.close();
+}
+
+// Gallery on a phone: no sideways page scroll; the viewer's arrows work.
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await page.goto(new URL("/gallery", url).href, { waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok("gallery: no sideways page scroll on phone", overflow <= 0, `${overflow}px extra`);
+  await page.locator("[data-gal-id] button").first().tap();
+  await page.waitForTimeout(800);
+  const before = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
+  await page.locator("dialog").getByRole("button", { name: "Next photo" }).tap();
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => document.querySelector("dialog").getAttribute("aria-label"));
+  await page.locator("dialog").getByRole("button", { name: "Close" }).tap();
+  await page.waitForTimeout(800);
+  const open = await page.evaluate(() => document.querySelector("dialog").open);
+  ok("gallery viewer on phone: next and close", before !== after && !open, `"${before}" -> "${after}", closed ${!open}`);
   await page.close();
 }
 

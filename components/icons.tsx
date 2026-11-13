@@ -138,3 +138,24 @@ export function SendIcon({ className }: IconProps) {
     </Line>
   );
 }
+
+export function SearchIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </Line>
+  );
+}
+
+/** Two corner arrows pointing out: "see larger". */
+export function ExpandIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="M14 4h6v6" />
+      <path d="M20 4l-6.5 6.5" />
+      <path d="M10 20H4v-6" />
+      <path d="M4 20l6.5-6.5" />
+    </Line>
+  );
+}

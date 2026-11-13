@@ -244,7 +244,27 @@
                                   ],
                        "position":  "centre",
                        "use":  "Shop the look: bedroom"
-                   }
+                   },
+                   { "name": "gal-curtains-sheer", "source": "pexels", "id": 14095427, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: sheer curtains in evening light" },
+                   { "name": "gal-curtains-print", "source": "pexels", "id": 9298743, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: patterned curtains" },
+                   { "name": "gal-curtains-white", "source": "pexels", "id": 9980246, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: white sheer curtains" },
+                   { "name": "gal-curtains-amber", "source": "pexels", "id": 18252187, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: amber curtains" },
+                   { "name": "gal-blinds-wood", "source": "pexels", "id": 18622213, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wooden blinds" },
+                   { "name": "gal-blinds-vertical", "source": "pexels", "id": 4220436, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: vertical blinds" },
+                   { "name": "gal-fabric-swatches", "source": "pexels", "id": 6766365, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: fabric swatch book" },
+                   { "name": "gal-fabric-rolls", "source": "pexels", "id": 10579084, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: printed fabric rolls" },
+                   { "name": "gal-fabric-weave", "source": "pexels", "id": 6634450, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: woven fabric close-up" },
+                   { "name": "gal-fabric-stack", "source": "pexels", "id": 365067, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: folded fabrics" },
+                   { "name": "gal-carpet-pattern", "source": "pexels", "id": 36687249, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: patterned carpet" },
+                   { "name": "gal-carpet-room", "source": "pexels", "id": 1571468, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: carpet in a living room" },
+                   { "name": "gal-carpet-large", "source": "pexels", "id": 6969866, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: large patterned carpet" },
+                   { "name": "gal-cushion-mustard", "source": "pexels", "id": 6312024, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: mustard cushion" },
+                   { "name": "gal-cushion-lounge", "source": "pexels", "id": 17331180, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: cushions in a lounge" },
+                   { "name": "gal-cushion-sofa", "source": "pexels", "id": 5490356, "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: cushions on a sofa" },
+                   { "name": "gal-wallpaper-trellis", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Trellis_MET_DP306738.jpg", "credit": "William Morris, Trellis (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
+                   { "name": "gal-wallpaper-fruit", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Fruit_or_Pomegranate_MET_DP109416.jpg", "credit": "William Morris, Fruit or Pomegranate (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
+                   { "name": "gal-wallpaper-tulip", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Wild_Tulip_MET_DP146520.jpg", "credit": "William Morris, Wild Tulip (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" },
+                   { "name": "gal-wallpaper-blackthorn", "source": "wikimedia", "url": "https://upload.wikimedia.org/wikipedia/commons/7/78/Blackthorn_MET_ES8433.jpg", "credit": "William Morris, Blackthorn (Metropolitan Museum of Art, CC0)", "aspect": "original", "widths": [480, 800, 1200], "use": "Gallery: wallpaper" }
                ],
     "swatches":  [
                      {
