@@ -2,7 +2,7 @@
 
 Website for Delta Furnishings Pvt Ltd, Kirti Nagar, New Delhi (client: Aditya Jain). Next.js 16 (App Router) on Cloudflare Workers through the OpenNext adapter (`@opennextjs/cloudflare`). Made by [whycreatives.in](https://whycreatives.in). The full plan is in [PLAN.md](PLAN.md).
 
-Everything runs locally for now. Nothing is deployed until the client's Cloudflare account exists.
+The live site is deployed by Cloudflare Workers Builds: every push to `main` runs `npm run build`, then `npx wrangler deploy`. The pages are static for now; the live database has no tables yet, so the enquiry form works only locally.
 
 ## Setup
 
