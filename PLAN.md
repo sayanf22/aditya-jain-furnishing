@@ -311,23 +311,24 @@ Round 2 (31 October 2026):
 - `scripts/enquiry-check.mjs`: all 10 checks pass (valid B2C and B2B saved; bad phone, bad type, other-site post, non-JSON, oversized body and GET refused; honeypot accepted silently; rate limit after 5).
 
 
-## 11b. Collection pages (built 15 Nov 2026)
+## 11b. Collection pages (built 15 Nov 2026, simplified the same day)
 
-| Page | What it shows | Code |
+One simple layout on every Collection page, following the client's tree, so a visitor always sees where they are and where to go:
+
+| Part | What it does | Code |
 |---|---|---|
-| `/collection` | Photo header; the five categories as photo tiles (two wide, three below) with "how to browse" in three steps. No product grid here (15 Nov 2026: "less images, clean and understandable") | `app/collection/page.tsx` |
-| A page with types inside | Photo header; breadcrumbs; the types: two as large photo tiles, more as calm cards (smaller photo, name and what's inside written below); then "A few designs": one row, and "See all N designs", which opens the full grid with a chip per type, search (once there are more than 12) and "Show more" (12 at a time) | `app/collection/[...slug]/page.tsx`, `components/collection/CollectionParts.tsx` |
-| A page with no types inside | Photo header; breadcrumbs; the other types at its level as chips; its designs. With no designs yet it says "Designs are being added" with Enquire | same |
-| Product viewer | Tapping a card grows its photo into a large view (full screen on phones): trail, name, description, Enquire (the message names the product), a link to its collection, previous/next arrows and ←/→ keys. Tapping the photo zooms 2.2x at the spot tapped | `components/collection/ProductBrowser.tsx` |
+| Collection tree | Desktop: a sticky sidebar listing all five collections with design counts. The branch you are in is open; thread lines (├ and └) join each type to the one it sits in, and the threads down to the current page are red, with the current page in a light red pill. Any branch opens or shuts with its chevron, sliding (grid rows 0fr → 1fr). Phones: the same tree under a "Browse collections · You are in: …" bar that slides open | `components/collection/CollectionTree.tsx` |
+| `/collection` | Photo header, "How to browse" in three steps, then the five collections as cards (photo, name, clear description, types and designs) | `app/collection/page.tsx` |
+| A page with types inside | Breadcrumb, the page name, a clear description, "N types · N designs", then "Choose a type": a card per type with its description. Phones: compact rows with a small square photo | `app/collection/[...slug]/page.tsx`, `components/collection/CollectionParts.tsx` |
+| A page with no types inside ("single collection") | Breadcrumb, name, description, then its designs (12 a page, Show more, search once there are more than 12). With no designs yet: "Designs are being added" with Enquire | same |
+| Design viewer | Tapping a design grows its photo out of the card; the panel settles in and its details rise one by one. Arrows and ←/→ slide the next photo in from that side. Esc, the backdrop or ✕ fade it out (no snap). Full screen on phones. Tap the photo to zoom 2.2x. Enquire names the design | `components/collection/ProductBrowser.tsx` |
+| Page to page | Following a link cross-fades to the next page with a slight rise (cross-document view transitions, Chrome, Edge and Safari 18.2+; others load normally); the header, floating button and sidebar stay put. Off for "reduce motion" | `app/globals.css` |
 
-- Data: `lib/catalogue.ts` reads the whole catalogue in one D1 batch at build time; every page is pre-rendered.
-- Photos are never cropped. Frames are 4:5; a photo of another shape sits whole over a blurred copy of itself.
-- "Show more" adds 12 at a time, rounded to a full row of the grid (2 to 4 columns). Cards show the design's name, and below it in grey which type it is (only where a page holds several types).
-- The build pre-renders in one worker (`next.config.ts`): ten workers at once broke the local database during the build.
+- Descriptions: `migrations/0008_catalogue_descriptions.sql` (all five categories and every type; plain descriptions with no claims about stock or service; editable later from the admin dashboard). Not yet applied to the live database.
+- Data: `lib/catalogue.ts` reads the whole catalogue in one D1 batch at build time; every page is pre-rendered. The build pre-renders in one worker (`next.config.ts`): ten at once broke the local database.
+- Photos are never cropped: frames are 4:5; a photo of another shape sits whole over a blurred copy of itself.
 - Stand-in products: about 80, in `scripts/stock/catalogue-demo.json` (sources and licences in `docs/stock-images.md`).
-- Checks (15 Nov 2026, OpenNext build on workerd): `scripts/interaction-check.mjs` 80 of 80 pass, including routes and 404, Show more, chips, search, viewer zoom and steps, Esc, phone full-screen viewer, no sideways scroll, no cropped photos, no "WhatsApp" wording. No sideways scroll and no broken images at 390, 1024, 1440, 1920 and 2560 px. Phone profile: `/collection` LCP 0.78 s, CLS 0, blocking time 60 ms; a deep page LCP 0.62 s. Worker CPU: `/collection` about 4.5 ms of its own work (121 KB page), a deep page under 1 ms.
-
-- Checks after the logo colours and the calmer Collection (15 Nov 2026): `scripts/interaction-check.mjs` 85 of 85 pass (new: the main page has no product wall, preview then See all then Show more, calm type cards, sibling chips on a page with no types, logo light over photos and in colour once scrolled, grey footer logo with no red in the footer). Phone profile: Home LCP 0.82 s, `/collection` 0.64 s, CLS 0, blocking time 72–186 ms across runs.
+- Checks (15 Nov 2026, OpenNext build on workerd): `scripts/interaction-check.mjs` 83 of 83 pass (tree marks the current page with red threads, branches slide open and shut, described cards, phone Browse bar slides open, viewer zoom, steps with the photo sliding, Esc fades out, full screen on phones, no sideways scroll, no cropped photos, no "WhatsApp" wording, logo checks). A link from a type card arrives with a view transition. Opening a branch at 4x slower CPU: p95 16.8 ms. Phone profile: `/collection` LCP 0.68 s, a deep page 1.08 s, CLS 0, blocking time 76–94 ms. Worker CPU for a Collection page: about 2 ms of its own work.
 
 ## 12. Needed from the client (by the time we reach each step)
 

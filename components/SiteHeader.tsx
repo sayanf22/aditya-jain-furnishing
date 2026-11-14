@@ -62,7 +62,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,color] duration-500 ${
+        className={`site-header fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,color] duration-500 ${
           // Solid colour, no backdrop blur: a blur behind a fixed header is
           // redrawn on every scroll frame and makes scrolling stutter on
           // slower phones and laptops.

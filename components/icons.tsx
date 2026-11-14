@@ -80,6 +80,14 @@ export function ChevronRightIcon({ className }: IconProps) {
   );
 }
 
+export function ChevronDownIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="m6 9.5 6 6 6-6" />
+    </Line>
+  );
+}
+
 export function MapPinIcon({ className }: IconProps) {
   return (
     <Line className={className}>

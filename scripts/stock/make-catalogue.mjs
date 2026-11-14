@@ -2,7 +2,7 @@
 // scripts/stock/catalogue-demo.json:
 //   products -> public/demo/p-<slug>-<width>.webp (4:5)
 //   heroes   -> public/demo/sc-<name>-<width>.webp (16:9)
-//   seeds/demo-catalogue.sql (products, images, descriptions, hero photos)
+//   seeds/demo-catalogue.sql (products, images, hero photos)
 // Originals are cached in .stock/originals/ (not committed). Entries are
 // merged into public/demo/sizes.json.
 //
@@ -117,8 +117,7 @@ const lines = [
   "DELETE FROM product_images;",
   "DELETE FROM products;",
 ];
-for (const [id, text] of Object.entries(spec.descriptions)) lines.push(`UPDATE subcategories SET description = ${sql(text)} WHERE id = ${id};`);
-for (const [id, text] of Object.entries(spec.taglines)) lines.push(`UPDATE categories SET tagline = ${sql(text)} WHERE id = ${id};`);
+// Descriptions are real site copy, kept in migrations/0008_catalogue_descriptions.sql.
 for (const [slug, key] of Object.entries(spec.categoryHeroes)) lines.push(`UPDATE categories SET hero_image_key = ${sql(key)} WHERE slug = ${sql(slug)};`);
 lines.push(`INSERT INTO settings (key, value) VALUES ('collection_hero_image', 'demo/sc-collection') ON CONFLICT (key) DO UPDATE SET value = excluded.value;`);
 

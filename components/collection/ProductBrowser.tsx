@@ -1,9 +1,8 @@
 "use client";
 
-// The product grid on the Collection pages. A page that has types inside
-// it shows a short preview (one row) with "See all N designs"; the full
-// grid has filter chips (one per type), a search box once there are more
-// than one page of designs, 12 designs a page, and a viewer that opens a product large (agreement: "photos open with a
+// The design grid on the Collection pages: filter chips (when given
+// groups), a search box once there is more than one page of designs, 12
+// designs a page, and a viewer that opens a product large (agreement: "photos open with a
 // zoom"). Tapping a card grows its photo into the viewer while the page
 // dims; in the viewer, tapping the photo zooms in on the spot tapped, and
 // the arrows move through the products currently shown.
@@ -37,8 +36,6 @@ type Props = {
   /** Show the collection name on each card (main Collection page). */
   showCollection?: boolean;
   headingId: string;
-  /** Start as a short preview of this many designs, with "See all". */
-  preview?: number;
 };
 
 const FRAME = 4 / 5;
@@ -46,13 +43,16 @@ const FRAME = 4 / 5;
 const PAGE = 12;
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function ProductBrowser({ products, groups, allLabel, whatsappBase, showCollection = false, headingId, preview }: Props) {
-  const [expanded, setExpanded] = useState(!preview);
+export function ProductBrowser({ products, groups, allLabel, whatsappBase, showCollection = false, headingId }: Props) {
   const [group, setGroup] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [openId, setOpenId] = useState<number | null>(null);
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  // Closing plays a short fade-out first; stepping slides the next photo
+  // in from the side it comes from (-1, 1; 0 when opened from a card).
+  const [closing, setClosing] = useState(false);
+  const [dir, setDir] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
   const viewerImg = useRef<HTMLDivElement>(null);
   const fromRect = useRef<DOMRect | null>(null);
@@ -78,10 +78,9 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
     return () => ro.disconnect();
   }, [hasGrid]);
   // Round the page up to a full row, unless that is everything anyway.
-  const cap = expanded ? limit : (preview ?? PAGE);
-  const visible = Math.min(shown.length, Math.ceil(cap / cols) * cols);
-  const showSearch = expanded && products.length > PAGE;
-  const showChips = expanded && groups.length > 1;
+  const visible = Math.min(shown.length, Math.ceil(limit / cols) * cols);
+  const showSearch = products.length > PAGE;
+  const showChips = groups.length > 1;
 
   const index = shown.findIndex((p) => p.id === openId);
   const open = index >= 0 ? shown[index] : null;
@@ -115,12 +114,23 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
   const show = (id: number, from?: HTMLElement | null) => {
     fromRect.current = from?.getBoundingClientRect() ?? null;
     setZoom(null);
+    setDir(0);
     setOpenId(id);
   };
   const step = (by: number) => {
     if (shown.length < 2 || index < 0) return;
     setZoom(null);
+    setDir(by);
     setOpenId(shown[(index + by + shown.length) % shown.length].id);
+  };
+  const close = () => {
+    if (closing || openId === null) return;
+    if (reduced()) return setOpenId(null);
+    setClosing(true);
+    window.setTimeout(() => {
+      setClosing(false);
+      setOpenId(null);
+    }, 260);
   };
 
   useEffect(() => {
@@ -190,7 +200,7 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
         </div>
       )}
 
-      <p className={`text-[0.8rem] text-muted ${expanded ? "mb-4" : "sr-only"}`} aria-live="polite" id={`${headingId}-count`}>
+      <p className="sr-only" aria-live="polite" id={`${headingId}-count`}>
         {shown.length === 1 ? "1 design" : `${shown.length} designs`}
         {query.trim() && ` for “${query.trim()}”`}
       </p>
@@ -212,22 +222,7 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
           ))}
         </ul>
       ) : null}
-      {!expanded && products.length > visible && (
-        <div className="mt-10 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setExpanded(true);
-              setLimit(PAGE);
-            }}
-            className="btn inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[0.85rem] font-medium text-ivory hover:bg-terracotta"
-          >
-            See all {products.length} designs
-            <ArrowRightIcon className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      {expanded && shown.length > visible && (
+      {shown.length > visible && (
         <div className="mt-10 text-center">
           <button
             type="button"
@@ -253,9 +248,15 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
       <dialog
         ref={dialog}
         aria-label={open?.name ?? "Product"}
+        data-closing={closing || undefined}
         onClose={() => setOpenId(null)}
+        onCancel={(e) => {
+          // Esc: play the closing animation instead of vanishing at once.
+          e.preventDefault();
+          close();
+        }}
         onClick={(e) => {
-          if (e.target === e.currentTarget) setOpenId(null);
+          if (e.target === e.currentTarget) close();
         }}
         className="product-viewer m-auto h-[100dvh] max-h-[100dvh] w-full sm:h-auto max-w-none bg-transparent p-0 text-ink backdrop:bg-[rgb(12_12_12/0.74)] sm:max-h-[94dvh] sm:w-[min(68rem,94vw)]"
       >
@@ -265,13 +266,18 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
               {/* On a phone the details sit below the photo: keep Close in reach. */}
               <button
                 type="button"
-                onClick={() => setOpenId(null)}
+                onClick={close}
                 aria-label="Close"
                 className="btn absolute top-5 right-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ivory/95 shadow-[0_6px_18px_-8px_rgba(0,0,0,0.5)] md:hidden"
               >
                 <CloseIcon className="h-4 w-4" />
               </button>
-              <div ref={viewerImg} className="relative overflow-hidden rounded-[1.25rem]">
+              <div
+                ref={viewerImg}
+                key={open.id}
+                className={`relative overflow-hidden rounded-[1.25rem] ${dir ? "viewer-photo-step" : ""}`}
+                style={{ ["--dx" as string]: `${dir * 36}px` } as CSSProperties}
+              >
                 <button
                   type="button"
                   aria-label={zoom ? "Zoom out" : "Zoom in"}
@@ -299,12 +305,12 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
               <p className="mt-2 text-center text-[0.72rem] text-muted">{zoom ? "Tap to zoom out" : "Tap the photo to zoom in"}</p>
             </div>
 
-            <div className="flex flex-col p-6 sm:p-8 lg:p-10">
+            <div key={open.id} className="viewer-detail flex flex-col p-6 sm:p-8 lg:p-10">
               <div className="flex items-start justify-between gap-4">
                 <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-terracotta uppercase">{open.trail || open.collection}</p>
                 <button
                   type="button"
-                  onClick={() => setOpenId(null)}
+                  onClick={close}
                   aria-label="Close"
                   className="btn -mt-2 -mr-2 hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink/12 hover:border-ink md:flex"
                 >
@@ -326,13 +332,16 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
                     Enquire
                   </a>
                 )}
-                <a
-                  href={open.href}
-                  className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ink/15 px-5 text-[0.85rem] font-medium hover:border-ink hover:bg-ink hover:text-ivory"
-                >
-                  More {open.collection}
-                  <ArrowRightIcon className="btn-arrow h-4 w-4" />
-                </a>
+                {/* Not on the page of that collection itself. */}
+                {open.href !== window.location.pathname && (
+                  <a
+                    href={open.href}
+                    className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ink/15 px-5 text-[0.85rem] font-medium hover:border-ink hover:bg-ink hover:text-ivory"
+                  >
+                    More {open.collection}
+                    <ArrowRightIcon className="btn-arrow h-4 w-4" />
+                  </a>
+                )}
               </div>
 
               {shown.length > 1 && (

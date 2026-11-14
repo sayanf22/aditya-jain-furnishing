@@ -755,30 +755,102 @@ address {
   }
 }
 
-/* Collection pages (components/collection/). Tiles: the photo eases in
-   and the arrow fills on hover. Product cards lift and the photo zooms
+/* Collection pages (components/collection/). Type cards: the photo eases
+   in and the arrow fills on hover. Product cards lift and the photo zooms
    softly (agreement §05). Cards rise in one after another whenever the
    grid changes (filter, search). The viewer fades in over a dimmed page
    while its photo grows from the card (Web Animations, ProductBrowser). */
-.node-tile .img-reveal-inner {
-  transition: transform 1.9s var(--ease-out-soft);
-}
-.node-tile-arrow {
+/* Collection tree (components/collection/CollectionTree.tsx). Thread
+   lines join each type to the one it sits in: a vertical thread down the
+   branch, an elbow into each row, and a rounded corner into the last one.
+   The threads leading to the current page are red. A branch slides open
+   and shut by animating its grid row from 0fr to 1fr. */
+.tree-link {
   transition:
-    background-color 0.35s ease,
-    color 0.35s ease,
-    transform 0.5s var(--ease-out-soft);
+    color 0.25s ease,
+    background-color 0.25s ease;
 }
-@media (hover: hover) {
-  .node-tile:hover .img-reveal-inner {
-    transform: scale(1.06);
-    transition-duration: 1.2s;
-  }
-  .node-tile:hover .node-tile-arrow {
-    background-color: #fff;
-    color: var(--color-ink);
-    transform: translate3d(3px, 0, 0);
-  }
+.tree-link:hover {
+  background-color: rgb(20 20 20 / 0.04);
+}
+.tree-here,
+.tree-here:hover {
+  background-color: rgb(225 1 1 / 0.07);
+}
+.tree-kids {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.45s var(--ease-out-soft),
+    opacity 0.3s ease;
+}
+.tree-kids[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.tree-kids > div > * {
+  transform: translate3d(0, -6px, 0);
+  transition: transform 0.45s var(--ease-out-soft);
+}
+.tree-kids[data-open="true"] > div > * {
+  transform: none;
+}
+.tree-branch {
+  --thread: rgb(20 20 20 / 0.16);
+  --row-mid: 1.12rem; /* half a row: py-2 plus one line of text */
+  position: relative;
+  margin-left: 1.05rem;
+  padding: 0.1rem 0 0.2rem 0.95rem;
+}
+.tree-branch > .tree-item {
+  position: relative;
+}
+/* vertical thread past this row (to the next sibling) */
+.tree-branch > .tree-item::before {
+  content: "";
+  position: absolute;
+  left: -0.95rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--thread);
+}
+/* elbow into the row */
+.tree-branch > .tree-item::after {
+  content: "";
+  position: absolute;
+  left: -0.95rem;
+  top: var(--row-mid);
+  width: 0.75rem;
+  height: 1px;
+  background: var(--thread);
+}
+/* last row: the thread stops here with a rounded corner */
+.tree-branch > .tree-item:last-child::before {
+  bottom: auto;
+  height: var(--row-mid);
+  width: 0.75rem;
+  background: none;
+  border-left: 1px solid var(--thread);
+  border-bottom: 1px solid var(--thread);
+  border-bottom-left-radius: 0.6rem;
+}
+.tree-branch > .tree-item:last-child::after {
+  content: none;
+}
+/* red threads down to the current page */
+.tree-branch > .tree-item:has(~ .on-path)::before {
+  background: var(--color-terracotta);
+}
+.tree-branch > .tree-item.on-path:not(:last-child)::before {
+  background: linear-gradient(to bottom, var(--color-terracotta) var(--row-mid), var(--thread) var(--row-mid));
+}
+.tree-branch > .tree-item.on-path::after {
+  background: var(--color-terracotta);
+}
+.tree-branch > .tree-item.on-path:last-child::before {
+  border-color: var(--color-terracotta);
 }
 /* Type cards (a page with more than two types inside): photo above, name
    and what's inside below. */
@@ -842,12 +914,23 @@ address {
   outline: 2px solid var(--color-terracotta);
   outline-offset: 3px;
 }
+/* Viewer: the panel settles in (slight rise and scale), its details rise
+   one by one, and it fades back down when closed. Stepping to the next or
+   previous design slides the photo in from that side. */
 @keyframes viewer-in {
   from {
     opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.985);
   }
   to {
     opacity: 1;
+    transform: none;
+  }
+}
+@keyframes viewer-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.985);
   }
 }
 @keyframes viewer-backdrop {
@@ -855,11 +938,53 @@ address {
     opacity: 0;
   }
 }
+@keyframes viewer-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes viewer-photo-step {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--dx, 0), 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 .viewer-in {
-  animation: viewer-in 0.35s ease-out both;
+  animation: viewer-in 0.45s var(--ease-out-soft) both;
 }
 .product-viewer[open]::backdrop {
-  animation: viewer-backdrop 0.35s ease-out both;
+  animation: viewer-backdrop 0.4s ease-out both;
+}
+.product-viewer[data-closing] .viewer-in {
+  animation: viewer-out 0.26s ease-in both;
+}
+.product-viewer[data-closing]::backdrop {
+  animation: viewer-backdrop-out 0.26s ease-in both;
+}
+.viewer-photo-step {
+  animation: viewer-photo-step 0.45s var(--ease-out-soft) both;
+}
+.viewer-detail > * {
+  animation: product-in 0.5s var(--ease-out-soft) both;
+}
+.viewer-detail > :nth-child(1) {
+  animation-delay: 80ms;
+}
+.viewer-detail > :nth-child(2) {
+  animation-delay: 130ms;
+}
+.viewer-detail > :nth-child(3) {
+  animation-delay: 180ms;
+}
+.viewer-detail > :nth-child(4) {
+  animation-delay: 230ms;
+}
+.viewer-detail > :nth-child(n + 5) {
+  animation-delay: 280ms;
 }
 .product-viewer {
   overscroll-behavior: contain;
@@ -1111,5 +1236,56 @@ address {
   }
   .js .img-reveal[data-reveal] .img-reveal-inner {
     transform: none;
+  }
+}
+
+/* Page to page: a soft cross-fade with a slight rise when a link loads a
+   new page (cross-document view transitions; Chrome, Edge and Safari 18.2+;
+   other browsers just load the page). The header, the floating button and
+   the collection sidebar are named so they stay put while the content
+   changes. Off for "reduce motion". */
+@view-transition {
+  navigation: auto;
+}
+.site-header {
+  view-transition-name: site-header;
+}
+.float-wa {
+  view-transition-name: float-wa;
+}
+.collection-aside {
+  view-transition-name: collection-aside;
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+::view-transition-old(root) {
+  animation: page-out 0.22s ease-in both;
+}
+::view-transition-new(root) {
+  animation: page-in 0.5s var(--ease-out-soft) 0.08s both;
+}
+::view-transition-group(collection-aside) {
+  animation-duration: 0.45s;
+  animation-timing-function: var(--ease-out-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .tree-kids,
+  .tree-kids > div > * {
+    transition: none;
   }
 }

@@ -1,18 +1,24 @@
 // Server-rendered pieces of the Collection pages: the breadcrumb trail,
-// the row of sibling collections, the tiles for the collections inside a
-// page, and the plain-data form of products for the ProductBrowser.
-// Plain <a> links: every Collection page is pre-rendered HTML.
-import type { CatalogueNode, Product } from "@/lib/catalogue";
+// the collection tree (sidebar on desktop, "Browse collections" panel on
+// phones) that shows where the visitor is and where they can go, the cards
+// for the types inside a page, and the plain-data form of products for the
+// ProductBrowser. Plain <a> links: every Collection page is pre-rendered.
+import type { CatalogueCategory, CatalogueNode, Product } from "@/lib/catalogue";
 import { imageSource } from "@/lib/media";
 import { ArrowRightIcon, ChevronRightIcon } from "../icons";
 import { RevealImage } from "../RevealImage";
+import { SiteLink } from "../SiteLink";
+import { CollectionMenu as Menu, CollectionTree, type TreeNode } from "./CollectionTree";
 import type { BrowserProduct } from "./ProductBrowser";
+
+export const designs = (n: number) => (n === 1 ? "1 design" : `${n} designs`);
+export const types = (n: number) => (n === 1 ? "1 type" : `${n} types`);
 
 export function Breadcrumbs({ trail }: { trail: { name: string; href: string }[] }) {
   const items = [{ name: "Collection", href: "/collection" }, ...trail];
   return (
     <nav aria-label="Breadcrumb" className="no-scrollbar -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-      <ol className="flex items-center gap-1.5 text-[0.8rem] whitespace-nowrap text-muted">
+      <ol className="flex items-center gap-1.5 text-[0.82rem] whitespace-nowrap text-muted">
         {items.map((t, i) => {
           const last = i === items.length - 1;
           return (
@@ -37,109 +43,62 @@ export function Breadcrumbs({ trail }: { trail: { name: string; href: string }[]
   );
 }
 
-/** The other collections at the same level, so a visitor can hop across. */
-export function Siblings({ parent, current }: { parent: CatalogueNode; current: CatalogueNode }) {
-  if (parent.children.length < 2) return null;
+/** The tree in the slim shape the client component takes. */
+function slim(nodes: CatalogueNode[]): TreeNode[] {
+  return nodes.map((n) => ({ id: n.id, name: n.name, href: n.href, count: n.productCount, children: slim(n.children) }));
+}
+
+/** Desktop: a sticky sidebar with the collection tree. */
+export function CollectionSidebar({ categories, current }: { categories: CatalogueCategory[]; current: string }) {
   return (
-    <div className="chip-row no-scrollbar -mx-5 flex items-center gap-2 overflow-x-auto overflow-y-hidden px-5 sm:-mx-8 sm:px-8 lg:mx-0 lg:flex-wrap lg:px-0">
-      <span className="mr-1 shrink-0 text-[0.72rem] font-semibold tracking-[0.16em] text-muted uppercase">{parent.name}</span>
-      {parent.children.map((c) => {
-        const on = c.id === current.id;
-        return (
-          <a
-            key={c.id}
-            href={c.href}
-            aria-current={on ? "page" : undefined}
-            className={`shrink-0 rounded-full border px-4 py-1.5 text-[0.8rem] font-medium whitespace-nowrap transition-[background-color,border-color,color] duration-300 ${
-              on ? "border-terracotta bg-terracotta text-white" : "border-ink/15 text-ink-soft hover:border-ink hover:text-ink"
-            }`}
-          >
-            {c.name}
-          </a>
-        );
-      })}
-    </div>
+    <aside className="hidden lg:block">
+      <nav aria-label="Collections" className="collection-aside sticky top-28 max-h-[calc(100dvh-8rem)] overflow-y-auto pr-1 pb-6">
+        <SiteLink href="/collection" className="mb-3 block px-3 text-[0.72rem] font-semibold tracking-[0.2em] text-muted uppercase hover:text-ink">
+          All collections
+        </SiteLink>
+        <CollectionTree nodes={slim(categories)} current={current} />
+      </nav>
+    </aside>
   );
 }
 
-const count = (n: number) => (n === 1 ? "1 design" : `${n} designs`);
+/** Phones and tablets: the same tree under a "Browse collections" bar. */
+export function CollectionMenu({ categories, current, here }: { categories: CatalogueCategory[]; current: string; here: string }) {
+  return <Menu nodes={slim(categories)} current={current} here={here} />;
+}
 
-// Columns for the type cards, chosen so rows come out even where possible.
-const COLS: Record<number, string> = {
-  1: "sm:grid-cols-2 lg:grid-cols-3",
-  3: "sm:grid-cols-3",
-  4: "sm:grid-cols-2 lg:grid-cols-4",
-  5: "sm:grid-cols-3 lg:grid-cols-5",
-  6: "sm:grid-cols-3",
-};
+// Columns for the type cards (the content column sits beside the sidebar on
+// desktops). Two or four types: two across; otherwise three.
+const COLS: Record<number, string> = { 1: "sm:grid-cols-2", 2: "sm:grid-cols-2", 4: "sm:grid-cols-2" };
 
-/**
- * The collections inside a page. Two of them: large photo tiles. More:
- * quieter cards, a smaller photo with the name and what's inside written
- * underneath, so a row of seven doesn't turn into a wall of pictures.
- */
-export function NodeTiles({ nodes, headingId }: { nodes: CatalogueNode[]; headingId: string }) {
-  if (nodes.length !== 2) return <TypeCards nodes={nodes} headingId={headingId} />;
-  const many = nodes.length > 4;
+/** Cards for the types inside a page: photo, name, description, what's inside. */
+export function TypeCards({ nodes, headingId }: { nodes: CatalogueNode[]; headingId: string }) {
+  const cols = COLS[nodes.length] ?? "sm:grid-cols-2 lg:grid-cols-3";
+  const wide = nodes.length <= 2 || nodes.length === 4;
   return (
-    <ul
-      aria-labelledby={headingId}
-      className={`mt-8 grid gap-3 sm:mt-10 sm:gap-5 lg:gap-6 ${
-        nodes.length === 2 ? "grid-cols-2" : many ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-      }`}
-    >
+    <ul aria-labelledby={headingId} className={`mt-6 grid gap-x-6 gap-y-5 sm:mt-8 sm:gap-y-10 lg:gap-x-8 ${cols}`}>
       {nodes.map((n, i) => (
         <li key={n.id}>
-          <a href={n.href} className="node-tile group relative isolate block overflow-hidden rounded-[1.25rem] text-white sm:rounded-[1.6rem]">
+          {/* Phones: a row with a small square photo, so a list of types
+              stays short. Larger screens: photo above, text below. */}
+          <a href={n.href} className="type-card group flex items-center gap-4 sm:block">
             <RevealImage
               image={n.imageKey}
               alt=""
-              sizes={nodes.length === 2 ? "(min-width: 1024px) 40vw, 50vw" : "(min-width: 1024px) 23vw, (min-width: 768px) 31vw, 50vw"}
-              className={`node-tile-img ${nodes.length === 2 ? "aspect-[4/5] sm:aspect-[4/3]" : "aspect-[4/5]"}`}
+              sizes={wide ? "(min-width: 1024px) 34vw, (min-width: 640px) 46vw, 96px" : "(min-width: 1024px) 23vw, (min-width: 640px) 46vw, 96px"}
+              className={`node-tile-img aspect-square w-24 shrink-0 overflow-hidden rounded-2xl sm:w-auto sm:rounded-[1.35rem] ${wide ? "sm:aspect-[16/10]" : "sm:aspect-[4/3]"}`}
               delay={Math.min(i, 6)}
             />
-            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,rgba(12,12,12,0.78)_0%,rgba(12,12,12,0.25)_45%,rgba(12,12,12,0)_70%)]" />
-            <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 sm:p-5 lg:p-6">
+            <span className="flex min-w-0 flex-1 items-start justify-between gap-4 px-0.5 sm:mt-4">
               <span className="min-w-0">
-                <span className="block text-[1.05rem] leading-tight font-medium sm:text-[1.3rem]">{n.name}</span>
-                <span className="mt-1 block text-[0.75rem] text-white/80 sm:text-[0.8rem]">
-                  {n.children.length > 0 ? `${n.children.map((c) => c.name).join(", ")}` : count(n.productCount)}
+                <span className="block text-[1.1rem] leading-snug font-medium transition-colors duration-300 group-hover:text-terracotta sm:text-[1.2rem]">{n.name}</span>
+                {n.description && <span className="mt-1 block text-[0.86rem] leading-snug text-ink-soft sm:mt-1.5 sm:text-[0.9rem] sm:leading-relaxed">{n.description}</span>}
+                <span className="mt-2 block text-[0.8rem] text-muted">
+                  {n.children.length > 0 ? `${types(n.children.length)} · ${designs(n.productCount)}` : designs(n.productCount)}
                 </span>
               </span>
-              <span className="node-tile-arrow flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 sm:h-10 sm:w-10">
+              <span className="type-card-arrow mt-0.5 hidden h-9 w-9 shrink-0 sm:flex items-center justify-center rounded-full border border-ink/12 text-ink">
                 <ArrowRightIcon className="h-4 w-4" />
-              </span>
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function TypeCards({ nodes, headingId }: { nodes: CatalogueNode[]; headingId: string }) {
-  const cols = COLS[nodes.length] ?? "sm:grid-cols-3 lg:grid-cols-4";
-  return (
-    <ul aria-labelledby={headingId} className={`mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:mt-10 sm:gap-x-6 lg:gap-x-8 ${cols}`}>
-      {nodes.map((n, i) => (
-        <li key={n.id}>
-          <a href={n.href} className="type-card group block">
-            <RevealImage
-              image={n.imageKey}
-              alt=""
-              sizes="(min-width: 1024px) 20vw, (min-width: 640px) 31vw, 48vw"
-              className="node-tile-img aspect-[4/3] overflow-hidden rounded-[1.1rem] sm:rounded-[1.35rem]"
-              delay={Math.min(i, 6)}
-            />
-            <span className="mt-3.5 flex items-start justify-between gap-3 px-0.5">
-              <span className="min-w-0">
-                <span className="block text-[1rem] leading-snug font-medium transition-colors duration-300 group-hover:text-terracotta sm:text-[1.1rem]">{n.name}</span>
-                <span className="mt-1 block text-[0.8rem] leading-snug text-muted">
-                  {n.children.length > 0 ? n.children.map((c) => c.name).join(", ") : count(n.productCount)}
-                </span>
-              </span>
-              <span className="type-card-arrow mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/12 text-ink">
-                <ArrowRightIcon className="h-3.5 w-3.5" />
               </span>
             </span>
           </a>

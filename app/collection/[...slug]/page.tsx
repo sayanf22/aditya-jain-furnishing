@@ -1,23 +1,26 @@
-// One Collection page per category and per subcategory, at any depth:
+// One Collection page per category and per subcategory, at any depth, in
+// the client's tree (15 Nov 2026):
 //   /collection/curtains-blinds
 //   /collection/curtains-blinds/curtains
 //   /collection/curtains-blinds/curtains/sheer/organza
-// Each shows its photo header and where it sits (breadcrumb). A page with
-// types inside it shows those first, then a one-row preview of its designs
-// ("See all" opens the full grid with a filter per type). A page with no
-// types inside shows its designs straight away, with the other types at its
-// level as chips so a visitor can hop across.
+//
+// Every page has the same simple layout, so a visitor always knows where
+// they are and where to go next:
+//   - left (desktop): the collection tree, with the current page marked;
+//     phones get the same tree under a "Browse collections" bar
+//   - breadcrumb, the page's name and a clear description
+//   - a page with types inside lists those types (photo, name,
+//     description, how many designs); a page with no types inside shows
+//     its designs, which open large with an Enquire button.
 //
 // All pages are pre-rendered at build time from D1 (generateStaticParams);
 // any other path is a 404 (dynamicParams = false).
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Breadcrumbs, NodeTiles, Siblings, toBrowser } from "@/components/collection/CollectionParts";
-import { NodeTilesHeading } from "@/components/collection/NodeTilesHeading";
+import { Breadcrumbs, CollectionMenu, CollectionSidebar, designs, toBrowser, TypeCards, types } from "@/components/collection/CollectionParts";
 import { ProductBrowser } from "@/components/collection/ProductBrowser";
 import { WhatsAppIcon } from "@/components/icons";
-import { PageHero } from "@/components/PageHero";
-import { allPaths, findNode, getCatalogue, productsIn, type CatalogueNode } from "@/lib/catalogue";
+import { allPaths, findNode, getCatalogue, productsIn } from "@/lib/catalogue";
 import { whatsappLink } from "@/lib/contact";
 import { contactFrom, getSettings } from "@/lib/content";
 
@@ -42,20 +45,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** The node that holds this one (the category for a top-level subcategory). */
-function parentOf(category: CatalogueNode, node: CatalogueNode): CatalogueNode | null {
-  if (node === category) return null;
-  const find = (n: CatalogueNode): CatalogueNode | null => {
-    if (n.children.some((c) => c.id === node.id)) return n;
-    for (const c of n.children) {
-      const hit = find(c);
-      if (hit) return hit;
-    }
-    return null;
-  };
-  return find(category);
-}
-
 export default async function CollectionNodePage({ params }: Props) {
   const { slug } = await params;
   const [catalogue, settings] = await Promise.all([getCatalogue(), getSettings()]);
@@ -64,87 +53,83 @@ export default async function CollectionNodePage({ params }: Props) {
   const { category, node } = found;
   const contact = contactFrom(settings);
   const whatsappBase = whatsappLink(contact);
-  const parent = parentOf(category, node);
-  const isCategory = node === category;
   const hasTypes = node.children.length > 0;
+  const here = `You are in: ${node.name}`;
+  // The level above, as a small label over the title ("Curtains › Sheer").
+  const above = node.trail.length > 1 ? node.trail.slice(0, -1).map((t) => t.name).join(" › ") : "Collection";
 
-  const products = toBrowser(productsIn(catalogue, category, node), {
-    collectionName: (p) => p.trail[p.trail.length - 1] ?? category.name,
-    group: (p) => p.leafId,
-    // Which type inside this page a design is in ("Linen"); nothing on a
-    // page that has no types inside (every card would say the same).
-    trail: (p) => (hasTypes ? p.trail.slice(node.trail.length - 1).slice(-1) : []),
-    describe: (p) => {
-      const sub = catalogue.products.find((x) => x.id === p.id)?.subcategoryId;
-      return sub ? catalogue.nodes.get(sub)?.description ?? null : category.description;
-    },
-  });
-  const label = isCategory ? "Collection" : node.trail.slice(0, -1).map((t) => t.name).join(" · ");
-  const words = node.name.split(" ");
-  const title = words.length > 1 ? [words.slice(0, -1).join(" "), { accent: words[words.length - 1] }] : [{ accent: node.name }];
+  const products = hasTypes
+    ? []
+    : toBrowser(productsIn(catalogue, category, node), {
+        collectionName: () => node.name,
+        group: () => null,
+        // Every design on this page is the same type, so the cards show
+        // only their names.
+        trail: () => [],
+        describe: () => node.description,
+      });
   const enquiry = whatsappBase
     ? `${whatsappBase}?text=${encodeURIComponent(`Hello, I'd like to know more about ${node.trail.map((t) => t.name).join(" · ")} from your website.`)}`
     : null;
 
   return (
-    <main>
-      <PageHero
-        id="node-title"
-        label={label}
-        title={title}
-        intro={node.description ?? undefined}
-        image={category.heroKey ?? category.imageKey}
-        alt=""
-        size="short"
-      />
+    <main className="shell pt-24 pb-20 sm:pt-28 lg:pt-32 lg:pb-28">
+      <div className="grid gap-8 lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-14 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-20">
+        <CollectionSidebar categories={catalogue.categories} current={node.href} />
 
-      <div className="shell flex flex-col gap-5 pt-8 sm:pt-10">
-        <Breadcrumbs trail={node.trail} />
-        {parent && !hasTypes && <Siblings parent={parent} current={node} />}
-      </div>
-
-      {hasTypes && (
-        <section className="pt-12 pb-4 sm:pt-16 lg:pt-20" aria-labelledby="inside-title">
-          <div className="shell">
-            <NodeTilesHeading id="inside-title" label={`Inside ${node.name}`} parts={["Choose", { accent: "a type" }]} />
-            <NodeTiles nodes={node.children} headingId="inside-title" />
+        <div className="min-w-0">
+          <Breadcrumbs trail={node.trail} />
+          <div className="mt-4">
+            <CollectionMenu categories={catalogue.categories} current={node.href} here={here} />
           </div>
-        </section>
-      )}
 
-      <section className="py-14 sm:py-20 lg:py-24" aria-labelledby="products-title">
-        <div className="shell">
-          <div className="mb-8 sm:mb-10">
-            <NodeTilesHeading id="products-title" label={isCategory ? category.name : node.name} parts={hasTypes ? ["A few", { accent: "designs" }] : ["The", { accent: "designs" }]} />
-          </div>
-          {products.length > 0 ? (
-            <ProductBrowser
-              products={products}
-              groups={node.children.filter((c) => c.productCount > 0).map((c) => ({ id: c.id, name: c.name }))}
-              allLabel={node.name}
-              whatsappBase={whatsappBase}
-              headingId="products-title"
-              preview={hasTypes ? 4 : undefined}
-            />
+          <header className="mt-8 border-b border-ink/10 pb-8 sm:mt-10 sm:pb-10">
+            <p className="section-label">{above}</p>
+            <h1 id="node-title" className="mt-3 text-[2rem] leading-[1.1] font-medium tracking-[-0.01em] sm:text-[2.6rem] lg:text-[3rem]">
+              {node.name}
+            </h1>
+            {node.description && <p className="mt-4 max-w-2xl text-[1rem] leading-relaxed text-ink-soft sm:text-[1.08rem]">{node.description}</p>}
+            <p className="mt-4 text-[0.85rem] text-muted">{hasTypes ? `${types(node.children.length)} · ${designs(node.productCount)}` : designs(node.productCount)}</p>
+          </header>
+
+          {hasTypes ? (
+            <section className="pt-10 sm:pt-12" aria-labelledby="types-title">
+              <h2 id="types-title" className="text-[1.15rem] font-medium sm:text-[1.3rem]">
+                Choose a type
+              </h2>
+              <TypeCards nodes={node.children} headingId="types-title" />
+            </section>
           ) : (
-            <div className="rounded-[1.5rem] bg-sand/60 px-6 py-14 text-center">
-              <p className="text-[1.1rem] font-medium">Designs are being added</p>
-              <p className="mt-2 text-[0.95rem] text-muted">Ask the showroom about {node.name.toLowerCase()} in the meantime.</p>
-              {enquiry && (
-                <a
-                  href={enquiry}
-                  target="_blank"
-                  rel="noopener"
-                  className="btn mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-6 text-[0.85rem] font-medium text-white hover:bg-terracotta-dark"
-                >
-                  <WhatsAppIcon className="h-4 w-4" />
-                  Enquire
-                </a>
+            <section className="pt-10 sm:pt-12" aria-labelledby="products-title">
+              <h2 id="products-title" className="sr-only">
+                {node.name} designs
+              </h2>
+              {products.length > 0 ? (
+                <>
+                  <p className="mb-6 text-[0.92rem] text-ink-soft">Tap a design to see it large, then enquire about it.</p>
+                  <ProductBrowser products={products} groups={[]} allLabel={node.name} whatsappBase={whatsappBase} headingId="products-title" />
+                </>
+              ) : (
+                <div className="rounded-[1.5rem] bg-sand px-6 py-14 text-center">
+                  <p className="text-[1.1rem] font-medium">Designs are being added</p>
+                  <p className="mt-2 text-[0.95rem] text-muted">Ask the showroom about {node.name.toLowerCase()} in the meantime.</p>
+                  {enquiry && (
+                    <a
+                      href={enquiry}
+                      target="_blank"
+                      rel="noopener"
+                      className="btn mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-terracotta px-6 text-[0.85rem] font-medium text-white hover:bg-terracotta-dark"
+                    >
+                      <WhatsAppIcon className="h-4 w-4" />
+                      Enquire
+                    </a>
+                  )}
+                </div>
               )}
-            </div>
+            </section>
           )}
         </div>
-      </section>
+      </div>
     </main>
   );
 }
