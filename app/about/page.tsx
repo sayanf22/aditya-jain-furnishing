@@ -11,6 +11,7 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/PageHero";
 import { RevealImage } from "@/components/RevealImage";
+import { SiteLink } from "@/components/SiteLink";
 import { ArrowRightIcon, ArrowUpRightIcon, MapPinIcon, PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { Words } from "@/components/Words";
 import { enquiryMessage, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
@@ -21,7 +22,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "Delta Furnishings is a home furnishing showroom in Kirti Nagar, New Delhi: upholstery fabric, curtains & blinds, carpets & mats, cushions and wallpaper, for homes and interior designers.",
+    "Delta Furnishings is a home furnishing showroom in Kirti Nagar, New Delhi: upholstery, curtains & blinds, carpets & mats, wallpapers and cushions, for homes and interior designers.",
 };
 
 const delay = (n: number) => ({ ["--reveal-delay" as string]: n });
@@ -60,19 +61,19 @@ export default async function AboutPage() {
               <Words parts={["Five collections", { accent: "under one roof" }]} />
             </h2>
             <p className="mt-6 max-w-lg text-[1.05rem] leading-relaxed text-ink-soft" data-reveal style={delay(2)}>
-              Upholstery fabric, curtains and blinds, carpets and mats, cushions and wallpaper, all at our showroom in Furniture Block, Kirti Nagar.
+              Upholstery, curtains and blinds, carpets and mats, wallpapers and cushions, all at our showroom in Furniture Block, Kirti Nagar.
             </p>
             <p className="mt-4 max-w-lg text-[1.05rem] leading-relaxed text-ink-soft" data-reveal style={delay(3)}>
               Come in to see and feel the fabrics, or send us an enquiry first.
             </p>
             <div className="mt-9 flex flex-wrap gap-3" data-reveal style={delay(4)}>
-              <a
+              <SiteLink
                 href="/collection"
                 className="btn inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[0.85rem] font-medium text-ivory hover:bg-terracotta"
               >
                 Explore the collection
                 <ArrowRightIcon className="btn-arrow h-4 w-4" />
-              </a>
+              </SiteLink>
               <a
                 href="#visit"
                 className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ink/15 px-6 text-[0.85rem] font-medium hover:border-ink hover:bg-ink hover:text-ivory"
@@ -97,10 +98,10 @@ export default async function AboutPage() {
                   <Words parts={["Our", { accent: "collections" }]} />
                 </h2>
               </div>
-              <a href="/collection" className="inline-flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-[0.1em] text-terracotta uppercase" data-reveal style={delay(2)}>
+              <SiteLink href="/collection" className="inline-flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-[0.1em] text-terracotta uppercase" data-reveal style={delay(2)}>
                 <span className="link-line">See everything</span>
                 <ArrowRightIcon className="h-4 w-4" />
-              </a>
+              </SiteLink>
             </div>
 
             <ul className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-5">

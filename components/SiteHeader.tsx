@@ -11,7 +11,7 @@
 // trap the fixed panel inside the header's own box.
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type CSSProperties } from "react";
-import { NAV, PHOTO_HEADER_PAGES } from "@/lib/nav";
+import { hasPhotoHeader, isCurrent, NAV } from "@/lib/nav";
 import { ArrowRightIcon, PhoneIcon, WhatsAppIcon } from "./icons";
 import { SiteLink } from "./SiteLink";
 
@@ -24,7 +24,7 @@ type Props = {
 
 export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
   const pathname = usePathname();
-  const overlay = PHOTO_HEADER_PAGES.includes(pathname);
+  const overlay = hasPhotoHeader(pathname);
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -73,7 +73,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
         <div className="shell grid h-16 grid-cols-[1fr_auto_1fr] items-center sm:h-20">
           <nav aria-label="Main" className="hidden items-center gap-7 text-[0.8rem] font-medium tracking-[0.12em] uppercase lg:flex">
             {NAV.map((item) => (
-              <SiteLink key={item.href} href={item.href} className="link-line py-1" aria-current={pathname === item.href ? "page" : undefined}>
+              <SiteLink key={item.href} href={item.href} className="link-line py-1" aria-current={isCurrent(pathname, item.href) ? "page" : undefined}>
                 {item.label}
               </SiteLink>
             ))}
@@ -152,7 +152,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
               href={link.href}
               onClick={() => setOpen(false)}
               tabIndex={open ? 0 : -1}
-              aria-current={pathname === link.href ? "page" : undefined}
+              aria-current={isCurrent(pathname, link.href) ? "page" : undefined}
               className="menu-item group flex items-center justify-between border-b border-ink/10 py-5 text-[1.75rem] leading-none font-medium"
               style={item(i + 1, open)}
             >

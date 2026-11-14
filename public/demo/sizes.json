@@ -455,5 +455,879 @@
       1320,
       800
     ]
+  },
+  "sc-collection": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "sc-wallpapers": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "sc-cushions": {
+    "widths": [
+      640,
+      1080,
+      1600,
+      2048
+    ],
+    "aspect": [
+      16,
+      9
+    ]
+  },
+  "p-1-suede-tan": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-suede-mocha": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-suede-stone": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-velvet-forest": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-velvet-midnight": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-velvet-wine": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-boucle-ivory": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-boucle-berry": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-jacquard-sage-damask": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-jacquard-gold-damask": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-jacquard-blue-damask": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-jute-natural": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-jute-sand": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-print-floral": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-print-red-toile": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-print-blue-toile": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-tweed-blue": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-tweed-grey": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-leatherite-cognac": {
+    "widths": [
+      480
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-leatherite-black": {
+    "widths": [
+      480
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-1-leatherite-olive": {
+    "widths": [
+      480
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-linen-white": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-linen-natural": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-linen-flax": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-jacquard-celadon": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-jacquard-rose": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-boucle-pebble": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-boucle-cream": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-velvet-bronze": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-velvet-teal": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-velvet-plum": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-polyester-blush": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-polyester-champagne": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-polyester-silver": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-blackout-charcoal": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-blackout-espresso": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-dimout-walnut": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-dimout-taupe": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-sheer-linen-white": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-sheer-linen-warm": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-embroidered-sheer-floral": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-embroidered-sheer-lace": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-tissue-amber": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-tissue-mist": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-organza-peach": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-organza-blush": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-organza-ivory": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-print-manufacture-toile": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-print-bright-floral": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-print-rose-toile": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-trim-gold-fringe": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-trim-tassel-fringe": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-roller-graphite": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-roller-red": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-roman-natural-linen": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-roman-sage-linen": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-zebra-black-and-white": {
+    "widths": [
+      480
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-wooden-blinds-honey": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-wooden-blinds-light": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-print-toile-blind": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-2-print-botanical-blind": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-carpet-persian-red": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-carpet-tree-of-life": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-carpet-grey-trellis": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-carpet-patterned": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-mat-coir": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-3-mat-woven-stack": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-willow": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-rose-scroll": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-lilac-trellis": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-garland": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-blue-medallion": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-rose-border": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-5-wallpaper-yellow-floral": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-4-cushion-mustard": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-4-cushion-diamond-print": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-4-cushion-black-and-white-check": {
+    "widths": [
+      480,
+      800,
+      1200
+    ],
+    "aspect": [
+      4,
+      5
+    ]
+  },
+  "p-4-cushion-stripe": {
+    "widths": [
+      480,
+      800
+    ],
+    "aspect": [
+      4,
+      5
+    ]
   }
 }

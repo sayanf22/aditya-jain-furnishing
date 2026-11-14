@@ -23,7 +23,7 @@ export function Categories({ categories }: { categories: Category[] }) {
             <Words parts={["Browse", { accent: "by category" }]} />
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-[0.98rem] leading-relaxed text-muted" data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
-            Five collections, from upholstery fabric to wallpaper.
+            Five collections, from upholstery to cushions.
           </p>
         </div>
 
@@ -47,10 +47,7 @@ export function Categories({ categories }: { categories: Category[] }) {
 function CategoryCard({ category, index }: { category: Category; index: number }) {
   const source = imageSource(category.imageKey);
   const href = `/collection/${category.slug}`;
-  const subs =
-    category.slug === "carpets-mats"
-      ? [...category.subcategories, { id: -1, slug: "all", name: "Direct collections" }]
-      : category.subcategories;
+  const subs = category.subcategories;
 
   return (
     <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">

@@ -15,6 +15,9 @@
 //   - frame timing while animations run (long frames = visible stutter)
 //   - About Us: photo header, reveals, smooth scrolling, links; Gallery gone
 //   - Contact: links, hover, the enquiry form sends with source "contact"
+//   - Collection: routes and 404, Show more, filter chips, search, viewer
+//     (zoom, steps, Esc, full screen on a phone), tiles, breadcrumbs, no
+//     cropped photos, no sideways scroll, no "WhatsApp" wording
 import { chromium } from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:8787/";
@@ -573,6 +576,102 @@ const browser = await chromium.launch();
     return hits;
   });
   ok("contact has no 'WhatsApp' wording", waText.length === 0, waText.join(" | ") || "none");
+  await page.close();
+}
+
+// Collection: every page of the tree is there and unknown ones are not;
+// filter chips, search, "Show more", the viewer (opens, zooms, steps,
+// closes), tiles lead one level down, and nothing says "WhatsApp".
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const routes = ["/collection", "/collection/upholstery-fabric", "/collection/upholstery-fabric/fabrics/velvet", "/collection/curtains-blinds/curtains/blackouts", "/collection/curtains-blinds/blinds/roller", "/collection/carpets-mats/mats", "/collection/wallpaper", "/collection/cushions"];
+  const statuses = [];
+  for (const r of routes) statuses.push((await page.goto(new URL(r, url).href)).status());
+  const missing = (await page.goto(new URL("/collection/upholstery-fabric/nope", url).href)).status();
+  ok("collection pages load, unknown ones are 404", statuses.every((s) => s === 200) && missing === 404, `${statuses.join(",")} / ${missing}`);
+
+  await page.goto(new URL("/collection", url).href, { waitUntil: "networkidle" });
+  const header = await page.evaluate(() => getComputedStyle(document.querySelector("header")).backgroundColor);
+  ok("header is transparent over the Collection photo", header === "rgba(0, 0, 0, 0)", header);
+  const cards = () => page.locator(".product-card").count();
+  const count = async () => Number((await page.locator('[id$="-count"]').first().innerText()).match(/\d+/)?.[0] ?? 0);
+  const total = await count();
+  const first = await cards();
+  await page.getByRole("button", { name: /^Show more/ }).click();
+  const more = await cards();
+  ok("Collection shows a first page, then Show more adds the next", first > 0 && first < total && more > first, `${first} -> ${more} of ${total}`);
+
+  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Wallpapers" }).click();
+  const walls = await count();
+  const labels = await page.$$eval(".product-card", (els) => [...new Set(els.map((e) => e.querySelector("span span")?.textContent))]);
+  ok("filter chip shows only that category", walls > 0 && walls < total && labels.length === 1 && labels[0] === "Wallpapers", `${walls} cards, ${labels.join(", ")}`);
+  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: /^All/ }).click();
+  await page.fill('input[type="search"]', "velvet");
+  const found = await page.$$eval(".product-card", (els) => els.map((e) => e.textContent));
+  ok("search finds matching designs", found.length > 0 && found.every((t) => /velvet/i.test(t)), `${found.length} for "velvet"`);
+  await page.fill('input[type="search"]', "zzzz");
+  ok("search with no match says so", (await cards()) === 0 && /0 products/.test(await page.locator('[id$="-count"]').first().innerText()));
+  await page.fill('input[type="search"]', "");
+
+  // Viewer
+  await page.locator(".product-card").nth(1).click();
+  const dlg = page.locator("dialog[open]");
+  await dlg.waitFor({ timeout: 3000 }).catch(() => {});
+  const name1 = await dlg.locator("h3").textContent().catch(() => null);
+  const zoomBtn = dlg.getByRole("button", { name: "Zoom in" });
+  await zoomBtn.click({ position: { x: 60, y: 60 } });
+  await page.waitForTimeout(600);
+  const zoomed = await dlg.locator("img[style*='scale']").count();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(300);
+  const name2 = await dlg.locator("h3").textContent().catch(() => null);
+  await dlg.getByRole("button", { name: "Previous product" }).click();
+  const name3 = await dlg.locator("h3").textContent().catch(() => null);
+  ok("viewer opens, zooms on tap, steps with keys and arrows", !!name1 && zoomed > 0 && name2 !== name1 && name3 === name1, `${name1} -> ${name2} -> ${name3}, zoom ${zoomed}`);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  ok("viewer closes with Esc", (await page.locator("dialog[open]").count()) === 0);
+  await page.close();
+}
+{
+  // Category page: tiles go one level down, chips filter by child,
+  // breadcrumbs lead back; on a phone nothing scrolls sideways and the
+  // viewer fills the screen.
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await page.goto(new URL("/collection/curtains-blinds", url).href, { waitUntil: "networkidle" });
+  const tiles = await page.$$eval("a.node-tile", (els) => els.map((a) => a.getAttribute("href")));
+  ok("category page tiles lead to its subcategories", tiles.length === 2 && tiles.every((h) => h.startsWith("/collection/curtains-blinds/")), tiles.join(", "));
+  const crumbs = await page.$$eval('nav[aria-label="Breadcrumb"] a', (els) => els.map((a) => a.getAttribute("href")));
+  ok("breadcrumbs lead back to Collection", crumbs.includes("/collection"), crumbs.join(", "));
+  const r = await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 300) {
+      window.scrollTo(0, y);
+      await new Promise((res) => setTimeout(res, 100));
+    }
+    await new Promise((res) => setTimeout(res, 1500));
+    const hits = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/whatsapp/i.test(n.textContent) && !n.parentElement.closest("script,style")) hits.push(n.textContent.trim());
+    document.querySelectorAll("[aria-label]").forEach((el) => /whatsapp/i.test(el.getAttribute("aria-label")) && hits.push(el.getAttribute("aria-label")));
+    return {
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      hidden: document.querySelectorAll(".js [data-reveal]:not([data-shown]), .js [data-words]:not([data-shown])").length,
+      cropped: [...document.querySelectorAll(".product-img")].filter((i) => getComputedStyle(i).objectFit === "cover" && Math.abs(i.naturalWidth / i.naturalHeight - 0.8) > 0.02 && i.naturalWidth).length,
+      hits,
+    };
+  });
+  ok("collection on phone: no sideways scroll, all sections shown", r.overflow <= 0 && r.hidden === 0, `${r.overflow}px extra, ${r.hidden} hidden`);
+  ok("collection photos are never cropped", r.cropped === 0, `${r.cropped} cropped`);
+  ok("collection has no 'WhatsApp' wording", r.hits.length === 0, r.hits.join(" | ") || "none");
+  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Blinds", exact: true }).click();
+  const trails = await page.$$eval(".product-card", (els) => els.map((e) => e.querySelector("span span")?.textContent ?? ""));
+  ok("subcategory chip filters the category page", trails.length > 0 && trails.every((t) => /^Blinds/.test(t)), `${trails.length} cards`);
+  await page.locator(".product-card").first().tap();
+  await page.waitForTimeout(800);
+  const box = await page.evaluate(() => document.querySelector("dialog[open]")?.getBoundingClientRect().toJSON());
+  ok("viewer fills the phone screen", box && box.top <= 0 && box.height >= 843 && box.width >= 389, box ? `${box.width}x${box.height}` : "not open");
+  const enq = await page.locator("dialog[open] a", { hasText: "Enquire" }).getAttribute("href");
+  ok("viewer Enquire opens a message about that design", /^https:\/\/wa\.me\/\d+\?text=/.test(enq ?? ""), (enq ?? "").split("?")[0]);
   await page.close();
 }
 

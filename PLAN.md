@@ -1,6 +1,6 @@
 ﻿# Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
-Status: plan v9. Home, About Us and Contact built with stand-in images. On 13 Nov 2026 the décor picker and "Our looks" were merged into one interactive room on the Home page, at the client's request; waiting for review before the Collection page.
+Status: plan v10. Home, Collection, About Us and Contact built with stand-in images. On 15 Nov 2026 the Collection pages were built on the client's category and subcategory list (§11b); the admin dashboard is next.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
 Client PDFs: `docs/client-pdfs/` (kept out of git).
 
@@ -16,7 +16,7 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 | Way of working | One page at a time: Home first, get approval, then the next page |
 | Footer credit | "Made by whycreatives.in", linked to https://whycreatives.in, in the bottom row of the dark footer |
 | Video | None anywhere on the site (your instruction, round 2). Watch & Buy was merged into the interactive room (13 Nov 2026) |
-| Upholstery Fabric | Flat list as in the revised agreement: Fabric, Velvet, Linen, Prints, Leather |
+| Catalogue | The client's category and subcategory list (15 Nov 2026), replacing the agreement's flat lists: see §4. Subcategories can sit inside subcategories, to any depth |
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
 | Code repository | Private GitHub repo `sayanf22/aditya-jain-furnishing` |
 | Design direction | The Floor & Furnishings screenshots you sent: full-screen photo hero with the headline bottom left and a terracotta button, a terracotta ribbon of category names, then a row of tall category cards with "Explore" buttons. Warm ivory and sand backgrounds, terracotta accent, near-black text, one font (Instrument Sans, regular to semibold, no italics) |
@@ -50,9 +50,9 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 |---|---|---|
 | Price and time | ₹20,000 / ₹22,000, 3 weeks | ₹25,000, 4 weeks from the cleared advance |
 | Category names | Sofa Fabrics, Curtains, Carpets, Wallpapers, Cushions | Upholstery Fabric, Curtains & Blinds, Carpets & Mats, Cushions, Wallpaper |
-| Category order | Meeting notes give two different orders | 1 Upholstery Fabric, 2 Curtains & Blinds, 3 Carpets & Mats, 4 Cushions, 5 Wallpaper |
+| Category order | Meeting notes give two different orders | 1 Upholstery, 2 Curtains & Blinds, 3 Carpets & Mats, 4 Wallpapers, 5 Cushions (the client's list, 15 Nov 2026) |
 | Wallpaper | 5–6 categories | One collection |
-| Carpets | Single collection | Carpets, Mats, Direct collections |
+| Carpets | Single collection | Carpets, Mats; the category page itself shows everything (no separate "Direct collections" page) |
 | Pages | Home, Categories, Subcategories, Gallery, About, Contact | Home, Collection, About Us, Contact. Gallery was built, then replaced by About Us on 13 Nov 2026 (your call: Gallery and Collection showed the same thing) |
 | Enquiry form | Excluded (12 Oct) | Included, with B2C / B2B dropdown; shown in the dashboard; no email or SMS alerts |
 | Instagram | Not mentioned | Quick-enquiry link, plus tap-to-call |
@@ -70,14 +70,16 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 4. **Contact**: enquiry form, WhatsApp, Instagram, phone.
 5. **Admin dashboard** (secure login): categories, subcategories, products and images, the interactive room's fabrics, wallpapers and rugs (photo, name, description), testimonials, enquiries (B2C/B2B), contact details.
 
-**Catalogue** (seeded in the local database)
+**Catalogue** (the client's list, 15 Nov 2026; `migrations/0007_catalogue_v2.sql`)
 | # | Category | Inside |
 |---|---|---|
-| 1 | Upholstery Fabric | Fabric, Velvet, Linen, Prints, Leather |
-| 2 | Curtains & Blinds | Curtains group (up to 10 types, plus Prints) · Blinds group (4–5 types) |
-| 3 | Carpets & Mats | Carpets · Mats · Direct collections (everything on one page) |
-| 4 | Cushions | One collection |
-| 5 | Wallpaper | One collection |
+| 1 | Upholstery | Fabrics (Suede, Velvet, Boucle, Jacquard, Jute, Prints, Tweed) · Leatherite |
+| 2 | Curtains & Blinds | Curtains: Main (Linen, Jacquard, Boucle, Velvet, Polyester), Blackouts and Dimouts (100% Blackout, 80% Blackout), Sheer (Linen, Embroidery, Tissue, Organza), Prints, Trims · Blinds: Roller, Roman, Zebra, Wooden Blinds, Prints |
+| 3 | Carpets & Mats | Carpets · Mats |
+| 4 | Wallpapers | One collection |
+| 5 | Cushions | One collection |
+
+Every category and subcategory page also lists all the products inside it, so there is no separate "all" page.
 
 **Site-wide**: WhatsApp icon fixed on the right; Instagram quick-enquiry; tap-to-call; a WhatsApp button on every product that names the product. No cart, checkout or payments.
 
@@ -182,8 +184,8 @@ Node.js 22.16.0 meets every package's requirement; `.node-version` pins 22 for C
 
 | Table | Holds |
 |---|---|
-| `categories` | The five categories: slug, name, tagline, image, position |
-| `subcategories` | Category, optional parent group, slug, name, one line, image, position, visible |
+| `categories` | The five categories: slug, name, tagline, card image (Home), header image (Collection, added in 0007), position |
+| `subcategories` | Category, optional parent subcategory (any depth), slug (unique among siblings), name, one line, image, position, visible. Rebuilt in 0007 |
 | `products` | Category, optional subcategory, slug, name, description, position, visible |
 | `product_images` | R2 key, width, height, alt text, position |
 | `room_elements` | The seven parts of the interactive room (curtains, blind, sofa, armchair, cushions, rug, wallpaper): name, description, linked category, position, visible. Replaced `decor_scenes`, `decor_options`, `looks` and `look_hotspots` in `migrations/0005_interactive_room.sql` |
@@ -192,18 +194,16 @@ Node.js 22.16.0 meets every package's requirement; `.node-version` pins 22 for C
 | `enquiries` | Date, B2C or B2B, name, firm (B2B, added in 0004), phone, message, product or category, source page (added in 0004), read or unread |
 | `settings` | WhatsApp number, Instagram handle, phone, address, hero images |
 
-`migrations/0002_seed_catalogue.sql` adds the five categories and the subcategory names from the revised agreement. Checked: a pre-rendered page reads these rows from the local D1 during `next build`.
+`migrations/0002_seed_catalogue.sql` added the five categories and the agreement's subcategory names; `0007_catalogue_v2.sql` replaces the subcategory tree with the client's list (and drops and recreates `subcategories`, `products` and `product_images`, which held no products). Not yet applied to the live database. Checked: a pre-rendered page reads these rows from the local D1 during `next build`.
 
 ## 8. Routes
 
 | Route | Served by | Purpose |
 |---|---|---|
 | `/` | Pre-rendered | Home |
-| `/collection` | Pre-rendered | All five categories |
-| `/collection/[category]` | Pre-rendered | Category with its subcategories |
-| `/collection/[category]/[subcategory]` | Pre-rendered | Products; each opens in a zoom view with description and WhatsApp button |
-| `/collection/[category]/all` | Pre-rendered | Direct collections: everything in the category |
-| `/gallery` | Pre-rendered | Grid, search and category filter (search runs in the browser) |
+| `/collection` | Pre-rendered | All five categories, then every product with filter and search |
+| `/collection/[...slug]` | Pre-rendered, one page per category and subcategory at any depth (unknown paths are 404) | Its subcategories, then its products; each opens in a zoom view with description and Enquire button |
+| `/about` | Pre-rendered | About Us (replaced `/gallery`) |
 | `/contact` | Pre-rendered | Enquiry form and contact options |
 | `/admin/*` | Pre-rendered shell, live data from `/api/admin/*` | Dashboard (behind Access) |
 | `/api/health` | `worker/api.ts` | Health check (exists now) |
@@ -252,7 +252,7 @@ Each step ends with a check before the next one starts.
 | 3 | Design tokens, font, header, footer, floating WhatsApp button | Screenshots at 390 px and 1440 px | Done |
 | 4 | **Home page**, section by section in the agreed order, with its animations (see §11a) | Screenshots; `scripts/interaction-check.mjs` all PASS; your approval | Built, waiting for your review |
 | 5 | Speed check of the Home page | LCP < 2 s, CLS < 0.1, blocking time < 200 ms on the phone profile; page served as cache HIT | Done (§11a) |
-| 6 | **Collection pages** | Your approval | |
+| 6 | **Collection pages** (see §11b) | Screenshots at 390–2560 px; `scripts/interaction-check.mjs` all PASS; your approval | Built with stand-in photos, waiting for your review |
 | 7 | **About Us** (replaced Gallery) | Your approval | Built with stand-in photos; photo header on About Us and Contact; scroll-driven photo drift and photo reveals; checks in `scripts/interaction-check.mjs`; phone LCP 1.0 s, CLS 0 |
 | 8 | **Contact** page. The enquiry form and `/api/enquiry` were already built with the Home page (round 2) and are reused here | Test enquiry saved; bad input rejected (`scripts/enquiry-check.mjs` already passes) | Built: Message us, Call, Instagram (once a handle is set), Get directions, showroom address with GSTIN, and the enquiry form (source "contact"); checks in `scripts/interaction-check.mjs`; phone LCP 0.7 s, CLS 0 |
 | 9 | **Admin dashboard** and Publish button | Full add, edit, reorder, delete and rebuild cycle locally | |
@@ -309,11 +309,25 @@ Round 2 (31 October 2026):
 - `scripts/interaction-check.mjs`: all 18 checks pass (slide change, word-by-word headline on desktop and phone, card hover, swatch swap, look dots and arrows, no `<video>` on the page, form errors, B2B firm field, form submit, phone menu, no sideways scroll). No browser console errors.
 - `scripts/enquiry-check.mjs`: all 10 checks pass (valid B2C and B2B saved; bad phone, bad type, other-site post, non-JSON, oversized body and GET refused; honeypot accepted silently; rate limit after 5).
 
-Links to Collection, Gallery and Contact point at pages that come in the next steps, so they show the 404 page for now.
+
+## 11b. Collection pages (built 15 Nov 2026)
+
+| Page | What it shows | Code |
+|---|---|---|
+| `/collection` | Photo header; the five categories as photo tiles (two wide, three below); "Find a design": every product, with a chip per category, search, and "Show more" | `app/collection/page.tsx` |
+| `/collection/<category>/…` | Photo header (the category's header image); breadcrumbs; chips to the sibling pages; tiles for what's inside (with the names of the next level); then its products with a chip per child, search and "Show more". A page with no products yet says "Designs are being added" with Enquire | `app/collection/[...slug]/page.tsx`, `components/collection/CollectionParts.tsx` |
+| Product viewer | Tapping a card grows its photo into a large view (full screen on phones): trail, name, description, Enquire (the message names the product), a link to its collection, previous/next arrows and ←/→ keys. Tapping the photo zooms 2.2x at the spot tapped | `components/collection/ProductBrowser.tsx` |
+
+- Data: `lib/catalogue.ts` reads the whole catalogue in one D1 batch at build time; every page is pre-rendered.
+- Photos are never cropped. Frames are 4:5; a photo of another shape sits whole over a blurred copy of itself.
+- "Show more" adds 24 at a time, rounded to a full row of the grid (2 to 5 columns).
+- The build pre-renders in one worker (`next.config.ts`): ten workers at once broke the local database during the build.
+- Stand-in products: about 80, in `scripts/stock/catalogue-demo.json` (sources and licences in `docs/stock-images.md`).
+- Checks (15 Nov 2026, OpenNext build on workerd): `scripts/interaction-check.mjs` 80 of 80 pass, including routes and 404, Show more, chips, search, viewer zoom and steps, Esc, phone full-screen viewer, no sideways scroll, no cropped photos, no "WhatsApp" wording. No sideways scroll and no broken images at 390, 1024, 1440, 1920 and 2560 px. Phone profile: `/collection` LCP 0.78 s, CLS 0, blocking time 60 ms; a deep page LCP 0.62 s. Worker CPU: `/collection` about 4.5 ms of its own work (121 KB page), a deep page under 1 ms.
 
 ## 12. Needed from the client (by the time we reach each step)
 
-Instagram handle; logo; product photos; final subcategory names (curtain and blind types); décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
+Instagram handle; logo (a logo file was added to the project folder on 14 Nov 2026; not used yet); product photos with names and descriptions; décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
 
 ## 13. Sources checked (October 2026)
 

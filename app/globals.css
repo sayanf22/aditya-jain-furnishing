@@ -752,6 +752,92 @@ address {
   }
 }
 
+/* Collection pages (components/collection/). Tiles: the photo eases in
+   and the arrow fills on hover. Product cards lift and the photo zooms
+   softly (agreement §05). Cards rise in one after another whenever the
+   grid changes (filter, search). The viewer fades in over a dimmed page
+   while its photo grows from the card (Web Animations, ProductBrowser). */
+.node-tile .img-reveal-inner {
+  transition: transform 1.9s var(--ease-out-soft);
+}
+.node-tile-arrow {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    transform 0.5s var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .node-tile:hover .img-reveal-inner {
+    transform: scale(1.06);
+    transition-duration: 1.2s;
+  }
+  .node-tile:hover .node-tile-arrow {
+    background-color: #fff;
+    color: var(--color-ink);
+    transform: translate3d(3px, 0, 0);
+  }
+}
+@keyframes product-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.product-in {
+  animation: product-in 0.6s var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+.product-card .product-frame {
+  transition:
+    transform 0.5s var(--ease-out-soft),
+    box-shadow 0.5s ease;
+}
+.product-img {
+  transition: transform 0.9s var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .product-card:hover .product-frame {
+    transform: translate3d(0, -4px, 0);
+    box-shadow: 0 22px 40px -28px rgb(31 27 23 / 0.55);
+  }
+  .product-card:hover .product-img {
+    transform: scale(1.05);
+  }
+}
+.product-card:focus-visible {
+  outline: none;
+}
+.product-card:focus-visible .product-frame {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 3px;
+}
+@keyframes viewer-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes viewer-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+.viewer-in {
+  animation: viewer-in 0.35s ease-out both;
+}
+.product-viewer[open]::backdrop {
+  animation: viewer-backdrop 0.35s ease-out both;
+}
+.product-viewer {
+  overscroll-behavior: contain;
+}
+
 /* About Us: category tiles and the "who we work with" cards. */
 .about-tile .img-reveal-inner {
   transition: transform 1.9s var(--ease-out-soft);
@@ -986,6 +1072,7 @@ address {
     transform: none;
   }
   .marquee-track,
+  .product-in,
   .spot-ring,
   .page-hero-media,
   .page-hero-text,
