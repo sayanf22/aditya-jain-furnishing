@@ -10,7 +10,7 @@ export function FloatingWhatsApp({ href }: { href: string | null }) {
       target="_blank"
       rel="noopener"
       aria-label="Enquire"
-      className="float-wa group fixed right-4 bottom-5 z-30 flex h-14 items-center rounded-full bg-terracotta text-ivory shadow-[0_12px_32px_-10px_rgba(138,72,54,0.7)] ring-1 ring-white/20 sm:right-6 sm:bottom-6"
+      className="float-wa group fixed right-4 bottom-5 z-30 flex h-14 items-center rounded-full bg-terracotta text-ivory shadow-[0_12px_32px_-10px_rgba(179,0,0,0.55)] ring-1 ring-white/20 sm:right-6 sm:bottom-6"
     >
       <span className="float-wa-label grid grid-cols-[0fr] transition-[grid-template-columns] duration-500 ease-[var(--ease-out-soft)] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr]">
         <span className="overflow-hidden">

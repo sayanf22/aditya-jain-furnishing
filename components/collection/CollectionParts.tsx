@@ -62,10 +62,24 @@ export function Siblings({ parent, current }: { parent: CatalogueNode; current: 
   );
 }
 
-const count = (n: number) => (n === 1 ? "1 product" : `${n} products`);
+const count = (n: number) => (n === 1 ? "1 design" : `${n} designs`);
 
-/** Photo tiles for the collections inside a page. */
+// Columns for the type cards, chosen so rows come out even where possible.
+const COLS: Record<number, string> = {
+  1: "sm:grid-cols-2 lg:grid-cols-3",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+  5: "sm:grid-cols-3 lg:grid-cols-5",
+  6: "sm:grid-cols-3",
+};
+
+/**
+ * The collections inside a page. Two of them: large photo tiles. More:
+ * quieter cards, a smaller photo with the name and what's inside written
+ * underneath, so a row of seven doesn't turn into a wall of pictures.
+ */
 export function NodeTiles({ nodes, headingId }: { nodes: CatalogueNode[]; headingId: string }) {
+  if (nodes.length !== 2) return <TypeCards nodes={nodes} headingId={headingId} />;
   const many = nodes.length > 4;
   return (
     <ul
@@ -84,7 +98,7 @@ export function NodeTiles({ nodes, headingId }: { nodes: CatalogueNode[]; headin
               className={`node-tile-img ${nodes.length === 2 ? "aspect-[4/5] sm:aspect-[4/3]" : "aspect-[4/5]"}`}
               delay={Math.min(i, 6)}
             />
-            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,rgba(20,16,12,0.78)_0%,rgba(20,16,12,0.25)_45%,rgba(20,16,12,0)_70%)]" />
+            <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(to_top,rgba(12,12,12,0.78)_0%,rgba(12,12,12,0.25)_45%,rgba(12,12,12,0)_70%)]" />
             <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 sm:p-5 lg:p-6">
               <span className="min-w-0">
                 <span className="block text-[1.05rem] leading-tight font-medium sm:text-[1.3rem]">{n.name}</span>
@@ -94,6 +108,38 @@ export function NodeTiles({ nodes, headingId }: { nodes: CatalogueNode[]; headin
               </span>
               <span className="node-tile-arrow flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 sm:h-10 sm:w-10">
                 <ArrowRightIcon className="h-4 w-4" />
+              </span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TypeCards({ nodes, headingId }: { nodes: CatalogueNode[]; headingId: string }) {
+  const cols = COLS[nodes.length] ?? "sm:grid-cols-3 lg:grid-cols-4";
+  return (
+    <ul aria-labelledby={headingId} className={`mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:mt-10 sm:gap-x-6 lg:gap-x-8 ${cols}`}>
+      {nodes.map((n, i) => (
+        <li key={n.id}>
+          <a href={n.href} className="type-card group block">
+            <RevealImage
+              image={n.imageKey}
+              alt=""
+              sizes="(min-width: 1024px) 20vw, (min-width: 640px) 31vw, 48vw"
+              className="node-tile-img aspect-[4/3] overflow-hidden rounded-[1.1rem] sm:rounded-[1.35rem]"
+              delay={Math.min(i, 6)}
+            />
+            <span className="mt-3.5 flex items-start justify-between gap-3 px-0.5">
+              <span className="min-w-0">
+                <span className="block text-[1rem] leading-snug font-medium transition-colors duration-300 group-hover:text-terracotta sm:text-[1.1rem]">{n.name}</span>
+                <span className="mt-1 block text-[0.8rem] leading-snug text-muted">
+                  {n.children.length > 0 ? n.children.map((c) => c.name).join(", ") : count(n.productCount)}
+                </span>
+              </span>
+              <span className="type-card-arrow mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/12 text-ink">
+                <ArrowRightIcon className="h-3.5 w-3.5" />
               </span>
             </span>
           </a>
@@ -121,7 +167,7 @@ export function toBrowser<T extends Product>(
       id: p.id,
       name: p.name,
       description: p.description ?? opts.describe?.(p) ?? null,
-      trail: p.trail.join(" · "),
+      trail: (opts.trail ? opts.trail(p) : p.trail).join(" · "),
       href: p.href,
       collection: opts.collectionName(p),
       group: opts.group(p),

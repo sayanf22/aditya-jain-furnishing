@@ -108,7 +108,7 @@ export function Hero({ slides, eyebrow }: Props) {
       {/* Darkens the lower left so the white text stays readable on any photo. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.72)_0%,rgba(20,16,12,0.28)_42%,rgba(20,16,12,0.08)_70%,rgba(20,16,12,0.35)_100%)]"
+        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(12,12,12,0.72)_0%,rgba(12,12,12,0.28)_42%,rgba(12,12,12,0.08)_70%,rgba(12,12,12,0.35)_100%)]"
       />
 
       <div className="shell pb-28 sm:pb-32 lg:pb-36">

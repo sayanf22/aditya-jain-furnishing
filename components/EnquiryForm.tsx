@@ -63,7 +63,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
 
   if (state === "sent") {
     return (
-      <div className="look-panel-in flex min-h-[26rem] flex-col items-center justify-center rounded-[1.75rem] bg-white p-8 text-center shadow-[0_24px_60px_-40px_rgba(31,27,23,0.45)]">
+      <div className="look-panel-in flex min-h-[26rem] flex-col items-center justify-center rounded-[1.75rem] bg-white p-8 text-center shadow-[0_24px_60px_-40px_rgba(20,20,20,0.45)]">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-terracotta text-white">
           <CheckIcon className="h-8 w-8" />
         </span>
@@ -82,7 +82,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
     <form
       noValidate
       onSubmit={onSubmit}
-      className="rounded-[1.75rem] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(31,27,23,0.45)] sm:p-8"
+      className="rounded-[1.75rem] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(20,20,20,0.45)] sm:p-8"
       aria-describedby={problem ? "enquiry-problem" : undefined}
     >
       <p className="text-[1.25rem] font-medium">Send an enquiry</p>
@@ -170,7 +170,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
       </div>
 
       {problem && (
-        <p id="enquiry-problem" role="alert" className="mt-4 rounded-xl bg-[#b4412c]/8 px-4 py-3 text-[0.88rem] text-[#8f2f1f]">
+        <p id="enquiry-problem" role="alert" className="mt-4 rounded-xl bg-[#c40000]/8 px-4 py-3 text-[0.88rem] text-[#9a0000]">
           {problem}
         </p>
       )}
@@ -195,7 +195,7 @@ function Field({ label, error, htmlFor, wide, children }: { label: string; error
       </label>
       {children}
       {error && (
-        <p className="mt-1.5 text-[0.8rem] text-[#a3361f]" role="alert">
+        <p className="mt-1.5 text-[0.8rem] text-[#b00000]" role="alert">
           {error}
         </p>
       )}

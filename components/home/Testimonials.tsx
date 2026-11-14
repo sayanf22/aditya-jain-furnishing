@@ -21,7 +21,7 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
           {items.map((t, i) => (
             <li
               key={t.id}
-              className="flex w-[82vw] max-w-[22rem] shrink-0 snap-start flex-col rounded-[1.5rem] bg-white p-7 shadow-[0_1px_0_rgba(31,27,23,0.05),0_22px_44px_-32px_rgba(31,27,23,0.4)] md:w-auto md:max-w-none"
+              className="flex w-[82vw] max-w-[22rem] shrink-0 snap-start flex-col rounded-[1.5rem] bg-white p-7 shadow-[0_1px_0_rgba(20,20,20,0.05),0_22px_44px_-32px_rgba(20,20,20,0.4)] md:w-auto md:max-w-none"
               data-reveal
               style={{ ["--reveal-delay" as string]: i }}
             >

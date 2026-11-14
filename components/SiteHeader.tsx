@@ -58,7 +58,6 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
   }, [open]);
 
   const solid = !overlay || scrolled || open;
-  const [first, ...rest] = brand.split(" ");
 
   return (
     <>
@@ -67,7 +66,7 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
           // Solid colour, no backdrop blur: a blur behind a fixed header is
           // redrawn on every scroll frame and makes scrolling stutter on
           // slower phones and laptops.
-          solid ? "bg-ivory text-ink shadow-[0_1px_0_rgba(31,27,23,0.08)]" : "bg-transparent text-white"
+          solid ? "bg-ivory text-ink shadow-[0_1px_0_rgba(20,20,20,0.08)]" : "bg-transparent text-white"
         }`}
       >
         <div className="shell grid h-16 grid-cols-[1fr_auto_1fr] items-center sm:h-20">
@@ -92,9 +91,31 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
             <span className="block h-[1.6px] w-[22px] rounded-full bg-current" />
           </button>
 
-          <SiteLink href="/" className="justify-self-center text-center leading-none" aria-label={`${brand}, home`}>
-            <span className="block text-[1.05rem] font-semibold tracking-[0.28em] uppercase sm:text-[1.2rem]">{first}</span>
-            <span className="mt-1 block text-[0.62rem] font-medium tracking-[0.42em] uppercase opacity-80 sm:text-[0.68rem]">{rest.join(" ")}</span>
+          {/* The client's logo. Over a photo its black parts turn white
+              (logo-light); on the solid header it shows as sent. The two
+              cross-fade with the header background. */}
+          <SiteLink href="/" className="relative block justify-self-center" aria-label={`${brand}, home`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-color.webp"
+              alt=""
+              width={540}
+              height={177}
+              decoding="async"
+              className={`h-10 w-auto transition-opacity duration-500 sm:h-12 lg:h-14 ${solid ? "opacity-100" : "opacity-0"}`}
+            />
+            {overlay && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/brand/logo-light.webp"
+                alt=""
+                width={540}
+                height={177}
+                decoding="async"
+                aria-hidden="true"
+                className={`absolute inset-0 h-full w-auto drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)] transition-opacity duration-500 ${solid ? "opacity-0" : "opacity-100"}`}
+              />
+            )}
           </SiteLink>
 
           {/* Call shows its label as before. Enquire is a round WhatsApp

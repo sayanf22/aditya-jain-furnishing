@@ -52,7 +52,7 @@ function CategoryCard({ category, index }: { category: Category; index: number }
   return (
     <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">
       <article
-        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(31,27,23,0.5)] lg:h-[30rem] xl:h-[32rem]"
+        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(20,20,20,0.5)] lg:h-[30rem] xl:h-[32rem]"
         data-reveal
         style={{ ["--reveal-delay" as string]: index }}
       >
@@ -75,12 +75,12 @@ function CategoryCard({ category, index }: { category: Category; index: number }
         )}
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.8)_0%,rgba(20,16,12,0.32)_42%,rgba(20,16,12,0)_70%)]"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(12,12,12,0.8)_0%,rgba(12,12,12,0.32)_42%,rgba(12,12,12,0)_70%)]"
         />
         {/* Deeper shade behind the subcategories, fades in on hover. */}
         <div
           aria-hidden="true"
-          className="cat-shade absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.55)_0%,rgba(20,16,12,0.25)_45%,rgba(20,16,12,0)_75%)]"
+          className="cat-shade absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(12,12,12,0.55)_0%,rgba(12,12,12,0.25)_45%,rgba(12,12,12,0)_75%)]"
         />
 
         {/* Not positioned, so the name's link overlay covers the whole card. */}

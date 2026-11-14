@@ -55,7 +55,7 @@ export function PageHero({ id, label, title, intro, image, alt, size = "tall", c
       {/* Darker at the top (for the header) and the lower left (for the text). */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(20,16,12,0.74)_0%,rgba(20,16,12,0.3)_45%,rgba(20,16,12,0.1)_70%,rgba(20,16,12,0.45)_100%)]"
+        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(12,12,12,0.74)_0%,rgba(12,12,12,0.3)_45%,rgba(12,12,12,0.1)_70%,rgba(12,12,12,0.45)_100%)]"
       />
 
       <div className="page-hero-text shell pb-14 sm:pb-20 lg:pb-24">

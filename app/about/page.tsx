@@ -230,7 +230,7 @@ export default async function AboutPage() {
             className="absolute! inset-0 -z-10 h-full w-full"
             cover="var(--color-ivory)"
           />
-          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(20,16,12,0.78)_0%,rgba(20,16,12,0.45)_50%,rgba(20,16,12,0.15)_100%)]" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgba(12,12,12,0.78)_0%,rgba(12,12,12,0.45)_50%,rgba(12,12,12,0.15)_100%)]" />
           <div className="shell flex min-h-[26rem] flex-col justify-center py-16 sm:min-h-[30rem] lg:min-h-[34rem]">
             <h2 id="band-title" className="on-photo max-w-xl text-balance text-[2rem] leading-[1.12] font-medium sm:text-[2.6rem] lg:text-[3rem]" data-words>
               <Words parts={["Ask about a fabric", { accent: "or a visit" }]} />

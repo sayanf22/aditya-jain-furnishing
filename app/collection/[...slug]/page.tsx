@@ -2,9 +2,11 @@
 //   /collection/curtains-blinds
 //   /collection/curtains-blinds/curtains
 //   /collection/curtains-blinds/curtains/sheer/organza
-// Each shows its photo header, where it sits (breadcrumb, and the other
-// collections at its level), tiles for what's inside it, and every product
-// inside it, with a filter per sub-collection and a search.
+// Each shows its photo header and where it sits (breadcrumb). A page with
+// types inside it shows those first, then a one-row preview of its designs
+// ("See all" opens the full grid with a filter per type). A page with no
+// types inside shows its designs straight away, with the other types at its
+// level as chips so a visitor can hop across.
 //
 // All pages are pre-rendered at build time from D1 (generateStaticParams);
 // any other path is a 404 (dynamicParams = false).
@@ -64,12 +66,14 @@ export default async function CollectionNodePage({ params }: Props) {
   const whatsappBase = whatsappLink(contact);
   const parent = parentOf(category, node);
   const isCategory = node === category;
+  const hasTypes = node.children.length > 0;
 
   const products = toBrowser(productsIn(catalogue, category, node), {
     collectionName: (p) => p.trail[p.trail.length - 1] ?? category.name,
     group: (p) => p.leafId,
-    // Below this page only, and at most the last two steps ("Sheer · Linen").
-    trail: (p) => p.trail.slice(node.trail.length - 1).slice(-2),
+    // Which type inside this page a design is in ("Linen"); nothing on a
+    // page that has no types inside (every card would say the same).
+    trail: (p) => (hasTypes ? p.trail.slice(node.trail.length - 1).slice(-1) : []),
     describe: (p) => {
       const sub = catalogue.products.find((x) => x.id === p.id)?.subcategoryId;
       return sub ? catalogue.nodes.get(sub)?.description ?? null : category.description;
@@ -96,10 +100,10 @@ export default async function CollectionNodePage({ params }: Props) {
 
       <div className="shell flex flex-col gap-5 pt-8 sm:pt-10">
         <Breadcrumbs trail={node.trail} />
-        {parent && <Siblings parent={parent} current={node} />}
+        {parent && !hasTypes && <Siblings parent={parent} current={node} />}
       </div>
 
-      {node.children.length > 0 && (
+      {hasTypes && (
         <section className="pt-12 pb-4 sm:pt-16 lg:pt-20" aria-labelledby="inside-title">
           <div className="shell">
             <NodeTilesHeading id="inside-title" label={`Inside ${node.name}`} parts={["Choose", { accent: "a type" }]} />
@@ -111,7 +115,7 @@ export default async function CollectionNodePage({ params }: Props) {
       <section className="py-14 sm:py-20 lg:py-24" aria-labelledby="products-title">
         <div className="shell">
           <div className="mb-8 sm:mb-10">
-            <NodeTilesHeading id="products-title" label={isCategory ? category.name : node.name} parts={node.children.length > 0 ? ["All", { accent: "designs" }] : ["The", { accent: "designs" }]} />
+            <NodeTilesHeading id="products-title" label={isCategory ? category.name : node.name} parts={hasTypes ? ["A few", { accent: "designs" }] : ["The", { accent: "designs" }]} />
           </div>
           {products.length > 0 ? (
             <ProductBrowser
@@ -120,6 +124,7 @@ export default async function CollectionNodePage({ params }: Props) {
               allLabel={node.name}
               whatsappBase={whatsappBase}
               headingId="products-title"
+              preview={hasTypes ? 4 : undefined}
             />
           ) : (
             <div className="rounded-[1.5rem] bg-sand/60 px-6 py-14 text-center">

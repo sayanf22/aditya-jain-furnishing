@@ -15,9 +15,11 @@
 //   - frame timing while animations run (long frames = visible stutter)
 //   - About Us: photo header, reveals, smooth scrolling, links; Gallery gone
 //   - Contact: links, hover, the enquiry form sends with source "contact"
-//   - Collection: routes and 404, Show more, filter chips, search, viewer
-//     (zoom, steps, Esc, full screen on a phone), tiles, breadcrumbs, no
-//     cropped photos, no sideways scroll, no "WhatsApp" wording
+//   - Collection: routes and 404, no product wall on the main page, preview,
+//     See all, Show more, filter chips, search, viewer (zoom, steps, Esc,
+//     full screen on a phone), tiles and type cards, breadcrumbs, no cropped
+//     photos, no sideways scroll, no "WhatsApp" wording
+//   - Logo: light over photos, colour once scrolled, grey in the footer
 import { chromium } from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:8787/";
@@ -579,9 +581,12 @@ const browser = await chromium.launch();
   await page.close();
 }
 
-// Collection: every page of the tree is there and unknown ones are not;
-// filter chips, search, "Show more", the viewer (opens, zooms, steps,
-// closes), tiles lead one level down, and nothing says "WhatsApp".
+// Collection: every page of the tree is there and unknown ones are not.
+// The main page shows only the five collections (no product wall); a page
+// with types inside shows type tiles and a one-row preview with "See all";
+// the full grid has chips, search (more than 12 designs), Show more and the
+// viewer (opens, zooms, steps, closes); a page with no types inside shows
+// its designs and the other types at its level. Nothing says "WhatsApp".
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const routes = ["/collection", "/collection/upholstery-fabric", "/collection/upholstery-fabric/fabrics/velvet", "/collection/curtains-blinds/curtains/blackouts", "/collection/curtains-blinds/blinds/roller", "/collection/carpets-mats/mats", "/collection/wallpaper", "/collection/cushions"];
@@ -593,24 +598,30 @@ const browser = await chromium.launch();
   await page.goto(new URL("/collection", url).href, { waitUntil: "networkidle" });
   const header = await page.evaluate(() => getComputedStyle(document.querySelector("header")).backgroundColor);
   ok("header is transparent over the Collection photo", header === "rgba(0, 0, 0, 0)", header);
+  const index = await page.evaluate(() => ({ tiles: document.querySelectorAll("a.node-tile").length, cards: document.querySelectorAll(".product-card").length, steps: document.querySelectorAll('ol[aria-label="How to browse"] li').length }));
+  ok("Collection page shows the five collections and how to browse, no product wall", index.tiles === 5 && index.cards === 0 && index.steps === 3, JSON.stringify(index));
+
   const cards = () => page.locator(".product-card").count();
-  const count = async () => Number((await page.locator('[id$="-count"]').first().innerText()).match(/\d+/)?.[0] ?? 0);
+  const count = async () => Number((await page.locator('[id$="-count"]').first().textContent()).match(/\d+/)?.[0] ?? 0);
+  await page.goto(new URL("/collection/upholstery-fabric", url).href, { waitUntil: "networkidle" });
+  const preview = await cards();
+  const noTools = (await page.locator('input[type="search"]').count()) === 0 && (await page.getByRole("group", { name: "Filter" }).count()) === 0;
+  await page.getByRole("button", { name: /^See all \d+ designs/ }).click();
   const total = await count();
   const first = await cards();
   await page.getByRole("button", { name: /^Show more/ }).click();
   const more = await cards();
-  ok("Collection shows a first page, then Show more adds the next", first > 0 && first < total && more > first, `${first} -> ${more} of ${total}`);
+  ok("type page shows a one-row preview, then See all and Show more", preview > 0 && preview <= 4 && noTools && first > preview && first < total && more > first, `${preview} -> ${first} -> ${more} of ${total}`);
 
-  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Wallpapers" }).click();
-  const walls = await count();
-  const labels = await page.$$eval(".product-card", (els) => [...new Set(els.map((e) => e.querySelector("span span")?.textContent))]);
-  ok("filter chip shows only that category", walls > 0 && walls < total && labels.length === 1 && labels[0] === "Wallpapers", `${walls} cards, ${labels.join(", ")}`);
+  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Leatherite" }).click();
+  const leather = await page.$$eval(".product-card", (els) => els.map((e) => e.textContent));
+  ok("filter chip shows only that type", leather.length > 0 && leather.length < total && leather.every((t) => /Leatherite/.test(t)), `${leather.length} cards`);
   await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: /^All/ }).click();
   await page.fill('input[type="search"]', "velvet");
   const found = await page.$$eval(".product-card", (els) => els.map((e) => e.textContent));
   ok("search finds matching designs", found.length > 0 && found.every((t) => /velvet/i.test(t)), `${found.length} for "velvet"`);
   await page.fill('input[type="search"]', "zzzz");
-  ok("search with no match says so", (await cards()) === 0 && /0 products/.test(await page.locator('[id$="-count"]').first().innerText()));
+  ok("search with no match says so", (await cards()) === 0 && /0 designs/.test(await page.locator('[id$="-count"]').first().textContent()));
   await page.fill('input[type="search"]', "");
 
   // Viewer
@@ -618,8 +629,7 @@ const browser = await chromium.launch();
   const dlg = page.locator("dialog[open]");
   await dlg.waitFor({ timeout: 3000 }).catch(() => {});
   const name1 = await dlg.locator("h3").textContent().catch(() => null);
-  const zoomBtn = dlg.getByRole("button", { name: "Zoom in" });
-  await zoomBtn.click({ position: { x: 60, y: 60 } });
+  await dlg.getByRole("button", { name: "Zoom in" }).click({ position: { x: 60, y: 60 } });
   await page.waitForTimeout(600);
   const zoomed = await dlg.locator("img[style*='scale']").count();
   await page.keyboard.press("ArrowRight");
@@ -631,11 +641,22 @@ const browser = await chromium.launch();
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   ok("viewer closes with Esc", (await page.locator("dialog[open]").count()) === 0);
+
+  await page.goto(new URL("/collection/curtains-blinds/curtains", url).href, { waitUntil: "networkidle" });
+  const typeCards = await page.$$eval("a.type-card", (els) => els.map((a) => a.getAttribute("href")));
+  ok("a page with many types shows calm type cards", typeCards.length === 5 && typeCards.every((h) => h.startsWith("/collection/curtains-blinds/curtains/")), `${typeCards.length} cards`);
+  await page.goto(new URL("/collection/upholstery-fabric/fabrics/velvet", url).href, { waitUntil: "networkidle" });
+  const leaf = await page.evaluate(() => ({
+    siblings: [...document.querySelectorAll("a[aria-current='page']")].map((a) => a.textContent.trim()),
+    cards: document.querySelectorAll(".product-card").length,
+    seeAll: [...document.querySelectorAll("button")].some((b) => /^See all/.test(b.textContent)),
+  }));
+  ok("a page with no types shows its designs and its sibling types", leaf.cards > 0 && !leaf.seeAll && leaf.siblings.includes("Velvet"), JSON.stringify(leaf));
   await page.close();
 }
 {
-  // Category page: tiles go one level down, chips filter by child,
-  // breadcrumbs lead back; on a phone nothing scrolls sideways and the
+  // Category page on a phone: tiles go one level down, breadcrumbs lead
+  // back, nothing scrolls sideways, photos are never cropped, and the
   // viewer fills the screen.
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await page.goto(new URL("/collection/curtains-blinds", url).href, { waitUntil: "networkidle" });
@@ -643,6 +664,7 @@ const browser = await chromium.launch();
   ok("category page tiles lead to its subcategories", tiles.length === 2 && tiles.every((h) => h.startsWith("/collection/curtains-blinds/")), tiles.join(", "));
   const crumbs = await page.$$eval('nav[aria-label="Breadcrumb"] a', (els) => els.map((a) => a.getAttribute("href")));
   ok("breadcrumbs lead back to Collection", crumbs.includes("/collection"), crumbs.join(", "));
+  await page.getByRole("button", { name: /^See all/ }).tap();
   const r = await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += 300) {
       window.scrollTo(0, y);
@@ -663,15 +685,37 @@ const browser = await chromium.launch();
   ok("collection on phone: no sideways scroll, all sections shown", r.overflow <= 0 && r.hidden === 0, `${r.overflow}px extra, ${r.hidden} hidden`);
   ok("collection photos are never cropped", r.cropped === 0, `${r.cropped} cropped`);
   ok("collection has no 'WhatsApp' wording", r.hits.length === 0, r.hits.join(" | ") || "none");
-  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Blinds", exact: true }).click();
-  const trails = await page.$$eval(".product-card", (els) => els.map((e) => e.querySelector("span span")?.textContent ?? ""));
-  ok("subcategory chip filters the category page", trails.length > 0 && trails.every((t) => /^Blinds/.test(t)), `${trails.length} cards`);
+  await page.getByRole("group", { name: "Filter" }).getByRole("button", { name: "Blinds", exact: true }).tap();
+  const names = await page.$$eval(".product-card", (els) => els.map((e) => e.textContent ?? ""));
+  ok("subcategory chip filters the category page", names.length > 0 && names.every((t) => /Roller|Roman|Zebra|Wooden|Print/.test(t)), `${names.length} cards`);
   await page.locator(".product-card").first().tap();
   await page.waitForTimeout(800);
   const box = await page.evaluate(() => document.querySelector("dialog[open]")?.getBoundingClientRect().toJSON());
   ok("viewer fills the phone screen", box && box.top <= 0 && box.height >= 843 && box.width >= 389, box ? `${box.width}x${box.height}` : "not open");
   const enq = await page.locator("dialog[open] a", { hasText: "Enquire" }).getAttribute("href");
   ok("viewer Enquire opens a message about that design", /^https:\/\/wa\.me\/\d+\?text=/.test(enq ?? ""), (enq ?? "").split("?")[0]);
+  await page.close();
+}
+
+// Logo: the client's logo at the top (colour; white-and-red over photos)
+// and in the footer (grey, no colour), with no background box.
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(new URL("/about", url).href, { waitUntil: "networkidle" });
+  const top = await page.evaluate(() => [...document.querySelectorAll("header img")].map((i) => ({ src: i.getAttribute("src"), op: getComputedStyle(i).opacity, ok: i.complete && i.naturalWidth > 0 })));
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await page.waitForTimeout(800);
+  const scrolled = await page.evaluate(() => [...document.querySelectorAll("header img")].map((i) => getComputedStyle(i).opacity));
+  const foot = await page.evaluate(() => {
+    const i = document.querySelector("footer img");
+    const reds = [...document.querySelectorAll("footer *")].filter((el) => {
+      const c = getComputedStyle(el);
+      return [c.color, c.backgroundColor].some((v) => /rgb\((2[0-5]\d|1[6-9]\d), (\d|[1-5]\d), (\d|[1-5]\d)\)/.test(v));
+    }).length;
+    return { src: i?.getAttribute("src"), ok: !!i && i.complete && i.naturalWidth > 0, alt: i?.alt, reds };
+  });
+  ok("header shows the logo, light over the photo and in colour once scrolled", top.length === 2 && top.every((t) => t.ok) && top[0].op === "0" && top[1].op === "1" && scrolled[0] === "1" && scrolled[1] === "0", JSON.stringify(top.map((t) => `${t.src} ${t.op}`)));
+  ok("footer shows the grey logo and no red", foot.ok && /logo-grey/.test(foot.src) && foot.alt.length > 0 && foot.reds === 0, JSON.stringify(foot));
   await page.close();
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
-// The product grid on the Collection pages: filter chips (one per
-// subcategory, or per category on the main Collection page), a search box,
-// and a viewer that opens a product large (agreement: "photos open with a
+// The product grid on the Collection pages. A page that has types inside
+// it shows a short preview (one row) with "See all N designs"; the full
+// grid has filter chips (one per type), a search box once there are more
+// than one page of designs, 12 designs a page, and a viewer that opens a product large (agreement: "photos open with a
 // zoom"). Tapping a card grows its photo into the viewer while the page
 // dims; in the viewer, tapping the photo zooms in on the spot tapped, and
 // the arrows move through the products currently shown.
@@ -36,14 +37,17 @@ type Props = {
   /** Show the collection name on each card (main Collection page). */
   showCollection?: boolean;
   headingId: string;
+  /** Start as a short preview of this many designs, with "See all". */
+  preview?: number;
 };
 
 const FRAME = 4 / 5;
 /** Cards shown at first, and added by each "Show more". */
-const PAGE = 24;
+const PAGE = 12;
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function ProductBrowser({ products, groups, allLabel, whatsappBase, showCollection = false, headingId }: Props) {
+export function ProductBrowser({ products, groups, allLabel, whatsappBase, showCollection = false, headingId, preview }: Props) {
+  const [expanded, setExpanded] = useState(!preview);
   const [group, setGroup] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(PAGE);
@@ -74,7 +78,10 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
     return () => ro.disconnect();
   }, [hasGrid]);
   // Round the page up to a full row, unless that is everything anyway.
-  const visible = Math.min(shown.length, Math.ceil(limit / cols) * cols);
+  const cap = expanded ? limit : (preview ?? PAGE);
+  const visible = Math.min(shown.length, Math.ceil(cap / cols) * cols);
+  const showSearch = expanded && products.length > PAGE;
+  const showChips = expanded && groups.length > 1;
 
   const index = shown.findIndex((p) => p.id === openId);
   const open = index >= 0 ? shown[index] : null;
@@ -133,75 +140,94 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
 
   return (
     <div>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-        {groups.length > 1 ? (
-          <div
-            role="group"
-            aria-label="Filter"
-            className="chip-row no-scrollbar -mx-5 flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pb-1 sm:-mx-8 sm:px-8 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0"
-          >
-            {[{ id: null as number | null, name: `All ${allLabel}` }, ...groups].map((g) => {
-              const on = group === g.id;
-              return (
-                <button
-                  key={g.id ?? "all"}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => {
-                    setGroup(g.id);
-                    setLimit(PAGE);
-                  }}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-[0.82rem] font-medium whitespace-nowrap transition-[background-color,border-color,color] duration-300 ${
-                    on ? "border-ink bg-ink text-ivory" : "border-ink/15 text-ink-soft hover:border-ink hover:text-ink"
-                  }`}
-                >
-                  {g.name}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <span />
-        )}
-        <label className="relative block w-full shrink-0 lg:w-72">
-          <span className="sr-only">Search products</span>
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setLimit(PAGE);
-            }}
-            placeholder="Search by name or type"
-            className="field h-11 rounded-full! pl-11!"
-          />
-        </label>
-      </div>
+      {(showChips || showSearch) && (
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          {showChips ? (
+            <div
+              role="group"
+              aria-label="Filter"
+              className="chip-row no-scrollbar -mx-5 flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pb-1 sm:-mx-8 sm:px-8 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0"
+            >
+              {[{ id: null as number | null, name: `All ${allLabel}` }, ...groups].map((g) => {
+                const on = group === g.id;
+                return (
+                  <button
+                    key={g.id ?? "all"}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      setGroup(g.id);
+                      setLimit(PAGE);
+                    }}
+                    className={`shrink-0 rounded-full border px-4 py-2 text-[0.82rem] font-medium whitespace-nowrap transition-[background-color,border-color,color] duration-300 ${
+                      on ? "border-ink bg-ink text-ivory" : "border-ink/15 text-ink-soft hover:border-ink hover:text-ink"
+                    }`}
+                  >
+                    {g.name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span />
+          )}
+          {showSearch && (
+            <label className="relative block w-full shrink-0 lg:w-72">
+              <span className="sr-only">Search products</span>
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-muted" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setLimit(PAGE);
+                }}
+                placeholder="Search by name or type"
+                className="field h-11 rounded-full! pl-11!"
+              />
+            </label>
+          )}
+        </div>
+      )}
 
-      <p className="mt-6 text-[0.8rem] text-muted" aria-live="polite" id={`${headingId}-count`}>
-        {shown.length === 1 ? "1 product" : `${shown.length} products`}
+      <p className={`text-[0.8rem] text-muted ${expanded ? "mb-4" : "sr-only"}`} aria-live="polite" id={`${headingId}-count`}>
+        {shown.length === 1 ? "1 design" : `${shown.length} designs`}
         {query.trim() && ` for “${query.trim()}”`}
       </p>
 
       {shown.length > 0 ? (
-        <ul ref={grid} className="mt-4 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10 2xl:grid-cols-5">
+        <ul ref={grid} className="grid grid-cols-2 gap-x-4 gap-y-9 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
           {shown.slice(0, visible).map((p, i) => (
             <li key={p.id} className="product-in" style={{ ["--i" as string]: Math.min(i % PAGE, 11) } as CSSProperties}>
               <button type="button" onClick={(e) => show(p.id, e.currentTarget.querySelector<HTMLElement>(".product-frame"))} className="product-card group block w-full text-left">
-                <ProductFrame image={p.image} sizes="(min-width: 1536px) 18vw, (min-width: 1024px) 23vw, (min-width: 768px) 31vw, 48vw" className="product-frame rounded-[1.1rem] sm:rounded-[1.35rem]" hover />
-                <span className="mt-3 block px-0.5">
+                <ProductFrame image={p.image} sizes="(min-width: 1024px) 23vw, (min-width: 768px) 31vw, 48vw" className="product-frame rounded-[1.1rem] sm:rounded-[1.35rem]" hover />
+                <span className="mt-3.5 block px-0.5">
+                  <span className="block text-[0.95rem] leading-snug font-medium transition-colors duration-300 group-hover:text-terracotta sm:text-[1.02rem]">{p.name}</span>
                   {(showCollection || p.trail) && (
-                    <span className="block truncate text-[0.7rem] font-semibold tracking-[0.14em] text-terracotta uppercase">{showCollection ? p.collection : p.trail}</span>
+                    <span className="mt-1 block truncate text-[0.8rem] text-muted">{showCollection ? p.collection : p.trail}</span>
                   )}
-                  <span className="mt-1 block text-[0.95rem] leading-snug font-medium transition-colors duration-300 group-hover:text-terracotta sm:text-[1rem]">{p.name}</span>
                 </span>
               </button>
             </li>
           ))}
         </ul>
       ) : null}
-      {shown.length > visible && (
+      {!expanded && products.length > visible && (
+        <div className="mt-10 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(true);
+              setLimit(PAGE);
+            }}
+            className="btn inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[0.85rem] font-medium text-ivory hover:bg-terracotta"
+          >
+            See all {products.length} designs
+            <ArrowRightIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      {expanded && shown.length > visible && (
         <div className="mt-10 text-center">
           <button
             type="button"
@@ -231,7 +257,7 @@ export function ProductBrowser({ products, groups, allLabel, whatsappBase, showC
         onClick={(e) => {
           if (e.target === e.currentTarget) setOpenId(null);
         }}
-        className="product-viewer m-auto h-[100dvh] max-h-[100dvh] w-full sm:h-auto max-w-none bg-transparent p-0 text-ink backdrop:bg-[rgb(20_16_12/0.72)] sm:max-h-[94dvh] sm:w-[min(68rem,94vw)]"
+        className="product-viewer m-auto h-[100dvh] max-h-[100dvh] w-full sm:h-auto max-w-none bg-transparent p-0 text-ink backdrop:bg-[rgb(12_12_12/0.74)] sm:max-h-[94dvh] sm:w-[min(68rem,94vw)]"
       >
         {open && (
           <div className="viewer-in grid h-full max-h-[100dvh] content-start overflow-y-auto sm:h-auto bg-ivory sm:max-h-[94dvh] sm:rounded-[1.75rem] md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">

@@ -470,7 +470,7 @@ export function RoomStudio({ room, whatsappBase }: Props) {
                           >
                             <span
                               className={`block rounded-full p-[3px] transition-[box-shadow,transform] duration-300 group-hover:scale-105 ${
-                                on ? "shadow-[0_0_0_2px_var(--color-terracotta)]" : "shadow-[0_0_0_1px_rgba(31,27,23,0.15)]"
+                                on ? "shadow-[0_0_0_2px_var(--color-terracotta)]" : "shadow-[0_0_0_1px_rgba(20,20,20,0.15)]"
                               } ${current.slug === "rug" ? "rounded-lg" : ""}`}
                             >
                               {swatch(o, current.slug, current.slug === "rug" ? "h-10 w-14" : "h-12 w-12")}

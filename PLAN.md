@@ -19,7 +19,8 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 | Catalogue | The client's category and subcategory list (15 Nov 2026), replacing the agreement's flat lists: see §4. Subcategories can sit inside subcategories, to any depth |
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
 | Code repository | Private GitHub repo `sayanf22/aditya-jain-furnishing` |
-| Design direction | The Floor & Furnishings screenshots you sent: full-screen photo hero with the headline bottom left and a terracotta button, a terracotta ribbon of category names, then a row of tall category cards with "Explore" buttons. Warm ivory and sand backgrounds, terracotta accent, near-black text, one font (Instrument Sans, regular to semibold, no italics) |
+| Design direction | The Floor & Furnishings screenshots you sent: full-screen photo hero with the headline bottom left and a terracotta button, a terracotta ribbon of category names, then a row of tall category cards with "Explore" buttons. One font (Instrument Sans, regular to semibold, no italics). **Colours from the client's logo (15 Nov 2026):** the logo red #E10101 as the accent (buttons, labels, highlighted words), near-black #141414 text, clean off-white #F8F8F7 and light grey backgrounds; the old warm terracotta and ivory are gone |
+| Logo | The client's logo ("Delta, Shining Your Home…"), background removed by `scripts/stock/make-logo.mjs` into `public/brand/`: in colour on the solid header, white and red over photos, soft grey (no colour) in the dark footer. The footer has no red at all |
 
 ## 1a. Business details (from the client's visiting card)
 
@@ -32,7 +33,7 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 
 Stored in `migrations/0003_business_settings.sql` (editable later from the dashboard).
 
-**Not confirmed yet** (asked of the client before launch): whether the mobile number is also the WhatsApp number (the local preview assumes it is), the Instagram handle (the Instagram button stays hidden until it's added), the logo (a text logo is used for now).
+**Not confirmed yet** (asked of the client before launch): whether the mobile number is also the WhatsApp number (the local preview assumes it is), the Instagram handle (the Instagram button stays hidden until it's added).
 
 ## 2. The documents, oldest to newest
 
@@ -314,20 +315,23 @@ Round 2 (31 October 2026):
 
 | Page | What it shows | Code |
 |---|---|---|
-| `/collection` | Photo header; the five categories as photo tiles (two wide, three below); "Find a design": every product, with a chip per category, search, and "Show more" | `app/collection/page.tsx` |
-| `/collection/<category>/…` | Photo header (the category's header image); breadcrumbs; chips to the sibling pages; tiles for what's inside (with the names of the next level); then its products with a chip per child, search and "Show more". A page with no products yet says "Designs are being added" with Enquire | `app/collection/[...slug]/page.tsx`, `components/collection/CollectionParts.tsx` |
+| `/collection` | Photo header; the five categories as photo tiles (two wide, three below) with "how to browse" in three steps. No product grid here (15 Nov 2026: "less images, clean and understandable") | `app/collection/page.tsx` |
+| A page with types inside | Photo header; breadcrumbs; the types: two as large photo tiles, more as calm cards (smaller photo, name and what's inside written below); then "A few designs": one row, and "See all N designs", which opens the full grid with a chip per type, search (once there are more than 12) and "Show more" (12 at a time) | `app/collection/[...slug]/page.tsx`, `components/collection/CollectionParts.tsx` |
+| A page with no types inside | Photo header; breadcrumbs; the other types at its level as chips; its designs. With no designs yet it says "Designs are being added" with Enquire | same |
 | Product viewer | Tapping a card grows its photo into a large view (full screen on phones): trail, name, description, Enquire (the message names the product), a link to its collection, previous/next arrows and ←/→ keys. Tapping the photo zooms 2.2x at the spot tapped | `components/collection/ProductBrowser.tsx` |
 
 - Data: `lib/catalogue.ts` reads the whole catalogue in one D1 batch at build time; every page is pre-rendered.
 - Photos are never cropped. Frames are 4:5; a photo of another shape sits whole over a blurred copy of itself.
-- "Show more" adds 24 at a time, rounded to a full row of the grid (2 to 5 columns).
+- "Show more" adds 12 at a time, rounded to a full row of the grid (2 to 4 columns). Cards show the design's name, and below it in grey which type it is (only where a page holds several types).
 - The build pre-renders in one worker (`next.config.ts`): ten workers at once broke the local database during the build.
 - Stand-in products: about 80, in `scripts/stock/catalogue-demo.json` (sources and licences in `docs/stock-images.md`).
 - Checks (15 Nov 2026, OpenNext build on workerd): `scripts/interaction-check.mjs` 80 of 80 pass, including routes and 404, Show more, chips, search, viewer zoom and steps, Esc, phone full-screen viewer, no sideways scroll, no cropped photos, no "WhatsApp" wording. No sideways scroll and no broken images at 390, 1024, 1440, 1920 and 2560 px. Phone profile: `/collection` LCP 0.78 s, CLS 0, blocking time 60 ms; a deep page LCP 0.62 s. Worker CPU: `/collection` about 4.5 ms of its own work (121 KB page), a deep page under 1 ms.
 
+- Checks after the logo colours and the calmer Collection (15 Nov 2026): `scripts/interaction-check.mjs` 85 of 85 pass (new: the main page has no product wall, preview then See all then Show more, calm type cards, sibling chips on a page with no types, logo light over photos and in colour once scrolled, grey footer logo with no red in the footer). Phone profile: Home LCP 0.82 s, `/collection` 0.64 s, CLS 0, blocking time 72–186 ms across runs.
+
 ## 12. Needed from the client (by the time we reach each step)
 
-Instagram handle; logo (a logo file was added to the project folder on 14 Nov 2026; not used yet); product photos with names and descriptions; décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
+Instagram handle; product photos with names and descriptions; décor images; Watch & Buy room photos and which products are in each; testimonials; WhatsApp number, Instagram handle, showroom phone; the email for the Cloudflare account; domain. Questions go to you as a WhatsApp-ready message when we reach them.
 
 ## 13. Sources checked (October 2026)
 
