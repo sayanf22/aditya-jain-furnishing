@@ -69,7 +69,7 @@ async function processEnquiry(request: Request, env: EnquiryEnv): Promise<Respon
     input = parse(raw as Record<string, unknown>, {
       customerType: text(10), name: text(400), phone: text(60), company: text(600), interest: text(100),
       message: text(LIMITS.body), source: text(100), website: text(200), turnstileToken: text(2048),
-    });
+    }) as Partial<EnquiryInput>; // customerType is checked by validateEnquiry
   } catch (e) {
     if (e instanceof ApiFail) return json({ error: e.status === 413 ? "Too large" : "Invalid request" }, e.status === 413 ? 413 : 400);
     return json({ error: "Invalid request" }, 400);
