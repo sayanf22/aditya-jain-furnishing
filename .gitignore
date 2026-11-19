@@ -41,3 +41,5 @@ Thumbs.db
 
 # Stock downloads, review sheets and screenshots (local only)
 .stock/
+# Photos copied from the dashboard at build time (scripts/sync-content.mjs)
+public/m/

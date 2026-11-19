@@ -17,7 +17,8 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:seed:demo": "wrangler d1 execute DB --local --file seeds/demo-local.sql && wrangler d1 execute DB --local --file seeds/demo-catalogue.sql",
+    "db:seed:demo": "wrangler d1 execute DB --local --file seeds/demo-local.sql && wrangler d1 execute DB --local --file seeds/demo-room.sql && wrangler d1 execute DB --local --file seeds/demo-catalogue.sql",
+    "content:sync": "node scripts/sync-content.mjs",
     "perf": "node scripts/perf-check.mjs",
     "cpu": "node scripts/cpu-profile.mjs",
     "stock": "node scripts/stock/fetch-stock.mjs"

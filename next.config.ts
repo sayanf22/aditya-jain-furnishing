@@ -23,6 +23,25 @@ const nextConfig: NextConfig = {
     staticGenerationMinPagesPerWorker: 1000,
     staticGenerationRetryCount: 2,
   },
+  // `next dev` (port 3000) only serves the pages. The dashboard API, the
+  // photo files and the enquiry form live in the Worker (worker/index.ts), so
+  // while developing they are passed on to `wrangler dev` (default port
+  // 8787). Not part of a production build: there the Worker answers these
+  // addresses itself, before Next.js.
+  async rewrites() {
+    if (process.env.NODE_ENV !== "development") return [];
+    const worker = process.env.WORKER_DEV_URL ?? "http://localhost:8787";
+    return {
+      beforeFiles: [
+        { source: "/api/admin/:path*", destination: `${worker}/api/admin/:path*` },
+        { source: "/api/content/export", destination: `${worker}/api/content/export` },
+        { source: "/api/enquiry", destination: `${worker}/api/enquiry` },
+      ],
+      // After public/ files, so photos already copied to public/m/ are served directly.
+      afterFiles: [{ source: "/m/:path*", destination: `${worker}/m/:path*` }],
+      fallback: [],
+    };
+  },
   // Hide the "N" badge that `next dev` draws in the corner (errors still show).
   devIndicators: false,
 };
