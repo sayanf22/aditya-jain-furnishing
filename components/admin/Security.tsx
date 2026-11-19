@@ -49,7 +49,7 @@ function useFieldFailure() {
 
 function PasswordCard() {
   const toast = useToast();
-  const { me } = useSession();
+  const { me, refreshMe } = useSession();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");
@@ -65,6 +65,7 @@ function PasswordCard() {
     setBusy(true);
     try {
       await api.post("/auth/password", { current, next });
+      await refreshMe(); // the server issued a new session and CSRF token
       setCurrent("");
       setNext("");
       setAgain("");

@@ -12,6 +12,7 @@ import * as products from "../lib/server/products";
 import * as publish from "../lib/server/publish";
 import * as site from "../lib/server/site";
 import { listAudit } from "../lib/server/audit";
+import { secretOk } from "../lib/server/crypto";
 
 type Handler = (c: Ctx) => Promise<unknown>;
 type Route = { method: string; re: RegExp; handler: Handler; open: boolean };
@@ -87,12 +88,14 @@ function withApiHeaders(res: Response): Response {
 export async function handleAdmin(request: Request, env: AdminEnv, exec: ExecutionContext, subPath: string): Promise<Response> {
   try {
     const pepper = env.SESSION_PEPPER ?? "";
-    if (pepper.length < 16) throw fail(503, "NOT_CONFIGURED", "The dashboard is not set up on this site yet.");
+    if (!secretOk(pepper, 32)) throw fail(503, "NOT_CONFIGURED", "The dashboard is not set up on this site yet.");
 
     const ip = request.headers.get("CF-Connecting-IP") ?? "local";
     if (env.ADMIN_LIMITER) {
       const { success } = await env.ADMIN_LIMITER.limit({ key: `admin:${ip}` });
       if (!success) throw fail(429, "SLOW_DOWN", "Too many requests. Wait a moment.", undefined, undefined, { "Retry-After": "30" });
+    } else {
+      console.error("limiter missing: ADMIN_LIMITER");
     }
 
     const head = request.method === "HEAD";
@@ -104,7 +107,13 @@ export async function handleAdmin(request: Request, env: AdminEnv, exec: Executi
       throw fail(405, "METHOD_NOT_ALLOWED", "That method is not allowed here.", undefined, undefined, { Allow: [...new Set(matches.map((x) => x.r.method))].join(", ") });
     }
 
-    const c: Ctx = { request, env, exec, url: new URL(request.url), params: hit.m!.slice(1).map(decodeURIComponent), ip, pepper, session: null };
+    let params: string[];
+    try {
+      params = hit.m!.slice(1).map(decodeURIComponent);
+    } catch {
+      throw fail(404, "NOT_FOUND", "That was not found.");
+    }
+    const c: Ctx = { request, env, exec, url: new URL(request.url), params, ip, pepper, session: null };
     if (!hit.r.open) {
       c.session = await auth.loadSession(c);
       if (!c.session) {

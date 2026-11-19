@@ -2,9 +2,11 @@
 // Called by scripts/sync-content.mjs with Authorization: Bearer EXPORT_TOKEN.
 // Never returns users, sessions, enquiries or the audit log.
 import type { ContentExport } from "../admin-api";
-import { safeEqual } from "./crypto";
+import { safeEqual, secretOk } from "./crypto";
 import type { AdminEnv } from "./env";
 import { API_HEADERS } from "./http";
+
+const PUBLIC_SETTINGS = ["business_name", "legal_name", "address_line1", "address_line2", "phone", "phone_display", "whatsapp_number", "gstin", "instagram_handle", "hero_slides"];
 
 const reply = (status: number, body: unknown, extra?: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { ...API_HEADERS, ...extra } });
@@ -12,7 +14,7 @@ const reply = (status: number, body: unknown, extra?: Record<string, string>) =>
 export async function handleExport(request: Request, env: AdminEnv, ip: string): Promise<Response> {
   if (request.method !== "GET") return reply(405, { error: { code: "METHOD", message: "Use GET." } }, { Allow: "GET" });
   const token = env.EXPORT_TOKEN ?? "";
-  if (token.length < 24) return reply(503, { error: { code: "NOT_CONFIGURED", message: "Export is not set up." } });
+  if (!secretOk(token, 32)) return reply(503, { error: { code: "NOT_CONFIGURED", message: "Export is not set up." } });
   if (env.ADMIN_LIMITER) {
     const { success } = await env.ADMIN_LIMITER.limit({ key: `export:${ip}` });
     if (!success) return reply(429, { error: { code: "SLOW_DOWN", message: "Too many requests." } }, { "Retry-After": "60" });
@@ -36,7 +38,8 @@ export async function handleExport(request: Request, env: AdminEnv, ip: string):
     db.prepare(`${subs} SELECT p.id, p.category_id, p.subcategory_id, p.slug, p.name, p.description, p.position ${shownProducts} ORDER BY p.position, p.id`),
     db.prepare(`${subs} SELECT i.id, i.product_id, i.image_key, i.width, i.height, i.alt, i.position FROM product_images i WHERE i.product_id IN (SELECT p.id ${shownProducts}) ORDER BY i.position, i.id`),
     db.prepare("SELECT slot, media_key, alt FROM site_images"),
-    db.prepare("SELECT key, value FROM settings"),
+    // Only the public business details, so a future private setting can't leave through the export.
+    db.prepare(`SELECT key, value FROM settings WHERE key IN (${PUBLIC_SETTINGS.map(() => "?").join(", ")})`).bind(...PUBLIC_SETTINGS),
     db.prepare("SELECT id, name, text, position FROM testimonials WHERE visible = 1 ORDER BY position, id"),
   ]);
 

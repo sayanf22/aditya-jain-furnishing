@@ -3,16 +3,17 @@
 NEXTJS_ENV=development
 
 # Signs and encrypts dashboard data (password pre-hash, authenticator secrets,
-# hashed addresses). 32+ random bytes. Changing it signs everyone out and
+# hashed addresses). At least 32 characters; the Worker refuses any value containing "change-me". Changing it signs everyone out and
 # invalidates every stored password, so set it once.
 #   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-SESSION_PEPPER=change-me-32-random-bytes-base64url
+SESSION_PEPPER=change-me-generate-with-the-command-above
 
-# One-time code that unlocks /admin/setup while no owner exists. 8+ characters.
-SETUP_CODE=change-me-one-time-first-run-code
+# One-time code that unlocks /admin/setup while no owner exists. 20+ random characters, never a placeholder.
+# Run setup right after the first deploy, then delete SETUP_CODE.
+SETUP_CODE=change-me-generate-20-or-more-random-characters
 
-# Bearer token the site build uses to read /api/content/export. 24+ characters.
-EXPORT_TOKEN=change-me-random-24-or-more-characters
+# Bearer token the site build uses to read /api/content/export. 32+ random characters, never a placeholder.
+EXPORT_TOKEN=change-me-generate-32-or-more-random-characters
 
 # Workers Builds deploy hook URL for the Publish button. Leave empty locally:
 # the dashboard then shows "not set up" instead of publishing.

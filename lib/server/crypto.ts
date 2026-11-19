@@ -36,6 +36,11 @@ export async function hmacSha256(secret: string, data: string): Promise<Uint8Arr
   return new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret, "sign"), enc.encode(data)));
 }
 
+/** True when a configured secret is long enough and is not a copied placeholder from .dev.vars.example. */
+export function secretOk(value: string | undefined, min: number): value is string {
+  return typeof value === "string" && value.length >= min && !/change-me/i.test(value);
+}
+
 /** Compares two strings without stopping at the first difference. */
 export function safeEqual(a: string, b: string): boolean {
   const x = enc.encode(a);
