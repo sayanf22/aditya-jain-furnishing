@@ -4,6 +4,7 @@
 // individual or B2B business / interior designer), saved to D1 and shown in
 // the admin dashboard marked B2C or B2B. No email or SMS alerts.
 // The same checks run here (instant feedback) and on the server.
+import Script from "next/script";
 import { useState, type FormEvent } from "react";
 import { CUSTOMER_TYPES, validateEnquiry, type CustomerType, type FieldErrors } from "@/lib/enquiry-rules";
 import { CheckIcon, SendIcon } from "./icons";
@@ -12,6 +13,10 @@ type Option = { slug: string; name: string };
 type Props = { categories: Option[]; source: string; whatsappHref: string | null };
 
 type State = "idle" | "sending" | "sent" | "error";
+
+// Cloudflare Turnstile bot check. Shown only when a site key is set at build time
+// (NEXT_PUBLIC_TURNSTILE_SITE_KEY); set TURNSTILE_SECRET on the Worker at the same time.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export function EnquiryForm({ categories, source, whatsappHref }: Props) {
   const [customerType, setCustomerType] = useState<CustomerType | "">("");
@@ -31,6 +36,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
       message: String(form.get("message") ?? ""),
       website: String(form.get("website") ?? ""),
       source,
+      ...(TURNSTILE_SITE_KEY ? { turnstileToken: String(form.get("cf-turnstile-response") ?? "") } : {}),
     };
     const check = validateEnquiry(input);
     setErrors(check.errors);
@@ -168,6 +174,13 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
           </label>
         </div>
       </div>
+
+      {TURNSTILE_SITE_KEY && (
+        <>
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload" />
+          <div className="cf-turnstile mt-4" data-sitekey={TURNSTILE_SITE_KEY} />
+        </>
+      )}
 
       {problem && (
         <p id="enquiry-problem" role="alert" className="mt-4 rounded-xl bg-[#c40000]/8 px-4 py-3 text-[0.88rem] text-[#9a0000]">

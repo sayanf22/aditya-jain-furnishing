@@ -20,6 +20,23 @@ const WIDTHS = MEDIA_WIDTHS as readonly number[];
 
 // ------------------------------------------------------------ WebP header
 
+/** True when the RIFF chunks after the header each fit and together fill the file, with an image chunk among them. */
+function chunksFit(b: Uint8Array): boolean {
+  const le32 = (at: number) => (b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | (b[at + 3] * 2 ** 24)) >>> 0;
+  const name = (at: number) => String.fromCharCode(b[at], b[at + 1], b[at + 2], b[at + 3]);
+  let pos = 12;
+  let image = false;
+  let lastOdd = false;
+  while (pos + 8 <= b.length) {
+    const size = le32(pos + 4);
+    if (pos + 8 + size > b.length) return false;
+    if (["VP8 ", "VP8L"].includes(name(pos))) image = true;
+    lastOdd = (size & 1) === 1;
+    pos += 8 + size + (size & 1);
+  }
+  return image && (pos === b.length || (pos === b.length + 1 && lastOdd));
+}
+
 /** Pixel size read from a WebP file's own header, or null if it is not a WebP. */
 export function webpSize(b: Uint8Array): { width: number; height: number } | null {
   if (b.length < 30) return null;
@@ -27,6 +44,7 @@ export function webpSize(b: Uint8Array): { width: number; height: number } | nul
   if (!tag(0, "RIFF") || !tag(8, "WEBP")) return null;
   const riff = b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] * 2 ** 24);
   if (riff + 8 !== b.length && riff + 9 !== b.length) return null; // size must match (odd sizes are padded)
+  if (!chunksFit(b)) return null; // every chunk length must fit inside the file
   if (tag(12, "VP8X")) return { width: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), height: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
   if (tag(12, "VP8L")) {
     if (b[20] !== 0x2f) return null;
@@ -182,16 +200,23 @@ export async function uploadMedia(c: Ctx): Promise<Response> {
   const u = usage.results[0] as { n: number; bytes: number };
   if (u.n >= MAX_LIBRARY_ITEMS || u.bytes + total > MAX_LIBRARY_BYTES) throw fail(409, "LIBRARY_FULL", "The photo library is full. Delete photos that are not used.");
 
-  for (const [width, data] of sorted) {
-    await c.env.MEDIA.put(`${key}-${width}.webp`, data, {
-      httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
-    });
-  }
+  const names = sorted.map(([width]) => `${key}-${width}.webp`);
   const widths = sorted.map(([w]) => w).join(",");
-  await c.env.DB
-    .prepare("INSERT OR IGNORE INTO media (key, widths, width, height, bytes, label, alt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
-    .bind(key, widths, largest.width, largest.height, total, meta.label ?? null, meta.alt ?? null)
-    .run();
+  try {
+    for (const [width, data] of sorted) {
+      await c.env.MEDIA.put(`${key}-${width}.webp`, data, {
+        httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
+      });
+    }
+    await c.env.DB
+      .prepare("INSERT OR IGNORE INTO media (key, widths, width, height, bytes, label, alt) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+      .bind(key, widths, largest.width, largest.height, total, meta.label ?? null, meta.alt ?? null)
+      .run();
+  } catch (e) {
+    // Don't leave half an upload in R2.
+    await c.env.MEDIA.delete(names).catch(() => undefined);
+    throw e;
+  }
   const row = await c.env.DB.prepare(`SELECT ${COLS} FROM media WHERE key = ?1`).bind(key).first<MediaRow>();
   audit(c, "media.upload", "media", row!.id, { key, bytes: total });
   return Response.json(toAsset(row!), { status: 201, headers: { "Cache-Control": "no-store" } });
@@ -235,9 +260,16 @@ export async function deleteMedia(c: Ctx): Promise<Ok> {
 const SERVED = /^\/m\/[0-9a-f]{16}-(480|640|800|1080|1200|1600|2048)\.webp$/;
 
 /** Serves a photo from R2 (the ones the last build did not copy next to the pages). */
-export async function serveMedia(request: Request, env: AdminEnv, pathname: string): Promise<Response> {
+export async function serveMedia(request: Request, env: AdminEnv, pathname: string, exec?: ExecutionContext): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   if (!SERVED.test(pathname)) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
+  // Edge cache: a photo URL never changes (its name holds the hash), so repeat views cost no R2 read.
+  const cache = typeof caches !== "undefined" ? (caches as unknown as { default?: Cache }).default : undefined;
+  const cacheKey = new Request(new URL(pathname, request.url).toString(), { method: "GET" });
+  if (cache && request.method === "GET" && !request.headers.has("If-None-Match")) {
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  }
   const object = await env.MEDIA.get(pathname.slice(1));
   if (!object) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
   const headers = new Headers({
@@ -252,5 +284,7 @@ export async function serveMedia(request: Request, env: AdminEnv, pathname: stri
     return new Response(null, { status: 304, headers });
   }
   headers.set("Content-Length", String(object.size));
-  return new Response(request.method === "HEAD" ? null : object.body, { headers });
+  const response = new Response(request.method === "HEAD" ? null : object.body, { headers });
+  if (cache && exec && request.method === "GET") exec.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  return response;
 }

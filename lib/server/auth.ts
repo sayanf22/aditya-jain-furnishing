@@ -222,7 +222,10 @@ async function clearAttempt(c: Ctx, ids: number[]): Promise<void> {
   await c.env.AUTH_DB.prepare("DELETE FROM login_attempts WHERE id IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(ids)).run();
 }
 async function limitByIp(c: Ctx): Promise<void> {
-  if (!c.env.LOGIN_LIMITER) return;
+  if (!c.env.LOGIN_LIMITER) {
+    console.error("limiter missing: LOGIN_LIMITER");
+    return;
+  }
   const { success } = await c.env.LOGIN_LIMITER.limit({ key: `login:${c.ip}` });
   if (!success) throw fail(429, "TOO_MANY_TRIES", "Too many tries. Wait a minute and try again.", undefined, undefined, { "Retry-After": "60" });
 }
@@ -305,7 +308,8 @@ export async function login(c: Ctx): Promise<Response> {
   const user = await c.env.AUTH_DB.prepare(`SELECT ${USER_COLS} FROM admin_users WHERE email = ?1 AND disabled = 0`).bind(body.email).first<UserRow>();
   const good = await passwordMatches(c, user, body.password!);
   if (!good || !user) {
-    audit(c, "login_failed", "user", undefined, { reason: "password" }, { userId: user?.id ?? null, email: body.email! });
+    // A typed email that is not an account is stored only as a short pseudonym.
+    audit(c, "login_failed", "user", undefined, { reason: "password" }, { userId: user?.id ?? null, email: user ? user.email : `unknown:${keys[2].key.slice(0, 12)}` });
     throw fail(401, "BAD_LOGIN", "That email or password is not right.");
   }
 

@@ -9,6 +9,7 @@
 // per-visitor rate limit, a same-site Origin check, and Cloudflare Turnstile
 // once TURNSTILE_SECRET is set (it is left off for the local build).
 import { LIMITS, validateEnquiry, type CustomerType, type EnquiryInput } from "./enquiry-rules";
+import { ApiFail, parse, readBytes, text } from "./server/http";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -30,6 +31,15 @@ type EnquiryEnv = {
 };
 
 export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<Response> {
+  try {
+    return await processEnquiry(request, env);
+  } catch (e) {
+    console.error("enquiry error", e instanceof Error ? `${e.name}: ${e.message}` : "unknown");
+    return json({ error: "Something went wrong. Please try again." }, 500);
+  }
+}
+
+async function processEnquiry(request: Request, env: EnquiryEnv): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   // Only accept posts from this site's own pages.
@@ -40,25 +50,30 @@ export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<
   if (!(request.headers.get("Content-Type") ?? "").includes("application/json")) {
     return json({ error: "Expected JSON" }, 415);
   }
-  if (Number(request.headers.get("Content-Length") ?? 0) > LIMITS.body) {
-    return json({ error: "Too large" }, 413);
-  }
 
   const ip = request.headers.get("CF-Connecting-IP") ?? "local";
   if (env.ENQUIRY_LIMITER) {
     const { success } = await env.ENQUIRY_LIMITER.limit({ key: `enquiry:${ip}` });
     if (!success) return json({ error: "Too many enquiries. Please try again in a minute." }, 429);
+  } else {
+    console.error("limiter missing: ENQUIRY_LIMITER");
   }
 
+  // Read at most LIMITS.body bytes (also when the body is chunked), then check every field is text of a sane size.
   let input: Partial<EnquiryInput>;
   try {
-    const text = await request.text();
-    if (text.length > LIMITS.body) return json({ error: "Too large" }, 413);
-    input = JSON.parse(text);
-  } catch {
+    const bytes = await readBytes(request, LIMITS.body);
+    const raw: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return json({ error: "Invalid request" }, 400);
+    // Wide limits here only stop abuse; the form's own limits (and their messages) are applied by validateEnquiry.
+    input = parse(raw as Record<string, unknown>, {
+      customerType: text(10), name: text(400), phone: text(60), company: text(600), interest: text(100),
+      message: text(LIMITS.body), source: text(100), website: text(200), turnstileToken: text(2048),
+    });
+  } catch (e) {
+    if (e instanceof ApiFail) return json({ error: e.status === 413 ? "Too large" : "Invalid request" }, e.status === 413 ? 413 : 400);
     return json({ error: "Invalid request" }, 400);
   }
-  if (typeof input !== "object" || input === null) return json({ error: "Invalid request" }, 400);
 
   // Honeypot filled in: pretend it worked, store nothing.
   if (typeof input.website === "string" && input.website.trim() !== "") return json({ ok: true });
@@ -71,16 +86,21 @@ export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<
     form.append("secret", env.TURNSTILE_SECRET);
     form.append("response", String(input.turnstileToken ?? ""));
     form.append("remoteip", ip);
-    const check = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
-    const outcome = (await check.json()) as { success?: boolean };
-    if (!outcome.success) return json({ error: "Please complete the check and try again." }, 403);
+    let passed = false;
+    try {
+      const check = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form, signal: AbortSignal.timeout(3000) });
+      passed = ((await check.json()) as { success?: boolean }).success === true;
+    } catch {
+      passed = false; // an unreachable check counts as failed, never as passed
+    }
+    if (!passed) return json({ error: "Please complete the check and try again." }, 403);
   }
 
   const customerType = input.customerType as CustomerType;
   const company = customerType === "B2B" ? (input.company ?? "").trim().slice(0, LIMITS.company) || null : null;
   const message = (input.message ?? "").trim().slice(0, LIMITS.message) || null;
   const source = (input.source ?? "").trim().slice(0, LIMITS.source) || null;
-  const interest = typeof input.interest === "string" ? input.interest.slice(0, 60) : "";
+  const interest = (input.interest ?? "").slice(0, 60);
 
   // Copy the collection's name onto the enquiry, so the inbox still reads well after a rename or delete.
   let category: { id: number; name: string } | null = null;

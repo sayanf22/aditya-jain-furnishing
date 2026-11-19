@@ -30,7 +30,7 @@ export default {
       return handleApi(request, env as unknown as AdminEnv, ctx, pathname);
     }
     if (pathname.startsWith("/m/")) {
-      return serveMedia(request, env as unknown as AdminEnv, pathname);
+      return serveMedia(request, env as unknown as AdminEnv, pathname, ctx);
     }
     // Headers in public/_headers only reach files served straight from static
     // assets, so pages answered here get the same ones added in code.

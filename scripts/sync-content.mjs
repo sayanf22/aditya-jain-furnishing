@@ -16,7 +16,8 @@
 // build-info.json written.
 //
 // For tests only: D1_PERSIST_TO=<dir> writes to a separate local database.
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { mkdirSync, readdirSync, renameSync, rmSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,6 +30,9 @@ const BUILD_INFO = here("lib/build-info.json");
 const WIDTHS = new Set([480, 640, 800, 1080, 1200, 1600, 2048]);
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MEDIA_KEY = /^m\/([0-9a-f]{16})$/;
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const IMAGE_KEY = /^(m\/[0-9a-f]{16}|demo\/[A-Za-z0-9._-]{1,80})$/;
+const WRANGLER = createRequire(import.meta.url).resolve("wrangler/bin/wrangler.js");
 
 const fail = (message) => {
   throw new Error(message);
@@ -92,6 +96,17 @@ function validate(data) {
       }
     });
   }
+  // Slugs become page addresses and image keys become file names, so both are held to a strict pattern.
+  for (const table of ["categories", "subcategories", "products"]) {
+    data[table].forEach((row, i) => must(SLUG.test(row.slug), `${table}[${i}].slug is not a valid address`));
+  }
+  const imageKeys = [
+    ...data.categories.flatMap((c) => [c.image_key, c.hero_image_key]),
+    ...data.subcategories.map((s) => s.image_key),
+    ...data.product_images.map((i) => i.image_key),
+    ...data.site_images.map((s) => s.media_key),
+  ];
+  must(imageKeys.every((k) => k === null || IMAGE_KEY.test(k)), "a photo key is not valid");
   // Never publish an empty site by accident.
   must(data.categories.length > 0, "there are no collections (refusing to publish an empty site)");
 
@@ -224,9 +239,10 @@ function sqlFor(data) {
 function writeDatabase(sql) {
   const file = join(tmpdir(), `delta-sync-${process.pid}.sql`);
   writeFileSync(file, sql, "utf8");
-  const persist = process.env.D1_PERSIST_TO ? ` --persist-to "${process.env.D1_PERSIST_TO}"` : "";
+  const persist = process.env.D1_PERSIST_TO ? ["--persist-to", process.env.D1_PERSIST_TO] : [];
   try {
-    execSync(`npx wrangler d1 execute DB --local${persist} --file "${file}"`, { stdio: "inherit" });
+    // No shell: the arguments are passed as a list, so nothing in them can be read as a command.
+    execFileSync(process.execPath, [WRANGLER, "d1", "execute", "DB", "--local", ...persist, "--file", file], { stdio: "inherit" });
   } finally {
     rmSync(file, { force: true });
   }
