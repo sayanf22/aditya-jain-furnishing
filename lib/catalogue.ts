@@ -7,8 +7,9 @@
 // is a single collection (Wallpapers, Cushions). A node's photo is its own
 // image if one is set, otherwise the first product photo inside it.
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { buildMediaIndex, imageSource, type ImageSource, type MediaIndex, type MediaRow } from "./media";
 
-export type ProductImage = { key: string; width: number; height: number; alt: string | null };
+export type ProductImage = { key: string; width: number; height: number; alt: string | null; source: ImageSource | null };
 export type Product = {
   id: number;
   slug: string;
@@ -28,6 +29,8 @@ export type CatalogueNode = {
   name: string;
   description: string | null;
   imageKey: string | null;
+  /** The photo ready for <img>, or null when there is none. */
+  image: ImageSource | null;
   href: string;
   /** Names from the category down to this node. */
   trail: { name: string; href: string }[];
@@ -37,6 +40,8 @@ export type CatalogueNode = {
 export type CatalogueCategory = CatalogueNode & {
   tagline: string | null;
   heroKey: string | null;
+  /** Wide photo for the top of the collection's page. */
+  heroImage: ImageSource | null;
 };
 export type Catalogue = {
   categories: CatalogueCategory[];
@@ -50,19 +55,29 @@ type SubRow = { id: number; category_id: number; parent_id: number | null; slug:
 type ProdRow = { id: number; category_id: number; subcategory_id: number | null; slug: string; name: string; description: string | null };
 type ImgRow = { product_id: number; image_key: string; width: number; height: number; alt: string | null };
 
-let cached: Promise<Catalogue> | null = null;
-
-/** Read once per build: every Collection page uses the same data. */
-export function getCatalogue(): Promise<Catalogue> {
-  cached ??= load();
-  return cached;
+/**
+ * Read once per build: every page uses the same data. `next dev` reads again
+ * on each request, so database changes show without a restart.
+ */
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let cached: Promise<T> | null = null;
+  return () => (process.env.NODE_ENV === "production" ? (cached ??= load()) : load());
 }
+
+/** The `media` table: widths and shape of every uploaded photo. */
+export const getMediaIndex = once(async (): Promise<MediaIndex> => {
+  const { env } = await getCloudflareContext({ async: true });
+  const { results } = await env.DB.prepare("SELECT key, widths, width, height FROM media").all<MediaRow>();
+  return buildMediaIndex(results);
+});
+
+export const getCatalogue = once(load);
 
 async function load(): Promise<Catalogue> {
   const { env } = await getCloudflareContext({ async: true });
   const database = env.DB;
-  const [cats, subs, prods, imgs] = await database.batch([
-    database.prepare("SELECT id, slug, name, tagline, image_key, hero_image_key FROM categories ORDER BY position, id"),
+  const [cats, subs, prods, imgs, media] = await database.batch([
+    database.prepare("SELECT id, slug, name, tagline, image_key, hero_image_key FROM categories WHERE visible = 1 ORDER BY position, id"),
     database.prepare(
       "SELECT id, category_id, parent_id, slug, name, description, image_key FROM subcategories WHERE visible = 1 ORDER BY position, id",
     ),
@@ -70,15 +85,22 @@ async function load(): Promise<Catalogue> {
       "SELECT id, category_id, subcategory_id, slug, name, description FROM products WHERE visible = 1 ORDER BY position, id",
     ),
     database.prepare("SELECT product_id, image_key, width, height, alt FROM product_images ORDER BY product_id, position, id"),
+    database.prepare("SELECT key, widths, width, height FROM media"),
   ]);
-  return build(cats.results as CatRow[], subs.results as SubRow[], prods.results as ProdRow[], imgs.results as ImgRow[]);
+  return build(
+    cats.results as CatRow[],
+    subs.results as SubRow[],
+    prods.results as ProdRow[],
+    imgs.results as ImgRow[],
+    buildMediaIndex(media.results as MediaRow[]),
+  );
 }
 
-export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: ImgRow[]): Catalogue {
+export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: ImgRow[], media: MediaIndex): Catalogue {
   const imagesOf = new Map<number, ProductImage[]>();
   for (const i of imgs) {
     const list = imagesOf.get(i.product_id) ?? [];
-    list.push({ key: i.image_key, width: i.width, height: i.height, alt: i.alt });
+    list.push({ key: i.image_key, width: i.width, height: i.height, alt: i.alt, source: imageSource(i.image_key, media) });
     imagesOf.set(i.product_id, list);
   }
   const products: Catalogue["products"] = [];
@@ -89,7 +111,7 @@ export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: Im
       const href = `${parentHref}/${s.slug}`;
       const trail = [...parentTrail, { name: s.name, href }];
       const children = subs.filter((x) => x.parent_id === s.id).map((x) => makeNode(x, href, trail));
-      return { id: s.id, slug: s.slug, name: s.name, description: s.description, imageKey: s.image_key, href, trail, children, productCount: 0 };
+      return { id: s.id, slug: s.slug, name: s.name, description: s.description, imageKey: s.image_key, image: null, href, trail, children, productCount: 0 };
     };
     const node: CatalogueCategory = {
       id: c.id,
@@ -98,7 +120,9 @@ export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: Im
       description: c.tagline,
       tagline: c.tagline,
       imageKey: c.image_key,
+      image: null,
       heroKey: c.hero_image_key,
+      heroImage: imageSource(c.hero_image_key, media),
       href: base,
       trail: [{ name: c.name, href: base }],
       children: [],
@@ -162,6 +186,7 @@ export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: Im
     if (!n.imageKey) {
       n.imageKey = direct.find((p) => p.images[0])?.images[0].key ?? n.children.find((ch) => ch.imageKey)?.imageKey ?? null;
     }
+    n.image = imageSource(n.imageKey, media);
   };
   for (const c of categories) {
     // Category level: its "direct" products are the ones with no
@@ -169,6 +194,7 @@ export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: Im
     finish(c, () => false);
     c.productCount = products.filter((p) => p.categoryId === c.id).length;
     c.imageKey ??= products.find((p) => p.categoryId === c.id && p.images[0])?.images[0].key ?? null;
+    c.image = imageSource(c.imageKey, media);
   }
 
   return { categories, products, nodes: nodeById };

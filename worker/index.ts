@@ -5,6 +5,8 @@
 //   /api/*    -> small hand-written handlers in worker/api.ts. They never load
 //               the Next.js server, so form posts and dashboard calls stay
 //               well under the CPU limit even on a cold start.
+//   /m/*      -> photos from R2 that the last build did not copy next to the
+//               pages (lib/server/media.ts).
 //   all else  -> the OpenNext handler. Pre-rendered pages are answered from
 //               Workers Static Assets by cache interception, also without
 //               loading the Next.js server.
@@ -16,14 +18,22 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { default as nextHandler } from "../.open-next/worker.js";
+import type { AdminEnv } from "../lib/server/env";
+import { withSecurityHeaders } from "../lib/server/headers";
+import { serveMedia } from "../lib/server/media";
 import { handleApi } from "./api";
 
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     if (pathname === "/api" || pathname.startsWith("/api/")) {
-      return handleApi(request, env, pathname);
+      return handleApi(request, env as unknown as AdminEnv, ctx, pathname);
     }
-    return nextHandler.fetch(request, env, ctx);
+    if (pathname.startsWith("/m/")) {
+      return serveMedia(request, env as unknown as AdminEnv, pathname);
+    }
+    // Headers in public/_headers only reach files served straight from static
+    // assets, so pages answered here get the same ones added in code.
+    return withSecurityHeaders(await nextHandler.fetch(request, env, ctx), pathname);
   },
 } satisfies ExportedHandler<CloudflareEnv>;

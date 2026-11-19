@@ -13,7 +13,6 @@
 // background. No auto-advance for visitors who ask for reduced motion.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HeroSlide } from "@/lib/content";
-import { imageSource } from "@/lib/media";
 import { ArrowRightIcon } from "../icons";
 import { SiteLink } from "../SiteLink";
 import { Words } from "../Words";
@@ -77,12 +76,11 @@ export function Hero({ slides, eyebrow }: Props) {
       className="relative isolate flex h-[100svh] min-h-[560px] items-end overflow-hidden bg-ink text-white"
     >
       {slides.map((slide, i) => {
-        const source = imageSource(slide.image);
-        if (!source) return null;
+        const source = slide.image;
         const render = i === 0 || loadRest;
         return (
           <div
-            key={slide.image}
+            key={source.src}
             className="hero-slide absolute inset-0 -z-10"
             data-active={i === active}
             aria-hidden={i !== active}
@@ -137,7 +135,7 @@ export function Hero({ slides, eyebrow }: Props) {
         <div className="absolute inset-x-0 bottom-8 flex items-center justify-center gap-1 sm:bottom-10">
           {slides.map((slide, i) => (
             <button
-              key={slide.image}
+              key={slide.image.src}
               type="button"
               onClick={() => setActive(i)}
               aria-label={`Show slide ${i + 1} of ${count}`}

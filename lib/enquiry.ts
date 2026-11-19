@@ -1,8 +1,8 @@
-// Enquiry form handler (agreement §06: customer-type dropdown, B2C or B2B;
+// Enquiry form handler (agreement Â§06: customer-type dropdown, B2C or B2B;
 // enquiries are viewed in the dashboard, with no email or SMS alerts).
 //
 // Used by worker/api.ts in production and by app/api/enquiry/route.ts under
-// `next dev`. Cheap on purpose: a few string checks and one D1 insert, so it
+// `next dev`. Cheap on purpose: a few string checks and one D1 insert (plus one small read), so it
 // stays far below the 10 ms CPU limit.
 //
 // Spam protection: a hidden "website" field (bots fill it, people don't), a
@@ -21,7 +21,10 @@ function json(body: unknown, status = 200): Response {
 }
 
 type EnquiryEnv = {
-  DB: D1Database;
+  /** Enquiries are private, so they live in their own database. */
+  ENQ_DB: D1Database;
+  /** Content database: only read, to copy the collection name onto the enquiry. */
+  DB?: D1Database;
   ENQUIRY_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   TURNSTILE_SECRET?: string;
 };
@@ -31,7 +34,7 @@ export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<
 
   // Only accept posts from this site's own pages.
   const origin = request.headers.get("Origin");
-  if (origin && new URL(origin).host !== new URL(request.url).host) {
+  if (request.headers.get("Sec-Fetch-Site") === "cross-site" || (origin !== null && origin !== new URL(request.url).origin)) {
     return json({ error: "Forbidden" }, 403);
   }
   if (!(request.headers.get("Content-Type") ?? "").includes("application/json")) {
@@ -79,11 +82,20 @@ export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<
   const source = (input.source ?? "").trim().slice(0, LIMITS.source) || null;
   const interest = typeof input.interest === "string" ? input.interest.slice(0, 60) : "";
 
-  await env.DB.prepare(
-    `INSERT INTO enquiries (customer_type, name, phone, company, message, category_id, source)
-     VALUES (?1, ?2, ?3, ?4, ?5, (SELECT id FROM categories WHERE slug = ?6), ?7)`,
+  // Copy the collection's name onto the enquiry, so the inbox still reads well after a rename or delete.
+  let category: { id: number; name: string } | null = null;
+  if (interest && env.DB) {
+    try {
+      category = await env.DB.prepare("SELECT id, name FROM categories WHERE slug = ?1").bind(interest).first<{ id: number; name: string }>();
+    } catch {
+      category = null; // the enquiry still matters more than the label
+    }
+  }
+  await env.ENQ_DB.prepare(
+    `INSERT INTO enquiries (customer_type, name, phone, company, message, category_id, category_name, source)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
   )
-    .bind(customerType, (input.name ?? "").trim(), phone, company, message, interest, source)
+    .bind(customerType, (input.name ?? "").trim(), phone, company, message, category?.id ?? null, category?.name ?? null, source)
     .run();
 
   return json({ ok: true }, 201);

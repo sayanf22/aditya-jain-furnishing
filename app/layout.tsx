@@ -6,7 +6,7 @@ import { RevealObserver } from "@/components/RevealObserver";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { enquiryMessage, phoneLink, whatsappLink } from "@/lib/contact";
-import { contactFrom, getCategories, getSettings } from "@/lib/content";
+import { contactFrom, getCategories, getSettings, namesInText } from "@/lib/content";
 import "./globals.css";
 
 // Self-hosted at build time by next/font: regular to semibold, upright only.
@@ -18,14 +18,16 @@ const instrument = Instrument_Sans({
   variable: "--font-instrument",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Delta Furnishings | Home Furnishing Showroom, Kirti Nagar, New Delhi",
-    template: "%s | Delta Furnishings",
-  },
-  description:
-    "Delta Furnishings, Kirti Nagar, New Delhi: upholstery fabric, curtains & blinds, carpets & mats, cushions and wallpaper. Enquire or call the showroom.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const categories = await getCategories();
+  return {
+    title: {
+      default: "Delta Furnishings | Home Furnishing Showroom, Kirti Nagar, New Delhi",
+      template: "%s | Delta Furnishings",
+    },
+    description: `Delta Furnishings, Kirti Nagar, New Delhi: ${namesInText(categories)}. Enquire or call the showroom.`,
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#f8f8f7",

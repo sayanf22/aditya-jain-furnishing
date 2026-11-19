@@ -9,7 +9,7 @@ import { ArrowRightIcon, ArrowUpRightIcon, InstagramIcon, MapPinIcon, PhoneIcon,
 import { PageHero } from "@/components/PageHero";
 import { RevealImage } from "@/components/RevealImage";
 import { enquiryMessage, instagramLink, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
-import { contactFrom, getCategories, getSettings } from "@/lib/content";
+import { contactFrom, getCategories, getSettings, getSitePhotos } from "@/lib/content";
 
 export const dynamic = "force-static";
 
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 const delay = (n: number) => ({ ["--reveal-delay" as string]: n });
 
 export default async function ContactPage() {
-  const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
+  const [settings, categories, photos] = await Promise.all([getSettings(), getCategories(), getSitePhotos()]);
   const contact = contactFrom(settings);
   const whatsapp = whatsappLink(contact, enquiryMessage(contact));
   const tel = phoneLink(contact);
@@ -42,8 +42,8 @@ export default async function ContactPage() {
         label="Contact"
         title={["Talk to", { accent: "the showroom" }]}
         intro="Ask about a fabric, a product or a visit. For your home or a client's project."
-        image={settings.contact_hero_image ?? null}
-        alt="White sheer curtains at a window"
+        image={photos("contact.hero").image}
+        alt={photos("contact.hero").alt ?? "White sheer curtains at a window"}
         size="short"
       />
 
@@ -80,10 +80,10 @@ export default async function ContactPage() {
             {/* Showroom card: a photo of the showroom on top, so visitors
                 know what to look for. */}
             <div className="mt-8 overflow-hidden rounded-[1.5rem] bg-night text-ivory" data-reveal style={delay(options.length)}>
-              {settings.about_showroom_image && (
+              {photos("contact.showroom").image && (
                 <RevealImage
-                  image={settings.about_showroom_image}
-                  alt="Inside a furnished room"
+                  image={photos("contact.showroom").image}
+                  alt={photos("contact.showroom").alt ?? "Inside a furnished room"}
                   sizes="(min-width: 1024px) 40vw, 100vw"
                   className="aspect-[16/9]"
                   cover="var(--color-night)"

@@ -11,7 +11,7 @@
 //     them keep a still photo.
 // No client JavaScript.
 import type { ReactNode } from "react";
-import { imageSource } from "@/lib/media";
+import type { ImageSource } from "@/lib/media";
 import { Words, type WordPart } from "./Words";
 
 type Props = {
@@ -19,15 +19,14 @@ type Props = {
   label: string;
   title: WordPart[];
   intro?: string;
-  image: string | null;
+  image: ImageSource | null;
   alt: string;
   /** "tall" for About Us, "short" for Contact. */
   size?: "tall" | "short";
   children?: ReactNode;
 };
 
-export function PageHero({ id, label, title, intro, image, alt, size = "tall", children }: Props) {
-  const source = imageSource(image);
+export function PageHero({ id, label, title, intro, image: source, alt, size = "tall", children }: Props) {
   const words = title.reduce((n, p) => n + (typeof p === "string" ? p : p.accent).split(/\s+/).length, 0);
   return (
     <section

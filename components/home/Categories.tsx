@@ -8,8 +8,7 @@
 // one button, so nothing is ever drawn twice on top of itself. On phones
 // and tablets the cards sit in a swipe row with the subcategories shown.
 import type { CSSProperties } from "react";
-import type { Category } from "@/lib/content";
-import { imageSource } from "@/lib/media";
+import { namesInText, sentenceCase, type Category } from "@/lib/content";
 import { ArrowRightIcon } from "../icons";
 import { Words } from "../Words";
 
@@ -23,7 +22,7 @@ export function Categories({ categories }: { categories: Category[] }) {
             <Words parts={["Browse", { accent: "by category" }]} />
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-[0.98rem] leading-relaxed text-muted" data-reveal style={{ ["--reveal-delay" as string]: 2 }}>
-            Five collections, from upholstery to cushions.
+            {sentenceCase(namesInText(categories))}.
           </p>
         </div>
 
@@ -45,8 +44,8 @@ export function Categories({ categories }: { categories: Category[] }) {
 }
 
 function CategoryCard({ category, index }: { category: Category; index: number }) {
-  const source = imageSource(category.imageKey);
-  const href = `/collection/${category.slug}`;
+  const source = category.image;
+  const href = category.href;
   const subs = category.subcategories;
 
   return (
@@ -98,7 +97,7 @@ function CategoryCard({ category, index }: { category: Category; index: number }
                 {subs.map((s, i) => (
                   <li key={s.id} className="cat-chip" style={{ "--i": i } as CSSProperties}>
                     <a
-                      href={`${href}/${s.slug}`}
+                      href={s.href}
                       className="block rounded-full border border-white/45 bg-black/20 px-3 py-1 text-[0.76rem] whitespace-nowrap transition-colors duration-300 hover:border-white hover:bg-white hover:text-ink"
                     >
                       {s.name}

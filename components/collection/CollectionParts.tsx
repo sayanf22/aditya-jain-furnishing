@@ -4,7 +4,6 @@
 // for the types inside a page, and the plain-data form of products for the
 // ProductBrowser. Plain <a> links: every Collection page is pre-rendered.
 import type { CatalogueCategory, CatalogueNode, Product } from "@/lib/catalogue";
-import { imageSource } from "@/lib/media";
 import { ArrowRightIcon, ChevronRightIcon } from "../icons";
 import { RevealImage } from "../RevealImage";
 import { SiteLink } from "../SiteLink";
@@ -83,7 +82,7 @@ export function TypeCards({ nodes, headingId }: { nodes: CatalogueNode[]; headin
               stays short. Larger screens: photo above, text below. */}
           <a href={n.href} className="type-card group flex items-center gap-4 sm:block">
             <RevealImage
-              image={n.imageKey}
+              image={n.image}
               alt=""
               sizes={wide ? "(min-width: 1024px) 34vw, (min-width: 640px) 46vw, 96px" : "(min-width: 1024px) 23vw, (min-width: 640px) 46vw, 96px"}
               className={`node-tile-img aspect-square w-24 shrink-0 overflow-hidden rounded-2xl sm:w-auto sm:rounded-[1.35rem] ${wide ? "sm:aspect-[16/10]" : "sm:aspect-[4/3]"}`}
@@ -121,7 +120,7 @@ export function toBrowser<T extends Product>(
 ): BrowserProduct[] {
   return products.map((p) => {
     const first = p.images[0];
-    const source = first ? imageSource(first.key) : null;
+    const source = first?.source ?? null;
     return {
       id: p.id,
       name: p.name,

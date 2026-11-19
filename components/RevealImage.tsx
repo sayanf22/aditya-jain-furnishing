@@ -4,10 +4,10 @@
 // (CSS scroll-driven animation, where supported). See ".img-reveal" in
 // globals.css. Transform and opacity only; no client JavaScript.
 import type { CSSProperties } from "react";
-import { imageSource } from "@/lib/media";
+import type { ImageSource } from "@/lib/media";
 
 type Props = {
-  image: string | null;
+  image: ImageSource | null;
   alt: string;
   sizes: string;
   /** Frame shape and corners, e.g. "aspect-[4/5] rounded-[1.75rem]". */
@@ -18,8 +18,7 @@ type Props = {
   eager?: boolean;
 };
 
-export function RevealImage({ image, alt, sizes, className = "", delay = 0, cover, eager = false }: Props) {
-  const source = imageSource(image);
+export function RevealImage({ image: source, alt, sizes, className = "", delay = 0, cover, eager = false }: Props) {
   return (
     <div
       // No background colour on the frame: it would show as a thin line

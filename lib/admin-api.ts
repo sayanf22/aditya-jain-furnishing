@@ -16,10 +16,17 @@
 //
 // Change log
 //   2026-11-20  first version (lead)
+//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
+//               MediaAsset.usedBy type may also be "room" (room fabric textures);
+//               PublishStatus.configured (false while DEPLOY_HOOK_URL is empty;
+//               POST /publish then answers 503 PUBLISH_NOT_CONFIGURED).
+//               Behaviour notes: an upload needs two sizes unless the original is
+//               under 800 px wide; requests with no body (DELETE, bare POST) need
+//               the X-CSRF-Token but not a Content-Type.
 
 // ---------------------------------------------------------------- shared
 
-export type ApiError = { error: { code: string; message: string; field?: string } };
+export type ApiError = { error: { code: string; message: string; field?: string; usedBy?: MediaAsset["usedBy"] } };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 export type Ok = { ok: true };
 
@@ -141,7 +148,7 @@ export type MediaAsset = {
   label: string | null;
   alt: string | null;
   createdAt: string;
-  usedBy: { type: "product" | "category" | "subcategory" | "site"; id: number | string; name: string }[];
+  usedBy: { type: "product" | "category" | "subcategory" | "site" | "room"; id: number | string; name: string }[];
 };
 
 // ------------------------------------------------------------------- site
@@ -224,6 +231,7 @@ export type PublishStatus = {
   liveVersion: number; // content version the running site was built from
   changesWaiting: number; // version - liveVersion
   requestedAt: string | null;
+  configured: boolean; // false until DEPLOY_HOOK_URL is set (local runs)
 };
 
 // ------------------------------------------------------------------ audit

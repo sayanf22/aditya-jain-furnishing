@@ -1,12 +1,13 @@
 // About Us (replaced the Gallery page on 13 Nov 2026). Pre-rendered at
 // build time from D1. The copy uses only what the client has confirmed:
-// the business name, the showroom address, the five collections, and that
+// the business name, the showroom address, the collections (named from the
+// database, so they follow the dashboard), and that
 // it serves homes and businesses (the B2C / B2B enquiry form). The client's
 // own story (history, people) is still to come from them; it is not
 // written here until they send it.
 //
-// Photos come from the settings (about_*_image keys), so they can be
-// replaced from the admin dashboard. Plain <a> links: the target pages are
+// Photos come from the dashboard's photo places (about.* in
+// SITE_IMAGE_SLOTS), with the stand-ins until one is chosen. Plain <a> links: the target pages are
 // pre-rendered HTML.
 import type { Metadata } from "next";
 import { PageHero } from "@/components/PageHero";
@@ -15,20 +16,26 @@ import { SiteLink } from "@/components/SiteLink";
 import { ArrowRightIcon, ArrowUpRightIcon, MapPinIcon, PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { Words } from "@/components/Words";
 import { enquiryMessage, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
-import { contactFrom, getCategories, getSettings } from "@/lib/content";
+import { collectionCount, contactFrom, getCategories, getSettings, getSitePhotos, namesInText, sentenceCase } from "@/lib/content";
 
 export const dynamic = "force-static";
 
-export const metadata: Metadata = {
-  title: "About Us",
-  description:
-    "Delta Furnishings is a home furnishing showroom in Kirti Nagar, New Delhi: upholstery, curtains & blinds, carpets & mats, wallpapers and cushions, for homes and interior designers.",
-};
-
+export async function generateMetadata(): Promise<Metadata> {
+  const categories = await getCategories();
+  return {
+    title: "About Us",
+    description: `Delta Furnishings is a home furnishing showroom in Kirti Nagar, New Delhi: ${namesInText(categories)}, for homes and interior designers.`,
+  };
+}
 const delay = (n: number) => ({ ["--reveal-delay" as string]: n });
 
+// Large-screen columns for the collection tiles (full class names, so
+// Tailwind can find them). Six or more collections wrap onto a second row.
+const GRID_COLUMNS = ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4", "lg:grid-cols-5"];
+
 export default async function AboutPage() {
-  const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
+  const [settings, categories, photos] = await Promise.all([getSettings(), getCategories(), getSitePhotos()]);
+  const names = namesInText(categories);
   const contact = contactFrom(settings);
   const whatsapp = whatsappLink(contact, enquiryMessage(contact));
   const tel = phoneLink(contact);
@@ -40,16 +47,16 @@ export default async function AboutPage() {
         label="About us"
         title={["Fabrics and furnishings,", { accent: "in Kirti Nagar" }]}
         intro={`${contact.businessName} is a home furnishing showroom in Kirti Nagar, New Delhi.`}
-        image={settings.about_hero_image ?? null}
-        alt="Folded fabrics in many colours"
+        image={photos("about.hero").image}
+        alt={photos("about.hero").alt ?? "Folded fabrics in many colours"}
       />
 
       {/* Who we are */}
       <section className="py-20 sm:py-28 lg:py-36" aria-labelledby="who-title">
         <div className="shell grid items-center gap-12 lg:grid-cols-[0.9fr_1fr] lg:gap-20 xl:gap-28">
           <RevealImage
-            image={settings.about_story_image ?? null}
-            alt="Fabric swatches being looked through"
+            image={photos("about.story").image}
+            alt={photos("about.story").alt ?? "Fabric swatches being looked through"}
             sizes="(min-width: 1024px) 42vw, 100vw"
             className="aspect-[4/5] rounded-[1.75rem] lg:rounded-[2.25rem]"
           />
@@ -58,10 +65,10 @@ export default async function AboutPage() {
               Who we are
             </p>
             <h2 id="who-title" className="mt-4 text-[2rem] leading-[1.12] font-medium sm:text-[2.6rem] lg:text-[3rem]" data-words>
-              <Words parts={["Five collections", { accent: "under one roof" }]} />
+              <Words parts={[categories.length > 0 ? collectionCount(categories.length) : "Our collections", { accent: "under one roof" }]} />
             </h2>
             <p className="mt-6 max-w-lg text-[1.05rem] leading-relaxed text-ink-soft" data-reveal style={delay(2)}>
-              Upholstery, curtains and blinds, carpets and mats, wallpapers and cushions, all at our showroom in Furniture Block, Kirti Nagar.
+              {sentenceCase(names)}, all at our showroom in Furniture Block, Kirti Nagar.
             </p>
             <p className="mt-4 max-w-lg text-[1.05rem] leading-relaxed text-ink-soft" data-reveal style={delay(3)}>
               Come in to see and feel the fabrics, or send us an enquiry first.
@@ -85,7 +92,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* The five collections */}
+      {/* The collections */}
       {categories.length > 0 && (
         <section className="pb-20 sm:pb-28 lg:pb-36" aria-labelledby="range-title">
           <div className="shell">
@@ -104,12 +111,12 @@ export default async function AboutPage() {
               </SiteLink>
             </div>
 
-            <ul className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-5">
+            <ul className={`mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:grid-cols-3 sm:gap-4 ${GRID_COLUMNS[Math.min(categories.length, 5)]} lg:gap-5`}>
               {categories.map((c, i) => (
                 <li key={c.id} className={i === categories.length - 1 && categories.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""}>
-                  <a href={`/collection/${c.slug}`} className="about-tile group block">
+                  <a href={c.href} className="about-tile group block">
                     <RevealImage
-                      image={c.imageKey}
+                      image={c.image}
                       alt=""
                       sizes="(min-width: 1024px) 19vw, (min-width: 640px) 31vw, 50vw"
                       className={`rounded-[1.25rem] lg:rounded-[1.5rem] ${i === categories.length - 1 && categories.length % 2 === 1 ? "aspect-[2/1] sm:aspect-[4/5]" : "aspect-[4/5]"}`}
@@ -149,7 +156,7 @@ export default async function AboutPage() {
                 <p className="text-[0.8rem] font-semibold tracking-[0.2em] text-terracotta tabular-nums">01</p>
                 <h3 className="mt-5 text-[1.5rem] leading-tight font-medium sm:text-[1.75rem]">For your home</h3>
                 <p className="mt-3 max-w-md text-[1rem] leading-relaxed text-ink-soft">
-                  Choose fabric, curtains, carpets, cushions and wallpaper for your own rooms.
+                  Choose {names} for your own rooms.
                 </p>
               </article></div>
               <div data-reveal style={delay(2)}><article className="about-card h-full rounded-[1.5rem] bg-ivory p-7 sm:p-9 lg:p-11">
@@ -177,8 +184,8 @@ export default async function AboutPage() {
       <section id="visit" className="scroll-mt-24 py-20 sm:py-28 lg:py-36" aria-labelledby="visit-title">
         <div className="shell grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-20 xl:gap-28">
           <RevealImage
-            image={settings.about_showroom_image ?? null}
-            alt="Inside a furnished room"
+            image={photos("about.showroom").image}
+            alt={photos("about.showroom").alt ?? "Inside a furnished room"}
             sizes="(min-width: 1024px) 52vw, 100vw"
             className="aspect-[4/3] rounded-[1.75rem] lg:order-2 lg:rounded-[2.25rem]"
           />
@@ -224,8 +231,8 @@ export default async function AboutPage() {
       <section className="px-3 pb-12 sm:px-5 sm:pb-16 lg:px-6 lg:pb-20" aria-labelledby="band-title">
         <div className="relative isolate mx-auto max-w-[108rem] overflow-hidden rounded-[2rem] text-white lg:rounded-[2.5rem]">
           <RevealImage
-            image={settings.about_band_image ?? null}
-            alt=""
+            image={photos("about.band").image}
+            alt={photos("about.band").alt ?? ""}
             sizes="100vw"
             className="absolute! inset-0 -z-10 h-full w-full"
             cover="var(--color-ivory)"
