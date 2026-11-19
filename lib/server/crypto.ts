@@ -28,8 +28,18 @@ export async function sha256Hex(data: string | Uint8Array): Promise<string> {
   return hex(await crypto.subtle.digest("SHA-256", typeof data === "string" ? enc.encode(data) : (data as BufferSource)));
 }
 
-async function hmacKey(secret: string | Uint8Array, usage: "sign"): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", typeof secret === "string" ? enc.encode(secret) : (secret as BufferSource), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
+// The pepper never changes while a Worker instance lives, so its HMAC key is imported once and reused
+// (a sign-in uses it five or six times).
+const keyCache = new Map<string, Promise<CryptoKey>>();
+
+function hmacKey(secret: string, usage: "sign"): Promise<CryptoKey> {
+  let key = keyCache.get(secret);
+  if (!key) {
+    if (keyCache.size > 4) keyCache.clear();
+    key = crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
+    keyCache.set(secret, key);
+  }
+  return key;
 }
 
 export async function hmacSha256(secret: string, data: string): Promise<Uint8Array> {
