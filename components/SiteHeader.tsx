@@ -99,8 +99,8 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
             <img
               src="/brand/logo-color.webp"
               alt=""
-              width={540}
-              height={177}
+              width={600}
+              height={209}
               decoding="async"
               className={`h-10 w-auto transition-opacity duration-500 sm:h-12 lg:h-14 ${solid ? "opacity-100" : "opacity-0"}`}
             />
@@ -109,8 +109,8 @@ export function SiteHeader({ brand, phoneHref, whatsappHref, address }: Props) {
               <img
                 src="/brand/logo-light.webp"
                 alt=""
-                width={540}
-                height={177}
+                width={600}
+                height={209}
                 decoding="async"
                 aria-hidden="true"
                 className={`absolute inset-0 h-full w-auto drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)] transition-opacity duration-500 ${solid ? "opacity-0" : "opacity-100"}`}

@@ -1,4 +1,4 @@
-﻿# Aditya Jain – Home Furnishing Showroom Website: Build Plan
+# Aditya Jain – Home Furnishing Showroom Website: Build Plan
 
 Status: plan v10. Home, Collection, About Us and Contact built with stand-in images. On 15 Nov 2026 the Collection pages were built on the client's category and subcategory list (§11b); the admin dashboard is next.
 Source of truth: **Website Development Agreement – Revised, 26 October 2026**. It replaces the 12 October agreement in full. The other PDFs fill in detail only where the revised agreement says nothing.
@@ -20,7 +20,7 @@ Client PDFs: `docs/client-pdfs/` (kept out of git).
 | Best-sellers, "12+ years" | Left out (dropped from the revised agreement, not confirmed) |
 | Code repository | Private GitHub repo `sayanf22/aditya-jain-furnishing` |
 | Design direction | The Floor & Furnishings screenshots you sent: full-screen photo hero with the headline bottom left and a terracotta button, a terracotta ribbon of category names, then a row of tall category cards with "Explore" buttons. One font (Instrument Sans, regular to semibold, no italics). **Colours from the client's logo (15 Nov 2026):** the logo red #E10101 as the accent (buttons, labels, highlighted words), near-black #141414 text, clean off-white #F8F8F7 and light grey backgrounds; the old warm terracotta and ivory are gone |
-| Logo | The client's logo ("Delta, Shining Your Home…"), background removed by `scripts/stock/make-logo.mjs` into `public/brand/`: in colour on the solid header, white and red over photos, soft grey (no colour) in the dark footer. The footer has no red at all |
+| Logo | The client's logo ("Delta, Shining Your Home…"; new version sent 20 Nov 2026 on a curtain photo), background removed by `scripts/stock/make-logo.mjs` into `public/brand/`; the tab and home-screen icons are the Delta mark on a white badge (`scripts/stock/make-favicon.mjs`): in colour on the solid header, white and red over photos, soft grey (no colour) in the dark footer. The footer has no red at all |
 
 ## 1a. Business details (from the client's visiting card)
 

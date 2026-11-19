@@ -1,94 +1,99 @@
-// Makes the site's logo files from the client's logo (red "Delta" and the
-// black-and-red mark, with "Shining Your Home..." under it, on a near-white
-// background).
+// Makes the site's logo files from the client's logo picture (red "Delta",
+// charcoal mark, black "Shining Your Home..." line), which comes on a photo
+// of curtains.
 //
 //   node scripts/stock/make-logo.mjs ["path/to/logo.png"]
 //
 // Writes to public/brand/:
 //   logo-color.webp  the logo as sent, background removed (light header)
-//   logo-light.webp  black parts turned white, red kept (header over photos)
+//   logo-light.webp  dark parts turned white, red kept (header over photos)
 //   logo-grey.webp   two soft greys, no colour (dark footer)
 //
-// The background is removed by "un-mixing" each pixel from white: the logo's
-// colours (red, black) all have a channel near 0, so how far the darkest
-// channel is from white gives the pixel's opacity, and the anti-aliased
-// edges come out clean instead of with a white fringe.
+// How the background goes: every ink colour in the logo (red, charcoal,
+// black) has a channel below about 40, while the curtains never go below
+// about 145 in any channel. So how far a pixel's darkest channel sits below
+// that gap gives its opacity (soft ramp, so the anti-aliased edge stays
+// smooth). Colour is then set from clean values measured from the file,
+// by "redness", so no curtain colour stays in the edge pixels.
 import sharp from "sharp";
 import { mkdirSync } from "node:fs";
 
-const src = process.argv[2] ?? "Delta Shining Your Home Logo.png";
+const src = process.argv[2] ?? "IMG_6712.PNG";
 const out = "public/brand";
 mkdirSync(out, { recursive: true });
 
-// The background is 246-254 with a faint checker pattern; everything at or
-// above BG counts as background.
-const BG = 238;
-const WHITE = 250;
+// Opacity ramp on the darkest channel: fully background at or above HI,
+// fully ink at or below LO.
+const HI = 135;
+const LO = 50;
+
+// Measured from the file (cores of each part).
+const RED = [208, 6, 17];
+const MARK = [35, 35, 34]; // the charcoal triangle mark
+const TEXT = [6, 5, 5]; // "Shining Your Home..."
 
 const { data, info } = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true });
 const { width, height } = info;
-const rgba = Buffer.alloc(width * height * 4);
+const alpha = new Uint8Array(width * height);
+const red = new Float32Array(width * height);
 let minX = width, minY = height, maxX = 0, maxY = 0;
-for (let p = 0, q = 0; p < data.length; p += 3, q += 4) {
+for (let i = 0, p = 0; i < alpha.length; i++, p += 3) {
   const r = data[p], g = data[p + 1], b = data[p + 2];
   const m = Math.min(r, g, b);
-  const a = Math.max(0, Math.min(1, (BG - m) / BG));
-  if (a > 0) {
-    // Undo the blend with white to get the ink's own colour.
-    const un = (c) => Math.max(0, Math.min(255, Math.round((c - (1 - a) * WHITE) / a)));
-    rgba[q] = un(r);
-    rgba[q + 1] = un(g);
-    rgba[q + 2] = un(b);
-    rgba[q + 3] = Math.round(a * 255);
-    if (a > 0.2) {
-      const x = (p / 3) % width, y = Math.floor(p / 3 / width);
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
+  const a = Math.max(0, Math.min(1, (HI - m) / (HI - LO)));
+  if (a <= 0) continue;
+  alpha[i] = Math.round(a * 255);
+  red[i] = Math.max(0, Math.min(1, (r - Math.max(g, b) - 30) / 90));
+  if (a > 0.5) {
+    const x = i % width, y = (i / width) | 0;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
   }
 }
 
-// Recolour: red ink is the pixels whose red channel stands well above the
-// others; the rest is the black ink.
-function recolour(fnRed, fnBlack) {
-  const buf = Buffer.from(rgba);
-  for (let q = 0; q < buf.length; q += 4) {
-    if (!buf[q + 3]) continue;
-    const r = buf[q], g = buf[q + 1], b = buf[q + 2];
-    const redness = Math.max(0, Math.min(1, (r - Math.max(g, b)) / 160));
-    const [r1, g1, b1] = fnRed;
-    const [r2, g2, b2] = fnBlack;
-    buf[q] = Math.round(r1 * redness + r2 * (1 - redness));
-    buf[q + 1] = Math.round(g1 * redness + g2 * (1 - redness));
-    buf[q + 2] = Math.round(b1 * redness + b2 * (1 - redness));
+// The mark sits top left, the tagline across the bottom.
+const isMark = (i) => {
+  const x = i % width, y = (i / width) | 0;
+  return x < 540 && y < 470;
+};
+
+function build(colourRed, colourMark, colourText) {
+  const buf = Buffer.alloc(width * height * 4);
+  for (let i = 0, q = 0; i < alpha.length; i++, q += 4) {
+    if (!alpha[i]) continue;
+    const t = red[i];
+    const dark = isMark(i) ? colourMark : colourText;
+    buf[q] = Math.round(colourRed[0] * t + dark[0] * (1 - t));
+    buf[q + 1] = Math.round(colourRed[1] * t + dark[1] * (1 - t));
+    buf[q + 2] = Math.round(colourRed[2] * t + dark[2] * (1 - t));
+    buf[q + 3] = alpha[i];
   }
   return buf;
 }
 
-const pad = 4;
+const pad = 6;
 const crop = {
   left: Math.max(0, minX - pad),
   top: Math.max(0, minY - pad),
   width: Math.min(width, maxX + pad + 1) - Math.max(0, minX - pad),
   height: Math.min(height, maxY + pad + 1) - Math.max(0, minY - pad),
 };
-const W = 540; // about 2.5x the widest the logo is shown (footer, 220 px)
+const W = 600; // about 3x the widest the logo is shown (footer, about 200 px)
 
 async function write(name, buf) {
   const file = `${out}/${name}.webp`;
   await sharp(buf, { raw: { width, height, channels: 4 } })
     .extract(crop)
     .resize({ width: W })
-    .webp({ quality: 85, alphaQuality: 90, effort: 6 })
+    .webp({ quality: 88, alphaQuality: 92, effort: 6 })
     .toFile(file);
   const m = await sharp(file).metadata();
   console.log(file, `${m.width}x${m.height}`);
 }
 
-// Logo red, measured from the file: about #E10101 (225, 1, 1).
-await write("logo-color", recolour([225, 1, 1], [12, 12, 12]));
-await write("logo-light", recolour([235, 30, 30], [255, 255, 255]));
-await write("logo-grey", recolour([200, 200, 200], [150, 150, 150]));
-console.log("crop", crop, "ratio", (crop.width / crop.height).toFixed(4));
+await write("logo-color", build(RED, MARK, TEXT));
+await write("logo-light", build([232, 30, 40], [255, 255, 255], [255, 255, 255]));
+await write("logo-grey", build([205, 205, 205], [150, 150, 150], [150, 150, 150]));
+console.log("crop", crop);
