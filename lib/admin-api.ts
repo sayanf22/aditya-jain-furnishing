@@ -36,10 +36,10 @@ export type Ok = { ok: true };
 //   POST   /api/admin/auth/login             (public)   LoginBody  -> LoginResponse
 //   POST   /api/admin/auth/logout                       -> Ok
 //   GET    /api/admin/me                                -> MeResponse
-//   POST   /api/admin/auth/password                     PasswordBody -> Ok (other sessions end)
+//   POST   /api/admin/auth/password                     PasswordBody -> MeResponse (new session cookie and CSRF token; other sessions end)
 //   POST   /api/admin/auth/2fa/start                    -> TwoFactorStart
-//   POST   /api/admin/auth/2fa/enable                   { code } -> Ok
-//   POST   /api/admin/auth/2fa/disable                  { password, code } -> Ok
+//   POST   /api/admin/auth/2fa/enable                   { code } -> MeResponse (new session; other sessions end)
+//   POST   /api/admin/auth/2fa/disable                  { password, code } -> MeResponse (new session; other sessions end)
 //   GET    /api/admin/sessions                          -> { items: SessionInfo[] }
 //   DELETE /api/admin/sessions/:id                      -> Ok   (id "others" = every other device)
 

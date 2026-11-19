@@ -48,6 +48,13 @@ export async function readBytes(request: Request, max: number): Promise<Uint8Arr
   const declared = Number(request.headers.get("Content-Length") ?? 0);
   if (declared > max) throw fail(413, "TOO_LARGE", "That request is too large.");
   if (!request.body) return new Uint8Array(0);
+  // A declared length within the limit is enforced by the HTTP layer (the body can't be longer), so the
+  // platform can read it in one native call, which costs far less CPU than copying chunk by chunk.
+  if (declared > 0) {
+    const all = new Uint8Array(await request.arrayBuffer());
+    if (all.byteLength > max) throw fail(413, "TOO_LARGE", "That request is too large.");
+    return all;
+  }
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
