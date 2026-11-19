@@ -17,25 +17,65 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Catalogue data and enquiries. No database_id yet: Wrangler creates the
-  // database in the client's Cloudflare account on first deploy.
+  // Four D1 databases, split by what they hold (Workers Free allows 10):
+  //   DB        content the site is built from: collections, products, photos
+  //             list, site settings. Read at build time; nothing private.
+  //   AUTH_DB   dashboard owner accounts, sessions, sign-in throttling.
+  //   ENQ_DB    enquiry form submissions (names and phone numbers).
+  //   AUDIT_DB  who changed what in the dashboard.
+  // Locally Wrangler uses its own copy of each; these ids are the live ones in
+  // the client's account (ids are not secrets).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "aditya-jain-furnishing-db",
+      "database_id": "e276b4c6-1956-4596-acd2-be1cab2769cd",
       "migrations_dir": "migrations"
+    },
+    {
+      "binding": "AUTH_DB",
+      "database_name": "delta-auth-db",
+      "database_id": "4ead6ba4-a52a-40e4-928a-fe56810f7181",
+      "migrations_dir": "migrations-auth"
+    },
+    {
+      "binding": "ENQ_DB",
+      "database_name": "delta-enquiries-db",
+      "database_id": "b41b3256-0cd0-4416-986d-0663380d77d9",
+      "migrations_dir": "migrations-enquiries"
+    },
+    {
+      "binding": "AUDIT_DB",
+      "database_name": "delta-audit-db",
+      "database_id": "611fc202-0d70-44cd-a1b4-13f7b3bd4189",
+      "migrations_dir": "migrations-audit"
     }
   ],
-  // R2 (photo uploads from the admin dashboard) is added back with the
-  // dashboard step: "r2_buckets": [{ "binding": "MEDIA", "bucket_name":
-  // "aditya-jain-furnishing-media" }]. It is left out for now because the
-  // site doesn't use it yet and the deploy fails on accounts without R2.
-  // Enquiry form: at most 5 submissions a minute per visitor (free plan).
+  // Photos uploaded from the dashboard: m/<hash>-<width>.webp. The site build
+  // copies the ones in use next to the pages (free static files); the Worker
+  // serves the rest straight from here.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "delta-furnishings-media"
+    }
+  ],
+  // Rate limits (free plan): enquiry form, dashboard sign-in, dashboard API.
   "ratelimits": [
     {
       "name": "ENQUIRY_LIMITER",
       "namespace_id": "1001",
       "simple": { "limit": 5, "period": 60 }
+    },
+    {
+      "name": "LOGIN_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 6, "period": 60 }
+    },
+    {
+      "name": "ADMIN_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 240, "period": 60 }
     }
   ],
   "upload_source_maps": true,

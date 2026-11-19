@@ -1,2 +1,7 @@
 # Copy to .dev.vars for local preview. .dev.vars is not committed.
 NEXTJS_ENV=development
+# Dashboard secrets. Live values are Worker secrets set through the Cloudflare API.
+SESSION_PEPPER=change-me-32-random-bytes-base64url
+SETUP_CODE=change-me-one-time-first-run-code
+EXPORT_TOKEN=change-me-random
+DEPLOY_HOOK_URL=
