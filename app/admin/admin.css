@@ -45,27 +45,24 @@ body:has(dialog.a-sheet[open]) {
 .adm-root *::after {
   font-style: normal;
 }
-.adm-root ul,
-.adm-root ol {
+:where(.adm-root) :where(ul, ol) {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.adm-root h1,
-.adm-root h2,
-.adm-root p {
+:where(.adm-root) :where(h1, h2, p) {
   margin: 0;
 }
-.adm-root a {
+:where(.adm-root) :where(a) {
   color: inherit;
   text-decoration: none;
 }
-.adm-root button {
+:where(.adm-root) :where(button) {
   font: inherit;
   color: inherit;
   cursor: pointer;
 }
-.adm-root button:disabled {
+:where(.adm-root) :where(button:disabled) {
   cursor: not-allowed;
 }
 

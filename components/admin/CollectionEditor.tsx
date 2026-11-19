@@ -68,7 +68,9 @@ export function CollectionEditor({ mode, onClose, onSaved, onAddChild, onDelete 
             })
           : await api.post<AdminCategory>("/categories", body);
         toast(`Added “${created.name}”`);
+        // The screen swaps this form for the new row's editor, so photos can be added next.
         onSaved({ kind: mode.parent ? "sub" : "category", id: created.id });
+        return;
       } else {
         const patch: CategoryPatch & SubcategoryPatch = {};
         if (name !== initial.name) patch.name = name;

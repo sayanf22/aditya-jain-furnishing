@@ -3,9 +3,15 @@
 import { useState } from "react";
 import { MEDIA_WIDTHS } from "@/lib/admin-api";
 
-/** Sizes to try, nearest to the wanted width first (a photo may not have every size). */
-function candidateWidths(wanted: number): number[] {
-  return [...MEDIA_WIDTHS].sort((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b);
+/** Size that worked for each photo, so later views go straight to it. */
+const workedBefore = new Map<string, number>();
+
+/** Sizes to try: the one that worked, then the nearest to the wanted width. */
+function candidateWidths(mediaKey: string, wanted: number, known?: readonly number[]): number[] {
+  const pool = known && known.length > 0 ? known : MEDIA_WIDTHS;
+  const nearest = [...pool].sort((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b);
+  const cached = workedBefore.get(mediaKey);
+  return cached !== undefined && pool.includes(cached) ? [cached, ...nearest.filter((w) => w !== cached)] : nearest;
 }
 
 /** Address of one size of a stored photo: "m/<hash>" or "demo/<name>". */
@@ -18,12 +24,16 @@ type PhotoProps = {
   alt?: string;
   /** Width in px that suits the box this sits in (a size close to it is loaded). */
   width?: number;
+  /** Sizes this photo is known to have. When unknown, nearby sizes are tried in turn. */
+  widths?: readonly number[];
   className?: string;
 };
 
-function PhotoImage({ mediaKey, alt, width, className }: { mediaKey: string; width: number; alt?: string; className?: string }) {
+type ImageProps = { mediaKey: string; width: number; widths?: readonly number[]; alt?: string; className?: string };
+
+function PhotoImage({ mediaKey, alt, width, widths, className }: ImageProps) {
   const [attempt, setAttempt] = useState(0);
-  const sizes = candidateWidths(width);
+  const sizes = candidateWidths(mediaKey, width, widths);
   if (attempt >= sizes.length) return <span className={`a-photo a-photo--empty ${className ?? ""}`} aria-label={alt || "Photo not found"} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -33,13 +43,14 @@ function PhotoImage({ mediaKey, alt, width, className }: { mediaKey: string; wid
       alt={alt ?? ""}
       loading="lazy"
       decoding="async"
+      onLoad={() => workedBefore.set(mediaKey, sizes[attempt])}
       onError={() => setAttempt((value) => value + 1)}
     />
   );
 }
 
 /** A photo shown whole (never cropped). Falls back to another size, then to a quiet placeholder. */
-export function Photo({ mediaKey, alt, width = 480, className }: PhotoProps) {
+export function Photo({ mediaKey, alt, width = 480, widths, className }: PhotoProps) {
   if (!mediaKey) return <span className={`a-photo a-photo--empty ${className ?? ""}`} aria-hidden="true" />;
-  return <PhotoImage key={mediaKey} mediaKey={mediaKey} alt={alt} width={width} className={className} />;
+  return <PhotoImage key={mediaKey} mediaKey={mediaKey} alt={alt} width={width} widths={widths} className={className} />;
 }

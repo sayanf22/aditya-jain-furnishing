@@ -172,7 +172,7 @@ function SlotRow({ slot, choice, onChoose }: { slot: SiteImage; choice?: PhotoCh
   return (
     <li className={cx("a-row a-row--slot", choice && "is-changed")}>
       <span className={cx("a-slotthumb", `is-${slot.shape}`)}>
-        <Photo mediaKey={mediaKey} alt="" width={slot.shape === "wide" ? 800 : 480} />
+        <Photo mediaKey={mediaKey} alt="" width={slot.shape === "wide" ? 800 : 480} widths={slot.media?.widths} />
         {usingDefault && <IconPhotos className="a-photofield__ghost" />}
       </span>
       <span className="a-row__text">

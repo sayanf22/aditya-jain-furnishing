@@ -123,7 +123,7 @@ function PhotoDetail({ asset, onClose, onChanged, onDeleted, onReplaced }: Detai
     <Sheet title={asset.label || "Photo"} onClose={onClose} dirty={dirty} saving={saving} onSave={save} error={error}>
       <div className="a-stack">
         <div className="a-preview">
-          <Photo mediaKey={asset.key} alt={asset.alt ?? ""} width={1200} />
+          <Photo mediaKey={asset.key} alt={asset.alt ?? ""} width={1200} widths={asset.widths} />
         </div>
         <p className="a-meta">
           {asset.width} × {asset.height} · {fileSize(asset.bytes)} · {asset.widths.length} sizes

@@ -165,7 +165,7 @@ export function MediaGrid({ items, onOpen, selected }: GridProps) {
           <li key={asset.id}>
             <button type="button" className={cx("a-media", picked >= 0 && "is-picked")} onClick={() => onOpen(asset)} aria-pressed={selected ? picked >= 0 : undefined}>
               <span className="a-media__frame">
-                <Photo mediaKey={asset.key} alt="" width={480} />
+                        <Photo mediaKey={asset.key} alt="" width={480} widths={asset.widths} />
                 {asset.usedBy.length > 0 && <span className="a-media__use" title="In use" />}
                 {picked >= 0 && <span className="a-media__pick">{selected && selected.length > 1 ? picked + 1 : <IconCheck />}</span>}
               </span>
