@@ -47,7 +47,7 @@ const resetAuth = () => d1("AUTH_DB", "DELETE FROM sessions; DELETE FROM login_a
 
 // ------------------------------------------------------------ plain HTTP (Node)
 async function http(method, path, { cookie, csrf, headers = {}, body, ip = "10.9.9.9", sameOrigin = true } = {}) {
-  const h = { "CF-Connecting-IP": ip, ...headers };
+  const h = { ...(ip === null ? {} : { "CF-Connecting-IP": ip }), ...headers }; // ip null: send no address, like the browser does
   if (cookie) h.Cookie = cookie;
   if (csrf) h["X-CSRF-Token"] = csrf;
   if (method !== "GET" && sameOrigin) {
@@ -486,16 +486,24 @@ async function runViewport(browser, name, viewport, ip, phone) {
   await shot(page, "login-wrong", false);
 
   let last = 0;
-  for (let i = 0; i < 6; i++) last = (await http("POST", "/api/admin/auth/login", { ip: `10.${i + 40}.7.7`, body: { email: EMAIL, password: "wrong password here" } })).status;
-  ok("repeated failures lock the account (429)", last === 429, String(last));
+  // The lock is per email AND address, so a stranger cannot lock the owner out from elsewhere.
+  // Sent from the page itself, so the failures count against the browser's own address.
+  for (let i = 0; i < 5; i++) {
+    last = await page.evaluate(
+      async (body) => (await fetch("/api/admin/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).status,
+      { email: EMAIL, password: "wrong password here" },
+    );
+  }
+  ok("repeated failures lock that address for the email (429)", last === 429, String(last));
   r = await http("POST", "/api/admin/auth/login", { ip: "10.77.7.7", body: { email: EMAIL, password: PASSWORD } });
-  ok("the right password is refused while locked, from any address", r.status === 429 && Number(r.headers.get("retry-after")) > 0, String(r.status));
+  ok("the owner can still sign in from another address", r.status === 200, String(r.status));
   await signIn(page);
   await page.locator(".a-form__error, .a-field__note--error").first().waitFor({ timeout: 8000 });
   const lockText = await page.locator(".a-form__error, .a-field__note--error").first().innerText();
   ok("the sign-in page says to wait", /too many|wait/i.test(lockText), lockText);
   await shot(page, "login-locked", false);
   d1("AUTH_DB", "DELETE FROM login_attempts;");
+  await page.waitForTimeout(61_000); // the Worker also allows only 6 sign-in tries a minute per address
 
   // after the lock is cleared, signing in works again
   await signIn(page);
