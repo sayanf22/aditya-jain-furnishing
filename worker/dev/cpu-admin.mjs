@@ -71,7 +71,10 @@ let nextId = 1;
 const pending = new Map();
 ws.onmessage = (e) => {
   const m = JSON.parse(e.data);
-  if (m.id && pending.has(m.id)) (pending.get(m.id)(m), pending.delete(m.id));
+  if (m.id && pending.has(m.id)) {
+    pending.get(m.id)(m);
+    pending.delete(m.id);
+  }
 };
 const send = (method, params = {}) => {
   const id = nextId++;

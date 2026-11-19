@@ -37,7 +37,9 @@ if (await up()) {
 
 mkdirSync(".wrangler", { recursive: true });
 const log = openSync(".wrangler/dev.log", "w");
-const child = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--inspector-port", String(INSPECTOR)], {
+// WRANGLER_EXTRA adds local-only options, e.g. "--var DEPLOY_HOOK_URL:http://127.0.0.1:9911/hook".
+const extra = (process.env.WRANGLER_EXTRA ?? "").split(/\s+/).filter(Boolean);
+const child = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--inspector-port", String(INSPECTOR), ...extra], {
   detached: true,
   stdio: ["ignore", log, log],
   shell: true,

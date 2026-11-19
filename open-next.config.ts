@@ -14,7 +14,7 @@ const config = defineCloudflareConfig({
   enableCacheInterception: true,
 });
 
-export default {
+const finalConfig = {
   ...config,
   // `npm run build` runs the whole OpenNext build (so Cloudflare Workers
   // Builds' default "npm run build" + "npx wrangler deploy" work). OpenNext
@@ -23,3 +23,5 @@ export default {
   // D1 migrations on the build machine's local database) runs before it.
   buildCommand: "npm run build:next",
 };
+
+export default finalConfig;

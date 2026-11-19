@@ -172,6 +172,8 @@ body:has(dialog.a-sheet[open]) {
 @media (max-width: 56rem) {
   .adm {
     grid-template-columns: minmax(0, 1fr);
+    /* Top bar keeps its height; the page takes the rest (short pages stay at the top). */
+    grid-template-rows: auto 1fr;
   }
   .a-side {
     display: none;
@@ -1818,6 +1820,13 @@ body:has(dialog.a-sheet[open]) {
   .a-row__add,
   .a-row__count {
     display: none;
+  }
+  /* Less indent per level so deep types keep room for their names. */
+  .a-tree--kids {
+    margin-left: 0.9rem;
+  }
+  .a-tree--kids > .a-tree__item > .a-row {
+    padding-left: 0.75rem;
   }
   .a-row--slot {
     grid-template-columns: auto minmax(0, 1fr);

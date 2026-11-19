@@ -174,3 +174,9 @@ Rules the owner set (do not break): edits wait for an explicit **Save** (show "N
 ## Done means
 
 Type check, lint, `npm run build`, local worker run, and Playwright checks (add them to `scripts/interaction-check.mjs` or a new `scripts/admin-check.mjs`) all pass; mobile (390 px) and desktop (1440 px) screenshots reviewed; no console errors; `npm audit` clean; CPU per admin request measured with `scripts/cpu-profile.mjs` and under 10 ms.
+
+## Integration notes (21 Nov 2026)
+
+- `scripts/admin-check.mjs` is the browser check (desktop 1440 px and phone 390 px); `--hook` tests Publish against a fake local hook server (start the Worker with `WRANGLER_EXTRA="--var DEPLOY_HOOK_URL:http://127.0.0.1:9911/hook"`; wait a minute between two `--hook` runs, the Worker allows one publish a minute).
+- CPU checks need `npx opennextjs-cloudflare populateCache local` after each build, otherwise pages are not answered from the static cache and read 50+ ms.
+- Open items: login (PBKDF2) and photo upload read above 10 ms in the local profiler, which adds Wrangler overhead; confirm in Workers Logs after the first real deploy.
