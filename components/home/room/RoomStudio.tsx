@@ -25,6 +25,10 @@ const src = (key: string) => imageSource(key)?.src ?? null;
 const FLOOR = src("demo/tex-floor-oak");
 const WIPE: Partial<Record<RoomSlug, "down" | "across">> = { curtains: "down", blind: "down", wall: "across" };
 
+// Corners of the rug plane projected onto the canvas (perspective 1760 units from
+// 800,360; see .room-3d, .room-floor and .room-rug in globals.css).
+const RUG_ON_SCREEN = "522,800 1298,800 1480,960 420,960";
+
 const pickLabel = (slug: RoomSlug) => (slug === "wall" ? "Choose a wallpaper" : slug === "rug" ? "Choose a rug" : "Choose a fabric");
 
 export function RoomStudio({ room, whatsappBase }: Props) {
@@ -383,6 +387,13 @@ export function RoomStudio({ room, whatsappBase }: Props) {
                   <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" className="room-svg">
                     <BackStatic />
                   </svg>
+                  {/* The rug's outline as drawn on screen, under the 3D plane. Safari does not
+                      hit-test the rotated plane, so its taps fall through to this shape. */}
+                  {rug && (
+                    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" className="room-svg">
+                      <polygon points={RUG_ON_SCREEN} className="room-hit-quiet" onClick={() => select("rug")} />
+                    </svg>
+                  )}
                   {floorAndRug}
                   <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" className="room-svg">
                     <FloorShadows />
