@@ -1,7 +1,7 @@
 ﻿// Sends the sign-in code email. Provider: Resend (https://resend.com/docs/api-reference/emails/send-email).
 //   POST https://api.resend.com/emails   Authorization: Bearer <RESEND_API_KEY>
 //   body { from, to: [address], subject, text, html }
-// Free plan: 100 emails a day, 3,000 a month, 2 requests a second. Without a verified
+// Free plan: 100 emails a day, 3,000 a month, 10 requests a second. Without a verified
 // domain Resend only delivers from onboarding@resend.dev to the account owner's own address.
 // Local development only: when NEXTJS_ENV is "development" and DEV_EMAIL_STUB points at a
 // loopback address, the mail goes to worker/dev/email-stub.mjs instead and no key is needed.

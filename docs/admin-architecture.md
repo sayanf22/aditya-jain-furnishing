@@ -1,6 +1,6 @@
 # Admin dashboard: architecture and rules
 
-Decided 20 Nov 2026, extended 23 Nov 2026 (photo life cycle, emailed sign-in codes,
+Decided 20 Nov 2026 and extended the same day (photo life cycle, emailed sign-in codes,
 whole-site headers). Read it fully before writing code. Anything it does not say, look
 up (official docs or the web) and do not guess. Security choices below were checked
 against the OWASP cheat sheets (Session Management, CSRF Prevention, File Upload,
@@ -46,7 +46,7 @@ Publish button   --> POST deploy hook --> Workers Builds --> scripts/sync-conten
 4. **Photos.** The dashboard resizes in the browser (canvas, WebP) to widths from 480, 640, 800, 1080, 1200, 1600, 2048 (480/800/1200 for ordinary photos; the widths a place needs are in `SITE_IMAGE_SLOTS`), never upscaling, keeping the shape (photos are never cropped). It uploads all sizes in one multipart request. The Worker validates, hashes (SHA-256 of the largest file, first 16 hex chars), stores `m/<hash>-<w>.webp` in R2 with `Cache-Control: public, max-age=31536000, immutable` and `Content-Type: image/webp`, and records one `media` row (`key = m/<hash>`). Public URL for a size: `/m/<hash>-<w>.webp`. At build, `sync-content.mjs` copies every photo in use into `public/m/` so visitors get them as free static assets. Photos not yet published (dashboard previews) fall through `/m/*` to the Worker, which serves them from R2. Image keys stored in other tables are either `demo/<name>` (a default photo, a static file in `public/demo/`, sizes in `public/demo/sizes.json`) or `m/<hash>` (an upload).
 5. **Sample content (local development only).** Rows whose image key starts with `demo/` are sample designs from the local seeds. The dashboard marks them "Sample" and offers one action to remove all of them. Designs have no default photo: a design without a photo shows a neutral placeholder, and a collection or type card without a photo shows a neutral tile.
 
-## Photo life cycle (23 Nov 2026)
+## Photo life cycle
 
 Places a photo can appear, and what the owner can do:
 
@@ -90,7 +90,7 @@ Sign-in by emailed code (forgotten password; OWASP Forgot Password cheat sheet, 
 - 2FA stays required: with 2FA on, `code/verify` with a right emailed code but no `totp` answers `{needsCode:true}`, sets no cookie and does not use the code up. The code is consumed only after the authenticator code also passes.
 - The password-reset session lasts 15 minutes and may only call `GET /me`, `POST /auth/logout` and `POST /auth/password/reset` (403 `PASSWORD_RESET_REQUIRED` for anything else). Setting the password ends every other session and deletes the user's open codes.
 - Sending (`lib/server/email.ts`): `POST https://api.resend.com/emails` with `Authorization: Bearer RESEND_API_KEY`, `from` = `RESEND_FROM`, one recipient, an `Idempotency-Key`, 8 s timeout. Only the status is logged on failure, never the message or key. Without `RESEND_API_KEY`, `code/request` answers 503 `EMAIL_NOT_CONFIGURED`.
-- **Domain limit:** until a domain is verified in Resend, only `onboarding@resend.dev` can be the sender and Resend delivers only to the address that owns the Resend account (anything else is a 403 "only send testing emails to your own email address"). Use the owner's own email as the dashboard email until a domain is verified, then set `RESEND_FROM`. Free plan: 100 emails a day, 3,000 a month, 2 requests a second.
+- **Domain limit:** until a domain is verified in Resend, only `onboarding@resend.dev` can be the sender and Resend delivers only to the address that owns the Resend account (anything else is a 403 "only send testing emails to your own email address"). Use the owner's own email as the dashboard email until a domain is verified, then set `RESEND_FROM`. Free plan: 100 emails a day, 3,000 a month, 10 API requests a second per team.
 - Local development: `node worker/dev/email-stub.mjs` (started by `worker/dev/api-check.mjs`) receives the mail instead of Resend. The Worker uses it only when `NEXTJS_ENV` is `development` and `DEV_EMAIL_STUB` is a loopback address; `worker/dev/start.mjs` sets both. On the live site neither is set, so the stub can never be reached.
 
 Uploads (OWASP File Upload):
@@ -114,7 +114,7 @@ Other:
 
 An authenticated API call is a cookie parse, one SHA-256, one AUTH_DB read and the actual work. Keep each handler to a handful of D1 statements (use `batch`), never import big libraries into `worker/`, and paginate lists (default 50). Only PBKDF2 is heavy. It runs in sign-in, setup, password change and password reset; the emailed-code check uses HMAC only.
 
-- **Decision (owner, 21 Nov 2026):** the site stays on Workers Free. PBKDF2 uses 20,000 rounds plus the pepper (`PBKDF2_ITERATIONS` in `lib/server/crypto.ts`, the only place the number lives). OWASP asks for 600,000, but Workers caps PBKDF2 at 100,000 and the Free CPU limit rules that out.
+- **Decision (owner, 20 Nov 2026):** the site stays on Workers Free. PBKDF2 uses 20,000 rounds plus the pepper (`PBKDF2_ITERATIONS` in `lib/server/crypto.ts`, the only place the number lives). OWASP asks for 600,000, but Workers caps PBKDF2 at 100,000 and the Free CPU limit rules that out.
 - **Measured locally** (`worker/dev/cpu-admin.mjs`, 20 requests each, own work above the `/api/health` baseline of 3 to 8 ms that Wrangler's inspector adds): dashboard reads 4 to 10 ms, writes 9 to 11 ms, photo upload about 21 ms, sign-in about 28 ms (PBKDF2 `deriveBits` alone about 16 ms). These are upper bounds; Cloudflare's own benchmark of about 100 ms for 600,000 rounds suggests 3 to 4 ms for 20,000 on real workerd.
 - **To verify after the first live deploy:** read `cpuTime` in Workers Logs (observability is on in `wrangler.jsonc`) for `/api/admin/auth/login`, `/auth/setup`, `/auth/password`, `/auth/password/reset` and `/media`. If any exceeds 10 ms, lower the constant to 10,000, never below that.
 - **Changing the constant is safe:** `login` re-hashes after a successful sign-in whenever the stored `pw_iterations` differs from the constant, higher or lower.
@@ -144,7 +144,7 @@ Rules the owner set: edits wait for an explicit **Save** ("Not saved yet" with S
 
 ## Migrations to apply to the live databases
 
-Applied before this round: `migrations/0001` to `0009`, `migrations-auth/0001`, `migrations-enquiries/0001`, `migrations-audit/0001`. New in this round:
+The full list, in order per database, and the commands are in `docs/go-live-checklist.md`. Wrangler records applied files in each database's `d1_migrations` table and applies only the missing ones, so the same command is right whatever the live state. New in this round:
 - `migrations/0010_fixed_heroes.sql` (database `DB`): clears saved hero replacements.
 - `migrations-auth/0002_email_codes.sql` (database `AUTH_DB`): `email_codes`, `email_code_requests`, `sessions.recovery`.
 

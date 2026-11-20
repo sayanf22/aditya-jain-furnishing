@@ -100,7 +100,7 @@ Throttled performance (production build, CPU 6x, 1.6 Mbit/s and 150 ms, 390 px p
 
 | Page | LCP | CLS | Long tasks | TBT | JS | CSS | Images |
 |------|-----|-----|-----------|-----|------------------|-----|--------|
-| `/` | 1.98 s | 0 | 3 | 836 ms | 516 KB | 72 KB | 582 KB |
-| `/collection` | 2.11 s | 0 | 2 | 627 ms | 466 KB | 72 KB | 274 KB |
-| `/about` | 3.60 s | 0 | 2 | 739 ms | 463 KB | 72 KB | 562 KB |
-| `/contact` | 1.86 s | 0 | 3 | 753 ms | 475 KB | 72 KB | 229 KB |
+| `/` | 1.97 s | 0 | 4 | 929 ms | 516 KB | 72 KB | 582 KB |
+| `/collection` | 2.18 s | 0 | 2 | 779 ms | 466 KB | 72 KB | 274 KB |
+| `/about` | 3.58 s | 0 | 2 | 799 ms | 463 KB | 72 KB | 562 KB |
+| `/contact` | 1.85 s | 0 | 3 | 781 ms | 475 KB | 72 KB | 229 KB |

@@ -195,7 +195,7 @@ Node.js 22.16.0 meets every package's requirement; `.node-version` pins 22 for C
 | `enquiries` | Date, B2C or B2B, name, firm (B2B, added in 0004), phone, message, product or category, source page (added in 0004), read or unread |
 | `settings` | WhatsApp number, Instagram handle, phone, address, hero images |
 
-`migrations/0002_seed_catalogue.sql` added the five categories and the agreement's subcategory names; `0007_catalogue_v2.sql` replaces the subcategory tree with the client's list (and drops and recreates `subcategories`, `products` and `product_images`, which held no products). Not yet applied to the live database. Checked: a pre-rendered page reads these rows from the local D1 during `next build`.
+`migrations/0002_seed_catalogue.sql` added the five categories and the agreement's subcategory names; `0007_catalogue_v2.sql` replaces the subcategory tree with the client's list (and drops and recreates `subcategories`, `products` and `product_images`, which held no products). Live migrations: `docs/go-live-checklist.md`. Checked: a pre-rendered page reads these rows from the local D1 during `next build`.
 
 ## 8. Routes
 
@@ -324,10 +324,11 @@ One simple layout on every Collection page, following the client's tree, so a vi
 | Design viewer | Tapping a design grows its photo out of the card; the panel settles in and its details rise one by one. Arrows and ←/→ slide the next photo in from that side. Esc, the backdrop or ✕ fade it out (no snap). Full screen on phones. Tap the photo to zoom 2.2x. Enquire names the design | `components/collection/ProductBrowser.tsx` |
 | Page to page | Following a link cross-fades to the next page with a slight rise (cross-document view transitions, Chrome, Edge and Safari 18.2+; others load normally); the header, floating button and sidebar stay put. Off for "reduce motion" | `app/globals.css` |
 
-- Descriptions: `migrations/0008_catalogue_descriptions.sql` (all five categories and every type; plain descriptions with no claims about stock or service; editable later from the admin dashboard). Not yet applied to the live database.
+- Descriptions: `migrations/0008_catalogue_descriptions.sql` (all five categories and every type; plain descriptions with no claims about stock or service; editable from the admin dashboard). Live migrations: `docs/go-live-checklist.md`.
+- Photos since the dashboard's phase 2 (20 Nov 2026): the `/collection` header and each collection's header photo are fixed in code and cannot be replaced from the dashboard. A collection or type card with no photo shows a neutral tile, and a design with no photo shows a neutral placeholder, never a stock photo. The Home category card photos are replaceable; their default is the current `demo/cat-*` photo.
 - Data: `lib/catalogue.ts` reads the whole catalogue in one D1 batch at build time; every page is pre-rendered. The build pre-renders in one worker (`next.config.ts`): ten at once broke the local database.
 - Photos are never cropped: frames are 4:5; a photo of another shape sits whole over a blurred copy of itself.
-- Stand-in products: about 80, in `scripts/stock/catalogue-demo.json` (sources and licences in `docs/stock-images.md`).
+- Stand-in products (local preview, and Workers Builds runs without `EXPORT_URL`/`EXPORT_TOKEN` only): about 80, in `scripts/stock/catalogue-demo.json` (sources and licences in `docs/stock-images.md`).
 - Checks (15 Nov 2026, OpenNext build on workerd): `scripts/interaction-check.mjs` 83 of 83 pass (tree marks the current page with red threads, branches slide open and shut, described cards, phone Browse bar slides open, viewer zoom, steps with the photo sliding, Esc fades out, full screen on phones, no sideways scroll, no cropped photos, no "WhatsApp" wording, logo checks). A link from a type card arrives with a view transition. Opening a branch at 4x slower CPU: p95 16.8 ms. Phone profile: `/collection` LCP 0.68 s, a deep page 1.08 s, CLS 0, blocking time 76–94 ms. Worker CPU for a Collection page: about 2 ms of its own work.
 
 ## 12. Needed from the client (by the time we reach each step)
