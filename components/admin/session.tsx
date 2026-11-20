@@ -39,6 +39,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const me = await api.get<MeResponse>("/me");
         if (!live) return;
         setCsrf(me.csrf);
+        if (me.mustSetPassword) {
+          router.replace("/admin/login"); // finish the emailed-code sign-in first
+          return;
+        }
         setState({ phase: "ready", me });
       } catch (error) {
         if (!live) return;
