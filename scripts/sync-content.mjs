@@ -17,7 +17,6 @@
 //
 // For tests only: D1_PERSIST_TO=<dir> writes to a separate local database.
 import { execFileSync } from "node:child_process";
-import { createRequire } from "node:module";
 import { mkdirSync, readdirSync, renameSync, rmSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,7 +31,8 @@ const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MEDIA_KEY = /^m\/([0-9a-f]{16})$/;
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const IMAGE_KEY = /^(m\/[0-9a-f]{16}|demo\/[A-Za-z0-9._-]{1,80})$/;
-const WRANGLER = createRequire(import.meta.url).resolve("wrangler/bin/wrangler.js");
+// Wrangler's bin file is not in its package "exports", so it cannot be resolved by name.
+const WRANGLER = here("node_modules/wrangler/bin/wrangler.js");
 
 const fail = (message) => {
   throw new Error(message);
