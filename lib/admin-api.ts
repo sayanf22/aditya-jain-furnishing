@@ -16,7 +16,16 @@
 //
 // Change log
 //   2026-11-20  first version (lead)
-//   2026-11-22  site photo places reduced to the four replaceable ones, each with a\n//               defaultKey; hero places listed in NON_REPLACEABLE_SLOTS; new helpers\n//               isReplaceableSlot, isHeroSlot, defaultFor, categoryCardDefaultFor,\n//               isProtectedDefault; CATEGORY_CARD_DEFAULTS.\n//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
+//   2026-11-22  site photo places reduced to the four replaceable ones, each with a
+//               defaultKey; hero places listed in NON_REPLACEABLE_SLOTS; new helpers
+//               isReplaceableSlot, isHeroSlot, defaultFor, categoryCardDefaultFor,
+//               isProtectedDefault; CATEGORY_CARD_DEFAULTS.
+//   2026-11-23  media lifecycle and email-code sign-in (additive): POST /media/sweep;
+//               hero places answer 400 NOT_REPLACEABLE; categories.heroImageKey can no
+//               longer be changed (400 NOT_REPLACEABLE); AuthStatus.emailCodes;
+//               POST /auth/code/request, /auth/code/verify, /auth/password/reset;
+//               MeResponse.mustSetPassword.
+//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
 //               MediaAsset.usedBy type may also be "room" (room fabric textures);
 //               PublishStatus.configured (false while DEPLOY_HOOK_URL is empty;
 //               POST /publish then answers 503 PUBLISH_NOT_CONFIGURED).
@@ -29,11 +38,16 @@
 export type ApiError = { error: { code: string; message: string; field?: string; usedBy?: MediaAsset["usedBy"] } };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 export type Ok = { ok: true };
+export type SweepResult = { photos: number; files: number };
 
 // ------------------------------------------------------------------ auth
 //   GET    /api/admin/auth/status            (public)   -> AuthStatus
 //   POST   /api/admin/auth/setup             (public)   SetupBody  -> MeResponse (signed in)
 //   POST   /api/admin/auth/login             (public)   LoginBody  -> LoginResponse
+//   POST   /api/admin/auth/code/request     (public)   CodeRequestBody -> Ok (the same answer for every email; 503 EMAIL_NOT_CONFIGURED when emailCodes is false)
+//   POST   /api/admin/auth/code/verify      (public)   CodeVerifyBody -> CodeVerifyResponse (needsCode = the authenticator code is also required; resend the same email code with totp)
+//            on success the session is a password-reset session (mustSetPassword true, 15 minutes): only /me, /auth/logout and /auth/password/reset work
+//   POST   /api/admin/auth/password/reset              PasswordResetBody -> MeResponse (new session; other sessions end)
 //   POST   /api/admin/auth/logout                       -> Ok
 //   GET    /api/admin/me                                -> MeResponse
 //   POST   /api/admin/auth/password                     PasswordBody -> MeResponse (new session cookie and CSRF token; other sessions end)
@@ -43,12 +57,16 @@ export type Ok = { ok: true };
 //   GET    /api/admin/sessions                          -> { items: SessionInfo[] }
 //   DELETE /api/admin/sessions/:id                      -> Ok   (id "others" = every other device)
 
-export type AuthStatus = { setupRequired: boolean };
+export type AuthStatus = { setupRequired: boolean; emailCodes: boolean };
 export type SetupBody = { setupCode: string; email: string; name?: string; password: string };
 export type LoginBody = { email: string; password: string; code?: string };
 export type LoginResponse = { ok: true } | { needsCode: true };
 export type AdminUser = { id: number; email: string; name: string | null; totpEnabled: boolean };
-export type MeResponse = { user: AdminUser; csrf: string; idleExpiresAt: string; expiresAt: string };
+export type MeResponse = { user: AdminUser; csrf: string; idleExpiresAt: string; expiresAt: string; mustSetPassword?: boolean };
+export type CodeRequestBody = { email: string };
+export type CodeVerifyBody = { email: string; code: string; totp?: string };
+export type CodeVerifyResponse = MeResponse | { needsCode: true };
+export type PasswordResetBody = { next: string };
 export type PasswordBody = { current: string; next: string };
 export type TwoFactorStart = { secret: string; otpauthUri: string };
 export type SessionInfo = { id: string; current: boolean; createdAt: string; lastSeenAt: string; device: string };
@@ -134,7 +152,8 @@ export type ProductPatch = Partial<{ name: string; description: string | null; v
 //                    w<width> for each width in MEDIA_WIDTHS that applies (w480, w800, w1200,
 //                    and for wide places w1600, w2048) = image/webp files; at least two, unique
 //   PATCH  /api/admin/media/:id                         { label?: string; alt?: string | null } -> MediaAsset
-//   DELETE /api/admin/media/:id                         -> Ok  (409 MEDIA_IN_USE with usedBy list while any design, collection or site place uses it)
+//   DELETE /api/admin/media/:id                         -> Ok  (409 MEDIA_IN_USE with usedBy list while any design, collection or site place uses it; removes the D1 row and every R2 size file)
+//   POST   /api/admin/media/sweep                       -> SweepResult  (deletes photos nothing uses and stray R2 files, both older than an hour)
 // Public URL of one size: /m/<hash>-<width>.webp where key = "m/<hash>".
 
 export const MEDIA_WIDTHS = [480, 640, 800, 1080, 1200, 1600, 2048] as const;
@@ -153,7 +172,9 @@ export type MediaAsset = {
 
 // ------------------------------------------------------------------- site
 //   GET   /api/admin/site/images                        -> { slots: SiteImage[] }
-//   PUT   /api/admin/site/images/:slot                  { mediaKey: string | null; alt?: string | null } -> SiteImage   (null = back to the stand-in)
+//   PUT   /api/admin/site/images/:slot                  { mediaKey: string | null; alt?: string | null } -> SiteImage
+//            null = back to the default photo; the owner's upload is deleted from D1 and R2 unless another place still uses it.
+//            Hero places and unknown places: 400 NOT_REPLACEABLE / 404.
 //   GET   /api/admin/site/settings                      -> SiteSettings
 //   PATCH /api/admin/site/settings                      Partial<SiteSettings> -> SiteSettings
 //   GET   /api/admin/testimonials                       -> { items: Testimonial[] }
