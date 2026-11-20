@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { MEDIA_WIDTHS } from "@/lib/admin-api";
+import { demoWidths } from "@/lib/media";
 
 /** Size that worked for each photo, so later views go straight to it. */
 const workedBefore = new Map<string, number>();
 
 /** Sizes to try: the one that worked, then the nearest to the wanted width. */
 function candidateWidths(mediaKey: string, wanted: number, known?: readonly number[]): number[] {
-  const pool = known && known.length > 0 ? known : MEDIA_WIDTHS;
+  // A default photo (demo/...) has its own sizes, listed in public/demo/sizes.json.
+  const demo = mediaKey.startsWith("demo/") ? demoWidths(mediaKey) : [];
+  const pool = demo.length > 0 ? demo : known && known.length > 0 ? known : MEDIA_WIDTHS;
   const nearest = [...pool].sort((a, b) => Math.abs(a - wanted) - Math.abs(b - wanted) || a - b);
   const cached = workedBefore.get(mediaKey);
   return cached !== undefined && pool.includes(cached) ? [cached, ...nearest.filter((w) => w !== cached)] : nearest;

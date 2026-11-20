@@ -22,6 +22,11 @@ export type ImageSource = {
   height: number;
 };
 
+/** Sizes a default photo (demo/<name>) has in public/demo/, smallest first; empty if unknown. */
+export function demoWidths(key: string): number[] {
+  return [...(DEMO[key.replace(/^demo\//, "")]?.widths ?? [])].sort((a, b) => a - b);
+}
+
 /** A row of the `media` table, as the loaders read it. */
 export type MediaRow = { key: string; widths: string; width: number; height: number };
 type MediaInfo = { widths: number[]; width: number; height: number };

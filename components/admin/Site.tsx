@@ -176,7 +176,7 @@ function SlotRow({ slot, choice, onChoose }: { slot: SiteImage; choice?: PhotoCh
           mediaKey={mediaKey ?? definition.defaultKey}
           alt=""
           width={slot.shape === "wide" ? 800 : 480}
-          widths={usingDefault ? definition.widths : choice ? undefined : slot.media?.widths}
+          widths={usingDefault || choice ? undefined : slot.media?.widths}
         />
       </span>
       <span className="a-row__text">
