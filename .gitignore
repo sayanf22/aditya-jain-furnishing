@@ -43,3 +43,8 @@ Thumbs.db
 .stock/
 # Photos copied from the dashboard at build time (scripts/sync-content.mjs)
 public/m/
+
+# Agent task notes and the client's original logo files
+.agents/
+IMG_*.PNG
+Delta Shining Your Home Logo.png
