@@ -25,6 +25,9 @@ export const API_HEADERS = {
   "Cache-Control": "no-store",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
+  "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Strict-Transport-Security": "max-age=31536000",
 } as const;
 
 export function json(body: unknown, status = 200, extra?: HeadersInit): Response {

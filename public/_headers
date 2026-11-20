@@ -1,3 +1,8 @@
+# Whole-site policy. Pages are pre-rendered, so Next.js puts its hydration data in inline
+# scripts that cannot carry a per-request nonce (Next.js CSP guide: nonces need dynamic
+# rendering); script-src therefore allows inline scripts but only from this site plus
+# Cloudflare Turnstile (the enquiry form check). Everything else is closed: no plugins,
+# no foreign frames, forms and base only to this site, https forced.
 # Headers for files served straight from Workers Static Assets. They do not
 # reach responses made by Worker code, so lib/server/headers.ts adds the same
 # set to pages and photos the Worker answers. Keep the two in step.
@@ -10,7 +15,7 @@
   Strict-Transport-Security: max-age=31536000
   Cross-Origin-Opener-Policy: same-origin
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
 
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
@@ -19,6 +24,9 @@
 # content hash, so they never change.
 /m/*
   Cache-Control: public,max-age=31536000,immutable
+  Cross-Origin-Resource-Policy: same-origin
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox
 
 # Dashboard pages are answered by the Worker (pre-rendered cache), which adds the same policy plus the hashes of the page's inline scripts (lib/server/headers.ts).
 # Dashboard: never embedded, never indexed, no referrer.

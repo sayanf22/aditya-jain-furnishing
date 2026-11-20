@@ -369,6 +369,8 @@ export async function serveMedia(request: Request, env: AdminEnv, pathname: stri
     "Cache-Control": "public, max-age=31536000, immutable",
     "X-Content-Type-Options": "nosniff",
     "Cross-Origin-Resource-Policy": "same-origin",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "Strict-Transport-Security": "max-age=31536000",
     ETag: object.httpEtag,
   });
   if (request.headers.get("If-None-Match") === object.httpEtag) {

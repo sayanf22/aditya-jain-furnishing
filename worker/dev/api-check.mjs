@@ -348,6 +348,7 @@ ok("same photo again returns the same item (200)", r.status === 200 && r.data.id
 const hash = mediaA.key.slice(2);
 r = await fetch(`${BASE}/m/${hash}-800.webp`);
 const body = Buffer.from(await r.arrayBuffer());
+ok("/m/ photos carry CSP, CORP and HSTS", /sandbox/.test(r.headers.get("content-security-policy") ?? "") && r.headers.get("cross-origin-resource-policy") === "same-origin" && !!r.headers.get("strict-transport-security"));
 ok("/m/ serves the stored file", r.status === 200 && r.headers.get("content-type") === "image/webp" && /immutable/.test(r.headers.get("cache-control")) && r.headers.get("x-content-type-options") === "nosniff" && body.equals(sizesA[1][1]), `${r.status} ${r.headers.get("content-type")}`);
 const etag = r.headers.get("etag");
 r = await fetch(`${BASE}/m/${hash}-800.webp`, { headers: { "If-None-Match": etag } });
@@ -602,6 +603,16 @@ ok("wrong method: 405 with Allow", r.status === 405 && /GET/.test(r.headers.get(
 r = await fetch(`${BASE}/`);
 await r.arrayBuffer();
 ok("site pages carry the security headers", r.headers.get("x-content-type-options") === "nosniff" && !!r.headers.get("strict-transport-security") && !!r.headers.get("permissions-policy") && !!r.headers.get("content-security-policy"), [...r.headers.keys()].join());
+const pageCsp = r.headers.get("content-security-policy") ?? "";
+ok("site pages: CSP closes plugins, foreign frames, base and forms; HSTS, referrer and COOP set", /default-src 'self'/.test(pageCsp) && /frame-ancestors 'self'/.test(pageCsp) && /object-src 'none'/.test(pageCsp) && /base-uri 'self'/.test(pageCsp) && /form-action 'self'/.test(pageCsp) && /max-age=\d{7,}/.test(r.headers.get("strict-transport-security") ?? "") && r.headers.get("referrer-policy") === "strict-origin-when-cross-origin" && r.headers.get("cross-origin-opener-policy") === "same-origin", pageCsp);
+r = await fetch(`${BASE}/api/health`);
+await r.arrayBuffer();
+ok("API replies: no-store, nosniff, CSP none, CORP same-origin, HSTS", r.headers.get("cache-control") === "no-store" && /default-src 'none'/.test(r.headers.get("content-security-policy") ?? "") && r.headers.get("cross-origin-resource-policy") === "same-origin" && !!r.headers.get("strict-transport-security"));
+r = await anon.call("POST", "/api/enquiry", { customerType: "B2C", name: "X", phone: "x" }, { headers: { Origin: BASE } });
+ok("enquiry replies carry the API headers, validation errors are 422", r.status === 422 && r.headers.get("x-content-type-options") === "nosniff" && r.headers.get("cache-control") === "no-store");
+r = await fetch(`${BASE}/api/enquiry`, { method: "OPTIONS", headers: { Origin: "https://evil.example", "Access-Control-Request-Method": "POST" } });
+await r.arrayBuffer();
+ok("enquiry: no CORS headers are ever sent", !r.headers.get("access-control-allow-origin"));
 r = await fetch(`${BASE}/admin`);
 await r.arrayBuffer();
 ok("/admin carries DENY, noindex and CSP", r.headers.get("x-frame-options") === "DENY" && /noindex/.test(r.headers.get("x-robots-tag") ?? "") && /frame-ancestors 'none'/.test(r.headers.get("content-security-policy") ?? ""), `${r.status} ${[...r.headers.keys()].join()}`);

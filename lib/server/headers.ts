@@ -33,7 +33,8 @@ async function inlineHashes(html: string, tag: "script" | "style"): Promise<stri
   }
   return [...found];
 }
-const SITE_CSP = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
+const SITE_CSP =
+  "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests";
 
 const GLOBAL: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",

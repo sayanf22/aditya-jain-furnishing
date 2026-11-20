@@ -9,13 +9,9 @@
 // per-visitor rate limit, a same-site Origin check, and Cloudflare Turnstile
 // once TURNSTILE_SECRET is set (it is left off for the local build).
 import { LIMITS, validateEnquiry, type CustomerType, type EnquiryInput } from "./enquiry-rules";
-import { ApiFail, parse, readBytes, text } from "./server/http";
+import { API_HEADERS, ApiFail, parse, readBytes, text } from "./server/http";
 
-const JSON_HEADERS = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-} as const;
+const JSON_HEADERS = API_HEADERS;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });

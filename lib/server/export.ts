@@ -1,7 +1,7 @@
 // GET /api/content/export: what the site build needs, visible content only.
 // Called by scripts/sync-content.mjs with Authorization: Bearer EXPORT_TOKEN.
 // Never returns users, sessions, enquiries or the audit log.
-import type { ContentExport } from "../admin-api";
+import { SITE_IMAGE_SLOTS, type ContentExport } from "../admin-api";
 import { safeEqual, secretOk } from "./crypto";
 import type { AdminEnv } from "./env";
 import { API_HEADERS } from "./http";
@@ -33,11 +33,12 @@ export async function handleExport(request: Request, env: AdminEnv, ip: string):
 
   const [state, categories, subcategories, products, images, siteImages, settings, testimonials] = await db.batch([
     db.prepare("SELECT version FROM content_state WHERE id = 1"),
-    db.prepare("SELECT id, slug, name, tagline, image_key, hero_image_key, position FROM categories WHERE visible = 1 ORDER BY position, id"),
+    db.prepare("SELECT id, slug, name, tagline, image_key, NULL AS hero_image_key, position FROM categories WHERE visible = 1 ORDER BY position, id"),
     db.prepare(`${subs} SELECT id, category_id, parent_id, slug, name, description, image_key, position FROM subcategories WHERE id IN (SELECT id FROM shown) ORDER BY position, id`),
     db.prepare(`${subs} SELECT p.id, p.category_id, p.subcategory_id, p.slug, p.name, p.description, p.position ${shownProducts} ORDER BY p.position, p.id`),
     db.prepare(`${subs} SELECT i.id, i.product_id, i.image_key, i.width, i.height, i.alt, i.position FROM product_images i WHERE i.product_id IN (SELECT p.id ${shownProducts}) ORDER BY i.position, i.id`),
-    db.prepare("SELECT slot, media_key, alt FROM site_images"),
+    // Hero places are fixed: nothing stored for them is ever exported (header photos above are exported as NULL).
+    db.prepare(`SELECT slot, media_key, alt FROM site_images WHERE slot IN (${SITE_IMAGE_SLOTS.map(() => "?").join(", ")})`).bind(...SITE_IMAGE_SLOTS.map((s) => s.slot)),
     // Only the public business details, so a future private setting can't leave through the export.
     db.prepare(`SELECT key, value FROM settings WHERE key IN (${PUBLIC_SETTINGS.map(() => "?").join(", ")})`).bind(...PUBLIC_SETTINGS),
     db.prepare("SELECT id, name, text, position FROM testimonials WHERE visible = 1 ORDER BY position, id"),
