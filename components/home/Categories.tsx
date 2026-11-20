@@ -51,7 +51,7 @@ function CategoryCard({ category, index }: { category: Category; index: number }
   return (
     <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">
       <article
-        className="cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] bg-stone shadow-[0_18px_40px_-30px_rgba(20,20,20,0.5)] lg:h-[30rem] xl:h-[32rem]"
+        className={`cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] ${source ? "bg-stone" : "bg-[#2e2e2e]"} shadow-[0_18px_40px_-30px_rgba(20,20,20,0.5)] lg:h-[30rem] xl:h-[32rem]`}
         data-reveal
         style={{ ["--reveal-delay" as string]: index }}
       >

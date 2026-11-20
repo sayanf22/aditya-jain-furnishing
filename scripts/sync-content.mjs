@@ -29,6 +29,7 @@ const BUILD_INFO = here("lib/build-info.json");
 const WIDTHS = new Set([480, 640, 800, 1080, 1200, 1600, 2048]);
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MEDIA_KEY = /^m\/([0-9a-f]{16})$/;
+const HERO_SLOT = /^(home\.hero\.\d+|collection\.hero|about\.hero|contact\.hero)$/;
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const IMAGE_KEY = /^(m\/[0-9a-f]{16}|demo\/[A-Za-z0-9._-]{1,80})$/;
 // Wrangler's bin file is not in its package "exports", so it cannot be resolved by name.
@@ -104,7 +105,7 @@ function validate(data) {
     ...data.categories.flatMap((c) => [c.image_key, c.hero_image_key]),
     ...data.subcategories.map((s) => s.image_key),
     ...data.product_images.map((i) => i.image_key),
-    ...data.site_images.map((s) => s.media_key),
+    ...data.site_images.filter((s) => !HERO_SLOT.test(s.slot)).map((s) => s.media_key),
   ];
   must(imageKeys.every((k) => k === null || IMAGE_KEY.test(k)), "a photo key is not valid");
   // Never publish an empty site by accident.
@@ -131,7 +132,7 @@ function usedPhotos(data) {
   data.categories.forEach((c) => (add(c.image_key), add(c.hero_image_key)));
   data.subcategories.forEach((s) => add(s.image_key));
   data.product_images.forEach((i) => add(i.image_key));
-  data.site_images.forEach((s) => add(s.media_key));
+  data.site_images.filter((s) => !HERO_SLOT.test(s.slot)).forEach((s) => add(s.media_key));
   const media = new Map(data.media.map((m) => [m.key, m]));
   const files = [];
   for (const key of keys) {
@@ -225,7 +226,8 @@ function sqlFor(data) {
   sql.push("DELETE FROM media");
   for (const m of data.media) sql.push(insert("media", { ...m, bytes: 0 }, ["key", "widths", "width", "height", "bytes", "alt"]));
   sql.push("DELETE FROM site_images");
-  for (const s of data.site_images) sql.push(insert("site_images", s, ["slot", "media_key", "alt"]));
+  // Hero places are fixed (lib/admin-api.ts NON_REPLACEABLE_SLOTS): rows for them are ignored.
+  for (const s of data.site_images.filter((r) => !HERO_SLOT.test(r.slot))) sql.push(insert("site_images", s, ["slot", "media_key", "alt"]));
   // Settings are added to, not replaced: the business details come from the
   // migrations and stay unless the dashboard changed them.
   for (const s of data.settings) {

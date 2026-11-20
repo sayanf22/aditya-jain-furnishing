@@ -5,6 +5,7 @@
 // globals.css. Transform and opacity only; no client JavaScript.
 import type { CSSProperties } from "react";
 import type { ImageSource } from "@/lib/media";
+import { PhotoPlaceholder } from "./PhotoPlaceholder";
 
 type Props = {
   image: ImageSource | null;
@@ -27,6 +28,7 @@ export function RevealImage({ image: source, alt, sizes, className = "", delay =
       data-reveal
       style={{ ["--reveal-delay" as string]: delay, ...(cover ? { ["--cover" as string]: cover } : {}) } as CSSProperties}
     >
+      {!source && <PhotoPlaceholder />}
       {source && (
         <div className="img-parallax absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

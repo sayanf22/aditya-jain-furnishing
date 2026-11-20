@@ -12,6 +12,7 @@
 // itself. Image URLs are worked out on the server and passed in, so the
 // image size list doesn't ship to the browser.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { PhotoPlaceholder } from "../PhotoPlaceholder";
 import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, SearchIcon, WhatsAppIcon } from "../icons";
 
 export type BrowserImage = { src: string; srcSet: string; width: number; height: number; alt: string };
@@ -387,6 +388,7 @@ function ProductFrame({
   const fits = image ? Math.abs(image.width / image.height - FRAME) < 0.02 : true;
   return (
     <span className={`relative block aspect-[4/5] overflow-hidden bg-stone ${className}`}>
+      {!image && <PhotoPlaceholder />}
       {image && (
         <>
           {!fits && (

@@ -2,7 +2,7 @@
 // (they are pre-rendered), so visitors never wait on the database.
 // Collections come from lib/catalogue.ts, the single place that reads them.
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { SITE_IMAGE_SLOTS } from "./admin-api";
+import { defaultFor, isReplaceableSlot } from "./admin-api";
 import { getCatalogue, getMediaIndex } from "./catalogue";
 import type { ContactInfo } from "./contact";
 import { imageSource, type ImageSource } from "./media";
@@ -101,77 +101,67 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 // ------------------------------------------------------------ photo places
-// Every place on the site with a replaceable photo (SITE_IMAGE_SLOTS in
-// lib/admin-api.ts). A photo chosen in the dashboard (site_images) wins; the
-// stand-in below shows until then. The Home slides take their stand-in from
-// the collection they link to, so they follow the collections.
+// Two kinds of photo place (lists in lib/admin-api.ts):
+//   - Replaceable (SITE_IMAGE_SLOTS): the photo chosen in the dashboard
+//     (site_images) when there is one, otherwise the default photo from
+//     public/demo/ (defaultFor). A chosen photo that cannot be found falls
+//     back to the default.
+//   - Heroes (page headers): fixed, static photos below. site_images is never
+//     read for them, so no database row can change a hero.
+// The Home slides follow the first collections: each uses its collection's
+// header photo.
 
-const STAND_INS: Record<string, string> = {
+const HERO_PHOTOS: Record<string, string> = {
   "collection.hero": "demo/sc-collection",
   "about.hero": "demo/about-hero",
-  "about.story": "demo/about-story",
-  "about.showroom": "demo/about-showroom",
-  "about.band": "demo/about-band",
   "contact.hero": "demo/contact-hero",
-  "contact.showroom": "demo/about-showroom",
 };
-const HERO_SLOT = /^home\.hero\.(\d+)$/;
+const HOME_SLIDES = 3;
 
 export type SitePhoto = { image: ImageSource | null; alt: string | null };
 export type SitePhotos = (slot: string) => SitePhoto;
 
 async function loadSitePhotos(): Promise<SitePhotos> {
-  for (const { slot } of SITE_IMAGE_SLOTS) {
-    if (!HERO_SLOT.test(slot) && !(slot in STAND_INS)) {
-      throw new Error(`lib/content.ts has no stand-in for the photo place "${slot}" (see SITE_IMAGE_SLOTS).`);
-    }
-  }
   const database = await db();
   const [rows, media] = await Promise.all([
     database.prepare("SELECT slot, media_key, alt FROM site_images WHERE media_key IS NOT NULL").all<{ slot: string; media_key: string; alt: string | null }>(),
     getMediaIndex(),
   ]);
-  const chosen = new Map(rows.results.map((r) => [r.slot, r]));
+  const chosen = new Map(rows.results.filter((r) => isReplaceableSlot(r.slot)).map((r) => [r.slot, r]));
   return (slot) => {
+    if (!isReplaceableSlot(slot)) return { image: imageSource(HERO_PHOTOS[slot], media), alt: null };
     const row = chosen.get(slot);
-    // A chosen photo that can't be found falls back to the stand-in.
-    const image = (row && imageSource(row.media_key, media)) || imageSource(STAND_INS[slot], media);
+    const image = (row && imageSource(row.media_key, media)) || imageSource(defaultFor(slot), media);
     return { image, alt: row?.alt ?? null };
   };
 }
 
-/** The photos for the places in SITE_IMAGE_SLOTS (other than the Home slides). */
+/** The photo of a place: replaceable places (default or upload) and the fixed page headers. */
 export function getSitePhotos(): Promise<SitePhotos> {
   return process.env.NODE_ENV === "production" ? (sitePhotos ??= loadSitePhotos()) : loadSitePhotos();
 }
 let sitePhotos: Promise<SitePhotos> | null = null;
 
-/** The Home slides: one for each of the first collections that has a slide place. */
+/** The Home slides: fixed, one for each of the first collections. */
 async function getHeroSlides(categories: Category[], settings: Record<string, string>): Promise<HeroSlide[]> {
-  const [photos, catalogue, media] = await Promise.all([getSitePhotos(), getCatalogue(), getMediaIndex()]);
+  const [catalogue, media] = await Promise.all([getCatalogue(), getMediaIndex()]);
   const texts = parseSlides(settings.hero_slides);
-  const places = SITE_IMAGE_SLOTS.filter((s) => HERO_SLOT.test(s.slot));
   const slides: HeroSlide[] = [];
-  places.forEach((place, i) => {
-    const category = categories[i];
-    if (!category) return;
+  for (const category of categories.slice(0, HOME_SLIDES)) {
     const text = texts.find((t) => t.href === category.href);
     const own = catalogue.categories.find((c) => c.id === category.id);
-    const photo = photos(place.slot);
-    // Chosen photo, then the slide's own stand-in, then the collection's photos.
-    const image = photo.image ?? imageSource(text?.image, media) ?? own?.heroImage ?? category.image;
-    if (!image) return;
+    const image = imageSource(text?.image, media) ?? own?.heroImage ?? category.image;
+    if (!image) continue;
     slides.push({
       image,
-      alt: photo.alt ?? text?.alt ?? category.name,
+      alt: text?.alt ?? category.name,
       title: text?.title ?? headline(category),
       cta: text?.cta ?? `Explore ${category.name}`,
       href: category.href,
     });
-  });
+  }
   return slides;
 }
-
 /** First sentence of the collection's description, or its name. */
 function headline(category: Category): string {
   const first = category.tagline?.split(/(?<=[.!?])\s/)[0]?.trim();

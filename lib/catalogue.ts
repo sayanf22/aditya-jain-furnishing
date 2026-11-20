@@ -5,8 +5,11 @@
 // Shape: category -> subcategories (any depth) -> products. A product sits
 // in the deepest subcategory it belongs to, or directly in a category that
 // is a single collection (Wallpapers, Cushions). A node's photo is its own
-// image if one is set, otherwise the first product photo inside it.
+// image if one is set, otherwise the first product photo inside it, otherwise
+// none (a neutral tile). Home cards of the first five collections fall back to
+// their default photo (CATEGORY_CARD_DEFAULTS), never a stock photo for types.
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { categoryCardDefaultFor } from "./admin-api";
 import { buildMediaIndex, imageSource, type ImageSource, type MediaIndex, type MediaRow } from "./media";
 
 export type ProductImage = { key: string; width: number; height: number; alt: string | null; source: ImageSource | null };
@@ -193,7 +196,7 @@ export function build(cats: CatRow[], subs: SubRow[], prods: ProdRow[], imgs: Im
     // subcategory, counted here rather than in finish().
     finish(c, () => false);
     c.productCount = products.filter((p) => p.categoryId === c.id).length;
-    c.imageKey ??= products.find((p) => p.categoryId === c.id && p.images[0])?.images[0].key ?? null;
+    c.imageKey ??= categoryCardDefaultFor(c.slug) ?? products.find((p) => p.categoryId === c.id && p.images[0])?.images[0].key ?? null;
     c.image = imageSource(c.imageKey, media);
   }
 
