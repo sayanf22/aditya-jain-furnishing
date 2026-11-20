@@ -389,7 +389,7 @@ async function devtools(page) {
     const overlap = credit.right > fab.left && credit.left < fab.right && credit.bottom > fab.top && credit.top < fab.bottom;
     return overlap ? "covered" : "clear";
   });
-  ok("floating WhatsApp button doesn't cover the footer credit", creditClear === "clear", creditClear);
+  ok("floating contact button doesn't cover the footer credit", creditClear === "clear", creditClear);
 
   // No visible text or button name on the page says "WhatsApp" (the buttons
   // show the WhatsApp icon and say "Enquire" / "Message us").
@@ -774,7 +774,7 @@ async function devtools(page) {
     return { src: i?.getAttribute("src"), ok: !!i && i.complete && i.naturalWidth > 0, alt: i?.alt, reds };
   });
   ok("header shows the logo, light over the photo and in colour once scrolled", top.length === 2 && top.every((t) => t.ok) && top[0].op === "0" && top[1].op === "1" && scrolled[0] === "1" && scrolled[1] === "0", JSON.stringify(top.map((t) => `${t.src} ${t.op}`)));
-  ok("footer shows the grey logo and no red", foot.ok && /logo-grey/.test(foot.src) && foot.alt.length > 0 && foot.reds === 0, JSON.stringify(foot));
+  ok("footer shows the real logo (white and red, on the dark footer)", foot.ok && /logo-light/.test(foot.src) && foot.alt.length > 0 && foot.reds === 0, JSON.stringify(foot));
   await page.close();
 }
 

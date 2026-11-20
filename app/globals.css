@@ -455,6 +455,36 @@ address {
 .float-wa:hover {
   background-color: var(--color-terracotta-dark);
 }
+/* Floating contact button: the three options rise out of the button one
+   after another (the one nearest the button first). */
+.float-contact-menu > li {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, 14px, 0) scale(0.96);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.25s ease calc(var(--i, 0) * 50ms),
+    transform 0.45s var(--ease-out-soft) calc(var(--i, 0) * 50ms),
+    visibility 0s linear 0.45s;
+}
+.float-contact[data-open="true"] .float-contact-menu > li {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: calc(var(--i, 0) * 50ms), calc(var(--i, 0) * 50ms), 0s;
+}
+.float-contact-icon > svg:last-child {
+  opacity: 0;
+  transform: rotate(-60deg) scale(0.6);
+}
+.float-contact[data-open="true"] .float-contact-icon > svg:first-child {
+  opacity: 0;
+  transform: rotate(60deg) scale(0.6);
+}
+.float-contact[data-open="true"] .float-contact-icon > svg:last-child {
+  opacity: 1;
+  transform: none;
+}
 
 /* Underline that draws in from the left on link hover. */
 .link-line {

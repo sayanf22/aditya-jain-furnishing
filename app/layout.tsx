@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Instrument_Sans } from "next/font/google";
-import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
+import { FloatingContact } from "@/components/FloatingContact";
 import { RevealObserver } from "@/components/RevealObserver";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <SiteFooter contact={contact} categories={categories} />
         </Suspense>
-        <FloatingWhatsApp href={whatsapp} />
+        <FloatingContact phoneHref={phoneLink(contact)} messageHref={whatsapp} />
         <RevealObserver />
       </body>
     </html>

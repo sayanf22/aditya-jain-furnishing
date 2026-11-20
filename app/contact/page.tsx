@@ -102,7 +102,7 @@ export default async function ContactPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] bg-sand p-3 sm:p-5 lg:sticky lg:top-28" data-reveal style={delay(1)}>
+          <div id="enquire" className="scroll-mt-28 rounded-[2rem] bg-sand p-3 sm:p-5 lg:sticky lg:top-28" data-reveal style={delay(1)}>
             <EnquiryForm categories={categories.map((c) => ({ slug: c.slug, name: c.name }))} source="contact" whatsappHref={whatsapp} />
           </div>
         </div>

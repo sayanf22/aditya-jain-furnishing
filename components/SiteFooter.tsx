@@ -22,7 +22,7 @@ export function SiteFooter({ contact, categories }: Props) {
         <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:items-end">
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-grey.webp" alt={contact.businessName} width={600} height={209} loading="lazy" decoding="async" className="h-14 w-auto sm:h-16 lg:h-[4.5rem]" />
+            <img src="/brand/logo-light.webp" alt={contact.businessName} width={600} height={209} loading="lazy" decoding="async" className="h-14 w-auto sm:h-16 lg:h-[4.5rem]" />
             <p className="mt-6 max-w-sm text-[0.98rem] leading-relaxed text-ivory/80">
               Home furnishing showroom in Kirti Nagar, New Delhi.
             </p>

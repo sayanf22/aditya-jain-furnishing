@@ -20,6 +20,16 @@ function Line({ className, children }: IconProps & { children: React.ReactNode }
   );
 }
 
+/** Enquiry: a speech bubble with two lines of text. */
+export function EnquiryIcon({ className }: IconProps) {
+  return (
+    <Line className={className}>
+      <path d="M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v9.2a1.5 1.5 0 0 1-1.5 1.5h-7.4L7.2 20.4v-3.7H5A1.5 1.5 0 0 1 3.5 15.2V6A1.5 1.5 0 0 1 5 4.5Z" />
+      <path d="M8 9.4h8M8 12.6h5" />
+    </Line>
+  );
+}
+
 /** WhatsApp, drawn in the same line style as the other icons. */
 export function WhatsAppIcon({ className }: IconProps) {
   return (
