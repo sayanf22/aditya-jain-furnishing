@@ -170,7 +170,7 @@ export async function deleteProduct(c: Ctx): Promise<Ok> {
   const { results: held } = await c.env.DB.prepare("SELECT image_key AS k FROM product_images WHERE product_id = ?1").bind(pid).all<{ k: string }>();
   await c.env.DB.batch([c.env.DB.prepare("DELETE FROM products WHERE id = ?1").bind(pid), bumpVersion(c)]);
   // The design's photos leave D1 and R2 too, unless another place still uses them.
-  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k), c.url.origin);
   audit(c, "product.delete", "product", pid, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }

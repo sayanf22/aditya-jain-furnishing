@@ -5,7 +5,7 @@
 // test rows in the local content database. Never touches the live account.
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const BASE = process.env.BASE ?? "http://localhost:8787";
 const vars = Object.fromEntries(
@@ -374,30 +374,33 @@ r = await owner.api("PUT", `/products/${p1.id}/images`, { images: [{ mediaKey: m
 ok("same photo twice is refused", r.status === 400);
 r = await owner.api("PUT", `/products/${p1.id}/images`, { images: [{ mediaKey: "m/ffffffffffffffff" }] });
 ok("photo not in the library is refused", r.status === 400 && r.data.error.code === "MEDIA_NOT_FOUND");
-r = await owner.api("PATCH", `/categories/${newCat.id}`, { imageKey: mediaA.key, heroImageKey: mediaA.key });
-ok("set collection photos", r.status === 200 && r.data.imageKey === mediaA.key);
+r = await owner.api("PATCH", `/categories/${newCat.id}`, { imageKey: mediaA.key });
+ok("set the collection card photo", r.status === 200 && r.data.imageKey === mediaA.key);
+r = await owner.api("PATCH", `/categories/${newCat.id}`, { heroImageKey: mediaA.key });
+ok("a collection header photo cannot be changed", r.status === 400 && r.data.error.code === "NOT_REPLACEABLE", JSON.stringify(r.data));
 r = await owner.api("DELETE", `/media/${mediaA.id}`);
 ok("delete a photo in use: 409 with usedBy", r.status === 409 && r.data.error.code === "MEDIA_IN_USE" && r.data.error.usedBy.length === 2, JSON.stringify(r.data));
 const tiny = await owner.api("POST", "/media", uploadForm([[480, fakeWebp(480, 300)]], { label: "Tiny", width: 480, height: 300 }));
 ok("small original may have one size", tiny.status === 201, JSON.stringify(tiny.data));
-r = await owner.api("PUT", "/site/images/home.hero.1", { mediaKey: tiny.data.key });
+r = await owner.api("PUT", "/site/images/about.band", { mediaKey: tiny.data.key });
 ok("photo too small for a wide place: 400", r.status === 400 && r.data.error.code === "TOO_SMALL", JSON.stringify(r.data));
 const wideSizes = [[800, fakeWebp(800, 400)], [1200, fakeWebp(1200, 600)]];
 r = await owner.api("POST", "/media", uploadForm(wideSizes, { label: "Wide", width: 1200, height: 600 }));
 const mediaW = r.data;
-r = await owner.api("PUT", "/site/images/home.hero.1", { mediaKey: mediaW.key, alt: "Living room" });
-ok("set a site photo", r.status === 200 && r.data.mediaKey === mediaW.key && r.data.media?.id === mediaW.id && r.data.slot === "home.hero.1", JSON.stringify(r.data).slice(0, 200));
+r = await owner.api("PUT", "/site/images/about.band", { mediaKey: mediaW.key, alt: "Living room" });
+ok("set a site photo", r.status === 200 && r.data.mediaKey === mediaW.key && r.data.media?.id === mediaW.id && r.data.slot === "about.band" && r.data.defaultKey === "demo/about-band", JSON.stringify(r.data).slice(0, 200));
 r = await owner.api("PUT", "/site/images/nope.slot", { mediaKey: null });
 ok("unknown site place: 404", r.status === 404);
 r = await owner.api("GET", "/site/images");
-ok("site photo list has every place", r.status === 200 && r.data.slots.length === 10 && r.data.slots.find((s) => s.slot === "home.hero.1").mediaKey === mediaW.key);
-r = await owner.api("PUT", "/site/images/home.hero.1", { mediaKey: null });
-ok("site photo back to the stand-in", r.status === 200 && r.data.mediaKey === null && r.data.media === null);
-await owner.api("DELETE", `/media/${tiny.data.id}`);
-r = await owner.api("DELETE", `/media/${mediaW.id}`);
-ok("delete an unused photo", r.status === 200);
+ok("site photo list has the four replaceable places", r.status === 200 && r.data.slots.length === 4 && r.data.slots.find((s) => s.slot === "about.band").mediaKey === mediaW.key && r.data.slots.every((s) => s.defaultKey.startsWith("demo/")));
+r = await owner.api("PUT", "/site/images/about.band", { mediaKey: null });
+ok("reset: the default is back and the upload is deleted (D1 + R2)", r.status === 200 && r.data.mediaKey === null && r.data.media === null && r.data.defaultKey === "demo/about-band");
 r = await fetch(`${BASE}/m/${mediaW.key.slice(2)}-800.webp`);
-ok("deleted photo is gone from R2", r.status === 404);
+ok("reset removed the upload files from R2", r.status === 404);
+r = await owner.api("DELETE", `/media/${mediaW.id}`);
+ok("reset removed the upload row from D1", r.status === 404);
+r = await owner.api("DELETE", `/media/${tiny.data.id}`);
+ok("delete an unused photo", r.status === 200);
 
 // ---- settings and testimonials
 r = await owner.api("GET", "/site/settings");
@@ -479,8 +482,90 @@ r = await owner.api("DELETE", `/categories/${newCat.id}?confirm=${encodeURICompo
 ok("delete collection", r.status === 200);
 await owner.api("DELETE", `/categories/${dupCat.id}?confirm=${encodeURIComponent(dupCat.name)}`);
 r = await owner.api("DELETE", `/media/${mediaA.id}`);
-ok("photo can be deleted once nothing uses it", r.status === 200, JSON.stringify(r.data));
+ok("the collection delete already removed its photo (D1 + R2)", r.status === 404 && (await fetch(`${BASE}/m/${hash}-800.webp`)).status === 404, JSON.stringify(r.data));
 
+// ---- media lifecycle
+const lifeCat = (await owner.api("POST", "/categories", { name: "Lifecycle Test" })).data;
+const lifeCat2 = (await owner.api("POST", "/categories", { name: "Lifecycle Two" })).data;
+const lifeSub = (await owner.api("POST", "/subcategories", { categoryId: lifeCat2.id, name: "Lifecycle Type" })).data;
+const upload = async (label, w = 1200, h = 600) => {
+  const res = await owner.api("POST", "/media", uploadForm([[800, fakeWebp(800, Math.round((800 * h) / w))], [1200, fakeWebp(1200, Math.round((1200 * h) / w))]], { label, width: w, height: h }));
+  return res.data;
+};
+const gone = async (m) => (await fetch(`${BASE}/m/${m.key.slice(2)}-800.webp`)).status === 404 && (await fetch(`${BASE}/m/${m.key.slice(2)}-1200.webp`)).status === 404 && (await owner.api("DELETE", `/media/${m.id}`)).status === 404;
+const there = async (m) => (await fetch(`${BASE}/m/${m.key.slice(2)}-800.webp`)).status === 200 && (await owner.api("GET", `/media?q=${encodeURIComponent(m.label)}`)).data.items.some((i) => i.id === m.id);
+
+const A2 = await upload("Life A2");
+const B2 = await upload("Life B2");
+ok("upload stores the files in R2 and the row in D1", A2.key && (await there(A2)));
+const design = (await owner.api("POST", "/products", { categoryId: lifeCat.id, name: "Life Design" })).data;
+await owner.api("PUT", `/products/${design.id}/images`, { images: [{ mediaKey: A2.key }] });
+await owner.api("PATCH", `/categories/${lifeCat.id}`, { imageKey: B2.key });
+r = await owner.api("DELETE", `/products/${design.id}`);
+ok("deleting a design removes its photo from D1 and R2", r.status === 200 && (await gone(A2)));
+ok("a photo still used elsewhere stays when the design goes", await there(B2));
+r = await owner.api("DELETE", `/categories/${lifeCat.id}?confirm=${encodeURIComponent("Lifecycle Test")}`);
+ok("deleting a collection removes its card photo from D1 and R2", r.status === 200 && (await gone(B2)));
+
+const E2 = await upload("Life E2");
+const F2 = await upload("Life F2");
+const G2 = await upload("Life G2");
+await owner.api("PATCH", `/subcategories/${lifeSub.id}`, { imageKey: E2.key });
+const design2 = (await owner.api("POST", "/products", { categoryId: lifeCat2.id, subcategoryId: lifeSub.id, name: "Life Design 2" })).data;
+await owner.api("PUT", `/products/${design2.id}/images`, { images: [{ mediaKey: F2.key }, { mediaKey: G2.key }] });
+await owner.api("PUT", "/site/images/about.story", { mediaKey: G2.key });
+r = await owner.api("DELETE", `/categories/${lifeCat2.id}?confirm=${encodeURIComponent("Lifecycle Two")}`);
+ok("deleting a collection removes its type and design photos", r.status === 200 && (await gone(E2)) && (await gone(F2)));
+ok("a photo another place still uses survives the collection delete", await there(G2));
+r = await owner.api("PUT", "/site/images/about.story", { mediaKey: null });
+ok("reset deletes the photo once no place uses it", r.status === 200 && (await gone(G2)));
+
+const C2 = await upload("Life C2");
+await owner.api("PUT", "/site/images/about.band", { mediaKey: C2.key });
+await owner.api("PUT", "/site/images/contact.showroom", { mediaKey: C2.key });
+await owner.api("PUT", "/site/images/about.band", { mediaKey: null });
+ok("reset keeps a photo another place still uses", await there(C2));
+await owner.api("PUT", "/site/images/contact.showroom", { mediaKey: null });
+ok("the last reset deletes it", await gone(C2));
+
+r = await owner.api("PUT", "/site/images/about.band", { mediaKey: "demo/about-band" });
+ok("a default file cannot be stored as an upload", r.status === 400, JSON.stringify(r.data));
+d1("DB", "INSERT INTO media (key, widths, width, height, bytes, label) VALUES ('demo/about-band', '800', 800, 500, 1, 'Default test');");
+r = await owner.api("GET", "/media?q=Default%20test");
+const demoRow = r.data.items.find((m) => m.key === "demo/about-band");
+r = demoRow ? await owner.api("DELETE", `/media/${demoRow.id}`) : { status: 0 };
+ok("a default photo can never be deleted", r.status === 403 && r.data.error.code === "PROTECTED_DEFAULT", r.text);
+d1("DB", "DELETE FROM media WHERE key = 'demo/about-band';");
+r = await fetch(`${BASE}/m/demo/about-band-800.webp`);
+ok("defaults are never served from R2", r.status === 404);
+r = await owner.api("PATCH", `/media/${tiny.data.id}`, { label: "x" });
+ok("deleted photo cannot be edited", r.status === 404);
+
+for (const slot of ["home.hero.1", "home.hero.2", "home.hero.3", "collection.hero", "about.hero", "contact.hero"]) {
+  r = await owner.api("PUT", `/site/images/${slot}`, { mediaKey: null });
+  ok(`hero place ${slot} is refused`, r.status === 400 && r.data.error.code === "NOT_REPLACEABLE", JSON.stringify(r.data));
+}
+r = await owner.api("GET", "/site/images");
+ok("hero places are not listed", !r.data.slots.some((s) => /hero/.test(s.slot)));
+
+const U1 = await upload("Life U1");
+const U2 = await upload("Life U2");
+d1("DB", `UPDATE media SET created_at = datetime('now', '-3 hours') WHERE key = '${U1.key}';`);
+r = await owner.api("POST", "/media/sweep");
+ok("sweep removes an unused photo older than an hour", r.status === 200 && r.data.photos >= 1 && (await gone(U1)), r.text);
+ok("sweep leaves a fresh unused photo (it may still be attached)", await there(U2));
+r = await owner.api("POST", "/media/sweep?minutes=-1");
+ok("sweep refuses a bad age", r.status === 400);
+const strayName = `m/${randomBytes(8).toString("hex")}-800.webp`;
+writeFileSync(".wrangler/stray.webp", fakeWebp(800, 400));
+execFileSync("npx", ["wrangler", "r2", "object", "put", `delta-furnishings-media/${strayName}`, "--file", ".wrangler/stray.webp", "--local", "--content-type", "image/webp"], { stdio: ["ignore", "ignore", "inherit"], shell: true });
+ok("a stray file (failed upload) is served until swept", (await fetch(`${BASE}/${strayName}`)).status === 200);
+r = await owner.api("POST", "/media/sweep");
+ok("a fresh stray file is left for now", (await fetch(`${BASE}/${strayName}`)).status === 200);
+r = await owner.api("POST", "/media/sweep?minutes=0");
+ok("sweep removes the stray R2 file and the unused photo", r.status === 200 && r.data.files >= 1 && r.data.photos >= 1 && (await fetch(`${BASE}/${strayName}`)).status === 404 && (await gone(U2)), r.text);
+r = await anon.api("POST", "/media/sweep");
+ok("sweep needs sign-in", r.status === 401);
 // ---- sessions, audit, headers
 r = await owner.api("DELETE", "/sessions/others");
 ok("sign out other devices", r.status === 200);

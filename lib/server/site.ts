@@ -52,7 +52,7 @@ export async function setSiteImage(c: Ctx): Promise<SiteImage> {
     bumpVersion(c),
   ]);
   // Back to the default: the owner's upload goes from D1 and R2 unless another place still uses it.
-  const removed = key === null ? await removeUnusedMedia(c.env, [previous]) : 0;
+  const removed = key === null ? await removeUnusedMedia(c.env, [previous], c.url.origin) : 0;
   audit(c, "site.image", "site_image", slot, { mediaKey: key, removed });
   const { slots } = await listSiteImages(c);
   return slots.find((s) => s.slot === slot)!;

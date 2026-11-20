@@ -190,7 +190,7 @@ export async function deleteCategory(c: Ctx): Promise<Ok> {
     .all<{ k: string | null }>();
   // Types and designs go with it (foreign keys: ON DELETE CASCADE).
   await c.env.DB.batch([c.env.DB.prepare("DELETE FROM categories WHERE id = ?1").bind(id), bumpVersion(c)]);
-  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k), c.url.origin);
   audit(c, "category.delete", "category", id, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }
@@ -300,7 +300,7 @@ export async function deleteSubcategory(c: Ctx): Promise<Ok> {
     c.env.DB.prepare("DELETE FROM subcategories WHERE id = ?1").bind(subId),
     bumpVersion(c),
   ]);
-  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k), c.url.origin);
   audit(c, "subcategory.delete", "subcategory", subId, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }

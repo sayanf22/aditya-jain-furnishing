@@ -252,7 +252,7 @@ export async function deleteMedia(c: Ctx): Promise<Ok> {
     throw fail(409, "MEDIA_IN_USE", "This photo is in use. Replace it where it is used, then delete it.", undefined, { usedBy });
   }
   await c.env.DB.prepare("DELETE FROM media WHERE id = ?1").bind(id).run();
-  await deleteFiles(c.env, row.key, row.widths);
+  await deleteFiles(c.env, row.key, row.widths, c.url.origin);
   audit(c, "media.delete", "media", id, { key: row.key });
   return { ok: true };
 }
@@ -260,10 +260,14 @@ export async function deleteMedia(c: Ctx): Promise<Ok> {
 // --------------------------------------------------- lifecycle and sweeping
 
 /** Deletes every size file of one photo from R2. Only names of the form m/<16 hex>-<width>.webp are ever touched. */
-async function deleteFiles(env: AdminEnv, key: string, widths: string): Promise<void> {
+async function deleteFiles(env: AdminEnv, key: string, widths: string, origin?: string): Promise<void> {
   if (!MEDIA_KEY.test(key)) return;
   const names = widths.split(",").filter((w) => /^\d{3,4}$/.test(w)).map((w) => `${key}-${w}.webp`);
-  if (names.length > 0) await env.MEDIA.delete(names);
+  if (names.length === 0) return;
+  await env.MEDIA.delete(names);
+  // Forget the copy in this data centre's edge cache too (other data centres drop theirs within a day: see serveMedia).
+  const cache = typeof caches !== "undefined" ? (caches as unknown as { default?: Cache }).default : undefined;
+  if (cache && origin) await Promise.all(names.map((n) => cache.delete(new Request(new URL(`/${n}`, origin).toString())).catch(() => false)));
 }
 
 /**
@@ -271,7 +275,7 @@ async function deleteFiles(env: AdminEnv, key: string, widths: string): Promise<
  * Call it after the row that used them is gone. Default photos (demo/...) and anything
  * that is not a library key are skipped. Returns how many photos were removed.
  */
-export async function removeUnusedMedia(env: AdminEnv, keys: (string | null | undefined)[]): Promise<number> {
+export async function removeUnusedMedia(env: AdminEnv, keys: (string | null | undefined)[], origin?: string): Promise<number> {
   const candidates = [...new Set(keys.filter((k): k is string => typeof k === "string" && MEDIA_KEY.test(k)))];
   if (candidates.length === 0) return 0;
   const used = await usageOf(env, candidates);
@@ -280,17 +284,17 @@ export async function removeUnusedMedia(env: AdminEnv, keys: (string | null | un
   const { results } = await env.DB.prepare("SELECT key, widths FROM media WHERE key IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(unused)).all<{ key: string; widths: string }>();
   if (results.length === 0) return 0;
   await env.DB.prepare("DELETE FROM media WHERE key IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(results.map((r) => r.key))).run();
-  for (const r of results) await deleteFiles(env, r.key, r.widths);
+  for (const r of results) await deleteFiles(env, r.key, r.widths, origin);
   return results.length;
 }
 
-const SWEEP_AGE_MS = 60 * 60 * 1000; // a fresh upload has an hour to be attached to something
+const SWEEP_AGE_MINUTES = 60; // a fresh upload has an hour to be attached to something
 const SWEEP_MAX_PHOTOS = 600;
 const SWEEP_MAX_FILES = 3000;
 
 /** Removes photos nothing uses and R2 files with no library row (failed uploads), both older than an hour. */
-export async function sweepOrphans(env: AdminEnv, now = Date.now()): Promise<SweepResult> {
-  const cutoff = now - SWEEP_AGE_MS;
+export async function sweepOrphans(env: AdminEnv, minutes = SWEEP_AGE_MINUTES, origin?: string): Promise<SweepResult> {
+  const cutoff = Date.now() - minutes * 60_000;
   let photos = 0;
   let files = 0;
 
@@ -302,7 +306,7 @@ export async function sweepOrphans(env: AdminEnv, now = Date.now()): Promise<Swe
       .bind(after, cutoff)
       .all<{ id: number; key: string }>();
     if (results.length === 0) break;
-    photos += await removeUnusedMedia(env, results.map((r) => r.key));
+    photos += await removeUnusedMedia(env, results.map((r) => r.key), origin);
     after = results[results.length - 1].id;
     seen += results.length;
   }
@@ -319,6 +323,8 @@ export async function sweepOrphans(env: AdminEnv, now = Date.now()): Promise<Swe
       const known = new Map(results.map((r) => [r.key, r.widths.split(",")]));
       const stray = old.filter((o) => !known.get(o.key.slice(0, 18))?.includes(o.key.slice(19, -5))).map((o) => o.key);
       for (let i = 0; i < stray.length; i += 100) await env.MEDIA.delete(stray.slice(i, i + 100));
+      const cache = typeof caches !== "undefined" ? (caches as unknown as { default?: Cache }).default : undefined;
+      if (cache && origin) await Promise.all(stray.map((n) => cache.delete(new Request(new URL(`/${n}`, origin).toString())).catch(() => false)));
       files += stray.length;
     }
     if (!page.truncated) break;
@@ -327,8 +333,12 @@ export async function sweepOrphans(env: AdminEnv, now = Date.now()): Promise<Swe
   return { photos, files };
 }
 
+/** POST /media/sweep?minutes=N (0 to 1440, default 60): only photos and files older than that are touched. */
 export async function sweepMedia(c: Ctx): Promise<SweepResult> {
-  const result = await sweepOrphans(c.env);
+  const raw = c.url.searchParams.get("minutes");
+  const minutes = raw === null ? SWEEP_AGE_MINUTES : Number(raw);
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 1440) throw fail(400, "INVALID", "Minutes must be a whole number from 0 to 1440.", "minutes");
+  const result = await sweepOrphans(c.env, minutes, c.url.origin);
   audit(c, "media.sweep", "media", undefined, { ...result });
   return result;
 }
@@ -346,7 +356,11 @@ export async function serveMedia(request: Request, env: AdminEnv, pathname: stri
   const cacheKey = new Request(new URL(pathname, request.url).toString(), { method: "GET" });
   if (cache && request.method === "GET" && !request.headers.has("If-None-Match")) {
     const hit = await cache.match(cacheKey);
-    if (hit) return hit;
+    if (hit) {
+      const again = new Response(hit.body, hit);
+      again.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      return again;
+    }
   }
   const object = await env.MEDIA.get(pathname.slice(1));
   if (!object) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -363,6 +377,11 @@ export async function serveMedia(request: Request, env: AdminEnv, pathname: stri
   }
   headers.set("Content-Length", String(object.size));
   const response = new Response(request.method === "HEAD" ? null : object.body, { headers });
-  if (cache && exec && request.method === "GET") exec.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
+  // The edge copy lives one day, not a year, so a deleted photo disappears from every data centre within a day.
+  if (cache && exec && request.method === "GET") {
+    const edge = new Response(response.clone().body, response);
+    edge.headers.set("Cache-Control", "public, max-age=86400");
+    exec.waitUntil(cache.put(cacheKey, edge).catch(() => undefined));
+  }
   return response;
 }

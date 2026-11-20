@@ -153,7 +153,7 @@ export type ProductPatch = Partial<{ name: string; description: string | null; v
 //                    and for wide places w1600, w2048) = image/webp files; at least two, unique
 //   PATCH  /api/admin/media/:id                         { label?: string; alt?: string | null } -> MediaAsset
 //   DELETE /api/admin/media/:id                         -> Ok  (409 MEDIA_IN_USE with usedBy list while any design, collection or site place uses it; removes the D1 row and every R2 size file)
-//   POST   /api/admin/media/sweep                       -> SweepResult  (deletes photos nothing uses and stray R2 files, both older than an hour)
+//   POST   /api/admin/media/sweep?minutes=60           -> SweepResult  (deletes photos nothing uses and stray R2 files, both older than `minutes`, default 60)
 // Public URL of one size: /m/<hash>-<width>.webp where key = "m/<hash>".
 
 export const MEDIA_WIDTHS = [480, 640, 800, 1080, 1200, 1600, 2048] as const;
