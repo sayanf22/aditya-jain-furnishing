@@ -16,7 +16,7 @@
 //
 // Change log
 //   2026-11-20  first version (lead)
-//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
+//   2026-11-22  site photo places reduced to the four replaceable ones, each with a\n//               defaultKey; hero places listed in NON_REPLACEABLE_SLOTS; new helpers\n//               isReplaceableSlot, isHeroSlot, defaultFor, categoryCardDefaultFor,\n//               isProtectedDefault; CATEGORY_CARD_DEFAULTS.\n//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
 //               MediaAsset.usedBy type may also be "room" (room fabric textures);
 //               PublishStatus.configured (false while DEPLOY_HOOK_URL is empty;
 //               POST /publish then answers 503 PUBLISH_NOT_CONFIGURED).
@@ -170,21 +170,77 @@ export type SiteImageSlot = {
   /** Widths the dashboard should produce for this place. */
   widths: number[];
   hint: string;
+  /** Default photo key shown while nothing is uploaded: a static file in public/demo/. */
+  defaultKey: string;
 };
-/** Every place on the site with a replaceable photo. Keep in sync with the site code. */
+
+/**
+ * Places the owner can replace with an upload. Each has a default photo
+ * (static file in public/demo/, protected) that returns when the upload is removed.
+ */
 export const SITE_IMAGE_SLOTS: SiteImageSlot[] = [
-  { slot: "home.hero.1", group: "Home", label: "Home slide 1", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide room photo, text sits bottom left" },
-  { slot: "home.hero.2", group: "Home", label: "Home slide 2", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide room photo" },
-  { slot: "home.hero.3", group: "Home", label: "Home slide 3", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide room photo" },
-  { slot: "collection.hero", group: "Collection", label: "Collection page header", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide living room photo" },
-  { slot: "about.hero", group: "About", label: "About header", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide photo" },
-  { slot: "about.story", group: "About", label: "About: who we are", shape: "tall", widths: [480, 800, 1200], hint: "Upright photo" },
-  { slot: "about.showroom", group: "About", label: "About: visit us", shape: "wide", widths: [640, 1080, 1600], hint: "Showroom photo" },
-  { slot: "about.band", group: "About", label: "About: closing band", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide photo" },
-  { slot: "contact.hero", group: "Contact", label: "Contact header", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide photo" },
-  { slot: "contact.showroom", group: "Contact", label: "Contact: showroom card", shape: "wide", widths: [640, 1080, 1600], hint: "Showroom photo" },
+  { slot: "about.story", group: "About", label: "About: who we are", shape: "tall", widths: [480, 800, 1200], hint: "Upright photo", defaultKey: "demo/about-story" },
+  { slot: "about.showroom", group: "About", label: "About: visit us", shape: "wide", widths: [640, 1080, 1600], hint: "Showroom photo", defaultKey: "demo/about-showroom" },
+  { slot: "about.band", group: "About", label: "About: closing band", shape: "wide", widths: [800, 1200, 1600, 2048], hint: "Wide photo", defaultKey: "demo/about-band" },
+  { slot: "contact.showroom", group: "Contact", label: "Contact: showroom card", shape: "wide", widths: [640, 1080, 1600], hint: "Showroom photo", defaultKey: "demo/about-showroom" },
 ];
 
+/**
+ * Hero places: fixed, never replaceable. The API refuses them and the
+ * dashboard does not list them. Also never replaceable: each collection's
+ * header photo (categories.hero_image_key).
+ */
+export const NON_REPLACEABLE_SLOTS: readonly string[] = [
+  "home.hero.1",
+  "home.hero.2",
+  "home.hero.3",
+  "collection.hero",
+  "about.hero",
+  "contact.hero",
+];
+
+/**
+ * Home category card photos (categories.image_key). Replaceable; when the
+ * column is empty the card shows the default for its slug. Slugs that are
+ * not listed (new collections) have no default and show a neutral tile.
+ */
+export const CATEGORY_CARD_DEFAULTS: Readonly<Record<string, string>> = {
+  "upholstery-fabric": "demo/cat-upholstery",
+  "curtains-blinds": "demo/cat-curtains",
+  "carpets-mats": "demo/cat-carpets",
+  cushions: "demo/cat-cushions",
+  wallpaper: "demo/cat-wallpaper",
+};
+
+const SLOT_BY_NAME = new Map(SITE_IMAGE_SLOTS.map((s) => [s.slot, s]));
+
+/** True for the site places in SITE_IMAGE_SLOTS. Heroes and unknown names are false. */
+export function isReplaceableSlot(slot: string): boolean {
+  return SLOT_BY_NAME.has(slot);
+}
+
+/** True for hero places (home.hero.*, collection.hero, about.hero, contact.hero). */
+export function isHeroSlot(slot: string): boolean {
+  return /^home\.hero\.\d+$/.test(slot) || NON_REPLACEABLE_SLOTS.includes(slot);
+}
+
+/** Default photo key of a replaceable site place, or null if it has none. */
+export function defaultFor(slot: string): string | null {
+  return SLOT_BY_NAME.get(slot)?.defaultKey ?? null;
+}
+
+/** Default Home card photo key for a collection slug, or null (neutral tile). */
+export function categoryCardDefaultFor(slug: string): string | null {
+  return Object.prototype.hasOwnProperty.call(CATEGORY_CARD_DEFAULTS, slug) ? CATEGORY_CARD_DEFAULTS[slug] : null;
+}
+
+/**
+ * True for a key that points at a static default file (demo/<name>). Such
+ * a key is never stored in R2 and its media row can never be deleted.
+ */
+export function isProtectedDefault(key: string | null | undefined): boolean {
+  return typeof key === "string" && key.startsWith("demo/");
+}
 export type SiteImage = SiteImageSlot & { mediaKey: string | null; alt: string | null; media: MediaAsset | null };
 export type SiteSettings = {
   businessName: string;
