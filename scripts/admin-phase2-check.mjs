@@ -63,6 +63,11 @@ async function stub(page, { emailCodes, log }) {
 const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 
 const browser = await ENGINES[engineName].launch();
+// A local https Worker (LOCAL_HTTPS=1 node worker/dev/start.mjs) has a self-signed certificate.
+if (/^https:\/\/localhost[:/]/.test(BASE)) {
+  const orig = browser.newContext.bind(browser);
+  browser.newContext = (o = {}) => orig({ ignoreHTTPSErrors: true, ...o });
+}
 for (const [label, viewport] of VIEWPORTS) {
   current = label;
 
