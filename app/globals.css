@@ -448,38 +448,85 @@ address {
 }
 .float-wa {
   animation: float-attention 1.6s ease 2.5s 1 both;
+  /* "scale" is its own property, so the attention pulse above (which fills
+     "transform") never blocks the hover and press scaling. */
   transition:
-    transform 0.35s var(--ease-out-soft),
-    background-color 0.3s ease;
+    scale 0.4s var(--ease-out-soft),
+    background-color 0.3s ease,
+    box-shadow 0.4s ease;
 }
 .float-wa:hover {
   background-color: var(--color-terracotta-dark);
+}
+@media (hover: hover) {
+  .float-wa:hover {
+    scale: 1.07;
+    box-shadow: 0 18px 36px -12px rgba(179, 0, 0, 0.65);
+  }
+}
+.float-wa:active {
+  scale: 0.93;
+  transition-duration: 0.12s;
 }
 /* Floating contact button: the three options rise out of the button one
    after another (the one nearest the button first). */
 .float-contact-menu > li {
   opacity: 0;
   visibility: hidden;
-  transform: translate3d(0, 14px, 0) scale(0.96);
+  transform: translate3d(0, 16px, 0) scale(0.9);
   transform-origin: bottom right;
+  /* Closing: all three leave together, quickly, with no stagger. */
   transition:
-    opacity 0.25s ease calc(var(--i, 0) * 50ms),
-    transform 0.45s var(--ease-out-soft) calc(var(--i, 0) * 50ms),
-    visibility 0s linear 0.45s;
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.4, 0, 1, 1),
+    visibility 0s linear 0.22s;
+  will-change: transform, opacity;
 }
 .float-contact[data-open="true"] .float-contact-menu > li {
   opacity: 1;
   visibility: visible;
   transform: none;
-  transition-delay: calc(var(--i, 0) * 50ms), calc(var(--i, 0) * 50ms), 0s;
+  /* Opening: they rise one after another from the button, with a very small
+     overshoot so they settle softly. */
+  transition:
+    opacity 0.3s ease calc(var(--i, 0) * 65ms),
+    transform 0.6s cubic-bezier(0.34, 1.25, 0.64, 1) calc(var(--i, 0) * 65ms),
+    visibility 0s linear 0s;
+}
+.float-contact-item {
+  transition:
+    translate 0.35s var(--ease-out-soft),
+    background-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.35s ease;
+}
+@media (hover: hover) {
+  .float-contact-item:hover {
+    translate: -5px 0;
+    box-shadow: 0 18px 34px -14px rgba(20, 20, 20, 0.55);
+  }
+}
+.float-contact-item:active {
+  scale: 0.96;
+}
+.float-contact-item svg {
+  transition: transform 0.4s var(--ease-out-soft);
+}
+.float-contact-item:hover svg {
+  transform: scale(1.12) rotate(-6deg);
+}
+.float-contact-icon > svg {
+  transition:
+    opacity 0.28s ease,
+    transform 0.45s var(--ease-out-soft);
 }
 .float-contact-icon > svg:last-child {
   opacity: 0;
-  transform: rotate(-60deg) scale(0.6);
+  transform: rotate(-90deg) scale(0.5);
 }
 .float-contact[data-open="true"] .float-contact-icon > svg:first-child {
   opacity: 0;
-  transform: rotate(60deg) scale(0.6);
+  transform: rotate(90deg) scale(0.5);
 }
 .float-contact[data-open="true"] .float-contact-icon > svg:last-child {
   opacity: 1;

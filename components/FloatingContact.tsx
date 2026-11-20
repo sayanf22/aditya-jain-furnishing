@@ -16,6 +16,7 @@ export function FloatingContact({ phoneHref, messageHref }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
+  const pointer = useRef<string>("mouse");
 
   useEffect(() => {
     if (!open) return;
@@ -42,15 +43,14 @@ export function FloatingContact({ phoneHref, messageHref }: Props) {
       ref={root}
       className="float-contact fixed right-4 bottom-5 z-30 flex flex-col items-end gap-2.5 sm:right-6 sm:bottom-6"
       data-open={open}
-      onMouseEnter={(e) => {
+      onMouseEnter={() => {
         // Hover opens it for a mouse; a finger opens it by tapping the button.
-        if ((e.nativeEvent as PointerEvent & { pointerType?: string }).pointerType === "touch") return;
         window.clearTimeout(closeTimer.current);
         if (window.matchMedia("(hover: hover)").matches) setOpen(true);
       }}
       onMouseLeave={() => {
         window.clearTimeout(closeTimer.current);
-        closeTimer.current = window.setTimeout(() => setOpen(false), 220);
+        closeTimer.current = window.setTimeout(() => setOpen(false), 300);
       }}
     >
       <ul id="float-contact-menu" className="float-contact-menu flex flex-col items-end gap-2.5" aria-label="Contact options" inert={!open}>
@@ -80,7 +80,13 @@ export function FloatingContact({ phoneHref, messageHref }: Props) {
         aria-expanded={open}
         aria-controls="float-contact-menu"
         aria-label={open ? "Close contact options" : "Contact options"}
-        onClick={() => setOpen((v) => !v)}
+        onPointerDown={(e) => (pointer.current = e.pointerType)}
+        onClick={(e) => {
+          // With a mouse, hovering has already opened it: a click keeps it open
+          // instead of closing it again. A finger, a pen or the keyboard toggles.
+          if (e.detail > 0 && pointer.current === "mouse" && open) return;
+          setOpen((v) => !v);
+        }}
         className="float-wa flex h-14 w-14 items-center justify-center rounded-full bg-terracotta text-ivory shadow-[0_12px_32px_-10px_rgba(179,0,0,0.55)] ring-1 ring-white/20"
       >
         <span className="float-contact-icon relative block h-6 w-6">
