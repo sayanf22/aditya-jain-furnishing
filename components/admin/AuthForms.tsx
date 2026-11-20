@@ -3,9 +3,8 @@
 // Sign in (with the authenticator step when it is on) and first-run setup.
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import type { LoginBody, LoginResponse, MeResponse, SetupBody } from "@/lib/admin-api";
+import type { AuthStatus, CodeRequestBody, CodeVerifyBody, CodeVerifyResponse, LoginBody, LoginResponse, MeResponse, SetupBody } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure, setCsrf } from "./api";
-import { type AuthStatusWithEmail, type CodeVerifyResponse, emailCodesAvailable } from "./email-code";
 import { IconCheck } from "./icons";
 import { Button, Field, Loading, PasswordInput, TextInput } from "./ui";
 
@@ -46,19 +45,25 @@ function waitMessage(failure: ApiFailure): string {
 function useAuthRedirect(wantSetup: boolean) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [status, setStatus] = useState<AuthStatusWithEmail | null>(null);
+  const [status, setStatus] = useState<AuthStatus | null>(null);
+  const [resuming, setResuming] = useState(false); // signed in by an emailed code, new password still to set
   useEffect(() => {
     let live = true;
     (async () => {
       try {
-        await api.get<MeResponse>("/me");
-        if (live) router.replace("/admin");
+        const me = await api.get<MeResponse>("/me");
+        if (!live) return;
+        if (me.mustSetPassword && !wantSetup) {
+          setCsrf(me.csrf);
+          setResuming(true);
+          setReady(true);
+        } else router.replace("/admin");
         return;
       } catch {
         // Not signed in: expected here.
       }
       try {
-        const found = await api.get<AuthStatusWithEmail>("/auth/status");
+        const found = await api.get<AuthStatus>("/auth/status");
         if (!live) return;
         setStatus(found);
         if (found.setupRequired !== wantSetup) router.replace(found.setupRequired ? "/admin/setup" : "/admin/login");
@@ -71,7 +76,7 @@ function useAuthRedirect(wantSetup: boolean) {
       live = false;
     };
   }, [router, wantSetup]);
-  return { ready, status };
+  return { ready, status, resuming };
 }
 
 type Step = "password" | "email" | "code" | "totp" | "newpass";
@@ -85,9 +90,10 @@ const TITLES: Record<Step, string> = {
 
 export function SignInScreen() {
   const router = useRouter();
-  const { ready, status } = useAuthRedirect(false);
-  const emailOn = emailCodesAvailable(status);
-  const [step, setStep] = useState<Step>("password");
+  const { ready, status, resuming } = useAuthRedirect(false);
+  const emailOn = status?.emailCodes === true;
+  const [chosen, setStep] = useState<Step>("password");
+  const step: Step = resuming && chosen === "password" ? "newpass" : chosen;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState(""); // authenticator or emailed code, depending on step
@@ -128,21 +134,24 @@ export function SignInScreen() {
         return;
       }
       if (step === "email") {
-        await api.post("/auth/code/request", { email: email.trim() });
+        const request: CodeRequestBody = { email: email.trim() };
+        await api.post("/auth/code/request", request);
         go("code");
         setBusy(false);
         return;
       }
       if (step === "code") {
         setEmailed(digits);
-        const result = await api.post<CodeVerifyResponse>("/auth/code/verify", { email: email.trim(), code: digits });
+        const verify: CodeVerifyBody = { email: email.trim(), code: digits };
+        const result = await api.post<CodeVerifyResponse>("/auth/code/verify", verify);
         // An emailed code never replaces the authenticator code.
+        if (!("needsCode" in result)) setCsrf(result.csrf);
         go("needsCode" in result ? "totp" : "newpass");
         setNeedsTotp(false);
         setBusy(false);
         return;
       }
-      const me = await api.post<MeResponse>("/auth/code/password", { next });
+      const me = await api.post<MeResponse>("/auth/password/reset", { next });
       await finish(me);
     } catch (error) {
       form.set(error);
@@ -165,8 +174,10 @@ export function SignInScreen() {
     setBusy(true);
     form.clear();
     try {
-      const result = await api.post<CodeVerifyResponse>("/auth/code/verify", { email: email.trim(), code: emailed, totp: code.replace(/\s/g, "") });
+      const verify: CodeVerifyBody = { email: email.trim(), code: emailed, totp: code.replace(/\s/g, "") };
+      const result = await api.post<CodeVerifyResponse>("/auth/code/verify", verify);
       if ("needsCode" in result) throw new ApiFailure(400, "INVALID", "That code is not right.", "code");
+      setCsrf(result.csrf);
       go("newpass");
       setEmailed("");
       setBusy(false);
