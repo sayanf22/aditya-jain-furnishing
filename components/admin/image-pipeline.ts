@@ -25,7 +25,10 @@ function fail(message: string): never {
 }
 
 async function decode(file: File): Promise<ImageBitmap> {
-  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") fail("That file is not a photo. Use JPG, PNG or WebP.");
+  // Some browsers leave the type empty for formats their system does not name (WebKit on Windows for .webp):
+  // then the file name decides, and decoding below is the real check.
+  const type = file.type || (/\.(jpe?g|png|webp|avif|gif)$/i.test(file.name) ? "image/unknown" : "");
+  if (!type.startsWith("image/") || type === "image/svg+xml") fail("That file is not a photo. Use JPG, PNG or WebP.");
   try {
     return await createImageBitmap(file);
   } catch {
@@ -45,14 +48,40 @@ function pickWidths(wanted: readonly number[], sourceWidth: number): number[] {
   return widths.slice(-MAX_FILES);
 }
 
-function encode(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
+function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+}
+
+// Safari cannot encode WebP from a canvas (it quietly returns a PNG). There the
+// photo is encoded with libwebp compiled to WebAssembly (@jsquash/webp, from
+// Google's Squoosh), loaded only when needed.
+let nativeWebp: Promise<boolean> | null = null;
+function canvasMakesWebp(): Promise<boolean> {
+  if (!nativeWebp) {
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 2;
+    nativeWebp = canvasBlob(probe, 0.8).then((blob) => blob?.type === "image/webp");
+  }
+  return nativeWebp;
+}
+
+async function encode(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
+  if (await canvasMakesWebp()) return canvasBlob(canvas, quality);
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  try {
+    const { default: encodeWebp } = await import("@jsquash/webp/encode");
+    const data = await encodeWebp(context.getImageData(0, 0, canvas.width, canvas.height), { quality: Math.round(quality * 100) });
+    return new Blob([data], { type: "image/webp" });
+  } catch {
+    return null;
+  }
 }
 
 async function encodeUnderLimit(canvas: HTMLCanvasElement): Promise<Blob> {
   for (let quality = START_QUALITY; quality >= LOWEST_QUALITY - 0.001; quality -= 0.08) {
     const blob = await encode(canvas, quality);
-    if (!blob || blob.type !== "image/webp") fail("This browser can't prepare photos. Use Chrome, Edge or Firefox.");
+    if (!blob || blob.type !== "image/webp") fail("This browser can't prepare photos. Try again, or use another browser.");
     if (blob.size <= MAX_FILE_BYTES) return blob;
   }
   return fail("This photo is too detailed to upload. Try a smaller one.");
