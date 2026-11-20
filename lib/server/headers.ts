@@ -60,13 +60,18 @@ export async function withSecurityHeaders(response: Response, pathname: string):
   let out: Response;
   let policy: string | null = null;
   if (isAdminPath(pathname) && (response.headers.get("Content-Type") ?? "").includes("text/html")) {
-    const html = await response.text();
-    // Pre-rendered pages don't change between deploys: remember the result per page and length.
-    const memo = `${pathname}|${html.length}`;
-    policy = POLICIES.get(memo) ?? adminCsp(await inlineHashes(html, "script"), await inlineHashes(html, "style"));
-    if (POLICIES.size > 64) POLICIES.clear();
-    POLICIES.set(memo, policy);
-    out = new Response(html, response);
+    // Pre-rendered pages don't change while a Worker version runs (a deploy starts new instances): remember the
+    // policy per page, and stream the body untouched on later requests instead of reading it again.
+    policy = POLICIES.get(pathname) ?? null;
+    if (policy) {
+      out = new Response(response.body, response);
+    } else {
+      const html = await response.text();
+      policy = adminCsp(await inlineHashes(html, "script"), await inlineHashes(html, "style"));
+      if (POLICIES.size > 64) POLICIES.clear();
+      POLICIES.set(pathname, policy);
+      out = new Response(html, response);
+    }
   } else {
     out = new Response(response.body, response);
   }

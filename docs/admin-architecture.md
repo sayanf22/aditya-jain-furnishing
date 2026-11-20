@@ -61,70 +61,7 @@ Passwords and sign-in (OWASP Authentication, Credential Stuffing):
 
 Uploads (OWASP File Upload):
 - Only signed-in users, CSRF checked. Allow only `image/webp` files produced by the dashboard; verify the real format from the first bytes (`RIFF....WEBP`), read width/height from the WebP header, reject if the bytes are not WebP, a dimension is over 4096, a file is over 1.5 MB, there are more than 6 files, or the total is over 6 MB. Never trust the client's file name or type; names are generated from the hash. No SVG, no other formats. R2 objects get `nosniff`-safe headers when served.
-- `/m/*` serves only keys matching `^m/[0-9a-f]{16}-(480|640|800|1080|1200|1600|2048)\.webp# Admin dashboard: architecture and rules
-
-Decided 20 Nov 2026. This is the contract for everyone building the dashboard.
-Read it fully before writing code. Anything it does not say, look up (official
-docs or the web) and do not guess. Security choices below were checked against
-the OWASP cheat sheets (Session Management, CSRF Prevention, File Upload,
-Authentication, Credential Stuffing) and Cloudflare's docs.
-
-## What exists (verified)
-
-- Live Cloudflare account `4f5b8e20afb6be7b174fa1e1ee1ce0c1` (deltafurnishings.com@gmail.com), Worker `aditya-jain-furnishing`.
-- Next.js 16.4.6, OpenNext 1.20.17, Workers **Free** plan: 10 ms CPU per request, 100,000 Worker requests a day, static asset requests are free.
-- Next.js here differs from older versions. Before writing Next.js code, read the matching guide in `node_modules/next/dist/docs/` (AGENTS.md says so).
-- Four D1 databases (free plan allows 10), one R2 bucket, bindings in `wrangler.jsonc`:
-
-| Binding | Database | Holds | Migrations |
-|---|---|---|---|
-| `DB` | aditya-jain-furnishing-db | content the site is built from: categories, subcategories, products, product_images, media, site_images, settings, testimonials, room_*, content_state | `migrations/` |
-| `AUTH_DB` | delta-auth-db | admin_users, sessions, login_attempts | `migrations-auth/` |
-| `ENQ_DB` | delta-enquiries-db | enquiries (names, phone numbers) | `migrations-enquiries/` |
-| `AUDIT_DB` | delta-audit-db | audit_log | `migrations-audit/` |
-| `MEDIA` (R2) | delta-furnishings-media | `m/<hash>-<width>.webp` photo files | none |
-
-- Rate limit bindings: `ENQUIRY_LIMITER`, `LOGIN_LIMITER` (6/min), `ADMIN_LIMITER` (240/min).
-- Secrets (Worker runtime, set through the Cloudflare API; locally in `.dev.vars`, never committed): `SESSION_PEPPER`, `SETUP_CODE`, `EXPORT_TOKEN`, `DEPLOY_HOOK_URL`.
-- Build variables (Workers Builds only): `EXPORT_TOKEN`, `EXPORT_URL` (the live site's origin).
-
-## How the pieces fit
-
-```
-Browser (admin)  --cookie + X-CSRF-Token-->  Worker  /api/admin/*   (worker/, light, no Next.js server)
-                                                |-- AUTH_DB / DB / ENQ_DB / AUDIT_DB (D1)
-                                                '-- MEDIA (R2)
-Visitor          --> static pages + /m/* images (free static assets)
-Publish button   --> POST deploy hook --> Workers Builds --> scripts/sync-content.mjs
-                                                |  GET {EXPORT_URL}/api/content/export  (Bearer EXPORT_TOKEN)
-                                                |  writes the build-local DB, downloads used photos to public/m/
-                                                '-> next build -> deploy
-```
-
-1. **The public site stays static.** Every public page is pre-rendered at build time from the build machine's local D1 (`DB`). Nothing on a public page touches D1 or R2 at request time. This keeps the 10 ms CPU limit safe. Do not make public pages dynamic.
-2. **The dashboard is a static shell + JSON API.** `app/admin/**` is client-rendered ("use client") pages that call `/api/admin/*`. The API lives in `worker/` (never in `app/api/`), so it never loads the Next.js server. The shell contains no data; every endpoint checks the session.
-3. **Editing is live in the databases; the site changes on Publish.** Each write bumps `content_state.version`. The build stamps the version it was made from into `lib/build-info.json`. `GET /api/admin/publish` compares the two. **Publish** POSTs `DEPLOY_HOOK_URL` (Workers Builds deploy hook, 10 builds/min limit) and records `requested_version` / `requested_at`.
-4. **Photos.** The dashboard resizes in the browser (canvas, WebP) to widths from 480, 640, 800, 1080, 1200, 1600, 2048 (480/800/1200 for ordinary photos; the widths a hero or wide place needs are listed in `SITE_IMAGE_SLOTS`), never upscaling, keeping the shape (photos are never cropped). It uploads all sizes in one multipart request. The Worker validates, hashes (SHA-256 of the largest file, first 16 hex chars), stores `m/<hash>-<w>.webp` in R2 with `Cache-Control: public, max-age=31536000, immutable` and `Content-Type: image/webp`, and records one `media` row (`key = m/<hash>`). Public URL for a size: `/m/<hash>-<w>.webp`. At build, `sync-content.mjs` copies every photo in use into `public/m/` so visitors get them as free static assets. For photos not yet published (the dashboard previews), `/m/*` falls through to the Worker, which serves them from R2. Image keys stored in other tables are either `demo/<name>` (stand-in stock photos in `public/demo/`, via `public/demo/sizes.json`) or `m/<hash>`.
-5. **Sample content.** Rows whose image key starts with `demo/` are sample designs. The dashboard marks them "Sample" and offers one action to remove all of them.
-
-## Security rules (all mandatory)
-
-Sessions (OWASP Session Management):
-- Cookie `__Host-delta_admin`: `Secure; HttpOnly; SameSite=Strict; Path=/`, no Domain. Value = 32 random bytes, base64url. Only SHA-256(token) is stored (`sessions.id`). New token on every sign-in (no fixation). Idle expiry 2 h, absolute expiry 12 h. Sign-out deletes the row and clears the cookie. Password change deletes the user's other sessions.
-- Every `/api/admin/*` response: `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
-
-CSRF (OWASP CSRF Prevention):
-- Reject every non-GET/HEAD request whose `Sec-Fetch-Site` is `cross-site` (or `same-site` from a different origin); when the header is missing, require `Origin` to equal the site's origin; ALWAYS require `Content-Type: application/json` or `multipart/form-data` AND the `X-CSRF-Token` header equal to `sessions.csrf` (constant-time compare). No state change on GET.
-
-Passwords and sign-in (OWASP Authentication, Credential Stuffing):
-- PBKDF2-SHA256, 20,000 iterations (Workers caps PBKDF2 at 100,000 and the Free plan CPU limit is 10 ms; measured ~5 ms at 20,000), over `HMAC-SHA256(SESSION_PEPPER, password)`, 16-byte random salt, constant-time compare. Minimum password length 12, maximum 128; reject a password equal to the email. Same generic message and similar timing for unknown email and wrong password (hash a dummy when the email is unknown).
-- Throttling: `LOGIN_LIMITER` (per IP) plus `login_attempts` counts: after 5 failures in 15 minutes for an email or 20 for an IP, refuse with 429 and `Retry-After`, without revealing whether the account exists. Every attempt is audited.
-- Optional authenticator-app 2FA (TOTP, RFC 6238, SHA-1, 6 digits, 30 s, ±1 step window, `totp_last_step` blocks replay). The TOTP secret is stored AES-GCM encrypted with a key derived from `SESSION_PEPPER`. Once enabled it is required at sign-in. The Security screen recommends it.
-- First-run setup: `/admin/setup` only works while `admin_users` is empty AND the correct `SETUP_CODE` is sent (constant-time compare, throttled like sign-in). It creates the owner, then is permanently closed.
-
-Uploads (OWASP File Upload):
-- Only signed-in users, CSRF checked. Allow only `image/webp` files produced by the dashboard; verify the real format from the first bytes (`RIFF....WEBP`), read width/height from the WebP header, reject if the bytes are not WebP, a dimension is over 4096, a file is over 1.5 MB, there are more than 6 files, or the total is over 6 MB. Never trust the client's file name or type; names are generated from the hash. No SVG, no other formats. R2 objects get `nosniff`-safe headers when served.
-- `/m/*` serves only keys matching .
+- `/m/*` serves only keys matching `^m/[0-9a-f]{16}-(480|640|800|1080|1200|1600|2048)\.webp$`; any other path is a 404.
 
 Other:
 - Build-export endpoint `GET /api/content/export` requires `Authorization: Bearer EXPORT_TOKEN` (constant-time compare) and returns only visible content. It never returns users, sessions, enquiries or the audit log.
@@ -196,3 +133,9 @@ Source: `.agents/tasks/admin-dashboard/security-review.md` (18 findings). Where 
 - **Audit (F16).** Keeps the newest 20,000 rows; failed sign-ins, setup and password failures are trimmed separately to 1,000 rows. A typed email that is not an account is stored only as `unknown:<12 hex>`.
 - **Export and sync (F17).** `/api/content/export` returns only these settings keys: business_name, legal_name, address_line1, address_line2, phone, phone_display, whatsapp_number, gstin, instagram_handle, hero_slides. Add a key to `PUBLIC_SETTINGS` in `lib/server/export.ts` when a new public setting is added. `scripts/sync-content.mjs` requires slugs to match `^[a-z0-9]+(-[a-z0-9]+)*$` and image keys to be `m/<16 hex>` or `demo/<name>`, and runs Wrangler without a shell (`execFileSync`).
 - **Limiters (F18).** A missing rate-limit binding now logs `limiter missing: <NAME>` on each request; it does not return 503. The D1 throttle remains the backstop.
+
+## Final gate corrections (21 Nov 2026)
+Current where it differs from the text above.
+- The "What exists", "How the pieces fit" and "Security rules" blocks were pasted twice by a shell `$` mishap in the first commit, which also cut the `/m/*` key pattern. The duplicate is removed and the pattern restored; no rule text changed.
+- PBKDF2 cost: the older lines that say sign-in is "about 5 ms" (Security rules, CPU budget) are wrong. In the local profiler PBKDF2 `deriveBits` alone is about 16 ms at 20,000 rounds; sign-in is the heaviest dashboard request. This replaces the "CPU (F4)" note's overlap with "Integration notes: open items".
+- CPU, local upper bound on 21 Nov 2026 at HEAD (`worker/dev/cpu-admin.mjs`, 20 requests each; the `/api/health` baseline of 5 ms is Wrangler's wrapper and varies 3 to 8 ms between runs). Own work above baseline: dashboard reads 4 to 10 ms (`/products` 10.4, `/sessions` 9.7); writes 9 to 11 ms; photo upload 20.9 ms; sign-in 27.8 ms (unknown email 17.3 ms). Dashboard pages answered by the Worker: `/admin/` about 8 ms after the policy for a page is remembered (it was about 14.6 ms before the Worker stopped re-reading the page on every request). Reads and writes are at or near 10 ms locally; sign-in, setup, password change and photo upload exceed it locally. Cloudflare's own figure is only visible in Workers Logs after a deploy.
