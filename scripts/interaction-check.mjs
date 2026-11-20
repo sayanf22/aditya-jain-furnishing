@@ -20,7 +20,7 @@
 //     Browse bar, viewer (zoom, steps, smooth Esc close, full screen on a
 //     phone), no cropped photos, no sideways scroll, no "WhatsApp" wording
 //   - Logo: light over photos, colour once scrolled, grey in the footer
-import { chromium } from "@playwright/test";
+import * as pw from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:8787/";
 const results = [];
@@ -54,12 +54,47 @@ async function frameTiming(page, ms) {
   );
 }
 
-const browser = await chromium.launch();
+const ENGINE = process.env.ENGINE ?? "chromium";
+const browser = await pw[ENGINE].launch();
+// A local https Worker (LOCAL_HTTPS=1 node worker/dev/start.mjs) has a self-signed certificate.
+if (/^https:\/\/localhost[:/]/.test(url)) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+for (const m of ["newContext", "newPage"]) {
+  const orig = browser[m].bind(browser);
+  browser[m] = (o = {}) => orig({ ignoreHTTPSErrors: true, ...o });
+}
+// CPU throttling and raw touch input exist only in Chromium (CDP). In Firefox
+// and WebKit the same checks run unthrottled, and a swipe is sent as touch
+// pointer events, which is what the room listens to.
+// Frame pacing is judged in Chromium only, where the CPU is throttled 4x
+// through CDP. Headless Firefox and WebKit draw without a GPU and cannot be
+// throttled, so their frame gaps are recorded but not judged.
+const smooth = (name, pass, detail) => (ENGINE === "chromium" ? ok(name, pass, detail) : results.push(`INFO  ${name} (${detail}; headless ${ENGINE}, not judged)`));
+async function devtools(page) {
+  if (ENGINE === "chromium") return page.context().newCDPSession(page);
+  let down = null;
+  const pointer = (type, x, y) =>
+    page.evaluate(
+      ([type, x, y]) => {
+        const target = document.elementFromPoint(x, y) ?? document.body;
+        target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, pointerId: 7, pointerType: "touch", isPrimary: true, button: type === "pointermove" ? -1 : 0, buttons: type === "pointerup" ? 0 : 1, clientX: x, clientY: y }));
+      },
+      [type, x, y],
+    );
+  return {
+    async send(method, params) {
+      if (method !== "Input.dispatchTouchEvent") return;
+      const p = params.touchPoints[0] ?? down;
+      if (params.type === "touchStart") down = p;
+      await pointer({ touchStart: "pointerdown", touchMove: "pointermove", touchEnd: "pointerup" }[params.type], p.x, p.y);
+      if (params.type === "touchMove") down = p;
+    },
+  };
+}
 
 // Desktop, with a 4x slower CPU to approximate a mid-range laptop/phone.
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const cdp = await page.context().newCDPSession(page);
+  const cdp = await devtools(page);
   await page.goto(url, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
@@ -73,7 +108,7 @@ const browser = await chromium.launch();
   await page.waitForTimeout(400);
   const titleAfter = await page.locator("h1").innerText();
   ok("hero dot changes slide", titleBefore !== titleAfter, `"${titleAfter}"`);
-  ok("hero cross-fade smooth", heroTiming.over50 <= 2, `p95 ${heroTiming.p95.toFixed(1)} ms, max ${heroTiming.max.toFixed(1)} ms, frames >50ms: ${heroTiming.over50}`);
+  smooth("hero cross-fade smooth", heroTiming.over50 <= 2, `p95 ${heroTiming.p95.toFixed(1)} ms, max ${heroTiming.max.toFixed(1)} ms, frames >50ms: ${heroTiming.over50}`);
 
   const wordCount = await page.locator("h1 .word").count();
   ok("hero headline animates word by word", wordCount >= 4, `${wordCount} words`);
@@ -160,7 +195,7 @@ const browser = await chromium.launch();
 
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const cdp = await page.context().newCDPSession(page);
+  const cdp = await devtools(page);
   await page.goto(url, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
@@ -223,7 +258,7 @@ const browser = await chromium.launch();
   ok("subcategories appear one by one", early.length > 1 && early[0] > early[early.length - 1] + 0.1, `at 0.43 s: ${early.map((o) => o.toFixed(2)).join(",")}`);
   ok("category names never re-wrap", titleSteady);
   ok("no overlapping text in category cards", overlaps(rest) === 0 && overlaps(open) === 0, `rest ${overlaps(rest)}, open ${overlaps(open)}`);
-  ok("category hover smooth", catTiming.over50 <= 1, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
+  smooth("category hover smooth", catTiming.over50 <= 1, `p95 ${catTiming.p95.toFixed(1)} ms, max ${catTiming.max.toFixed(1)} ms, frames >50ms: ${catTiming.over50}`);
 
   // Interactive room (Home 03): every element can be tapped and changed.
   const room = page.locator('section[aria-labelledby="room-title"]');
@@ -263,7 +298,7 @@ const browser = await chromium.launch();
   const checkedName = await room.locator('[role="radio"][aria-checked="true"]').innerText();
   ok("picking a fabric changes the curtains", after.length === 1 && after[0] !== before[0], `${before.join(",")} -> ${after.join(",")} (${checkedName})`);
   ok("curtain fabric wipes down over the old one", midLayers.length === 2 && /inset\(0px 0px [1-9]/.test(midClip), `mid-way: ${midLayers.length} layers, ${midClip}`);
-  ok("fabric change smooth", ct.over50 <= 1, `p95 ${ct.p95.toFixed(1)} ms, max ${ct.max.toFixed(1)} ms, frames >50ms: ${ct.over50}`);
+  smooth("fabric change smooth", ct.over50 <= 1, `p95 ${ct.p95.toFixed(1)} ms, max ${ct.max.toFixed(1)} ms, frames >50ms: ${ct.over50}`);
   const panelText = await room.innerText();
   const enquireHref = decodeURIComponent((await room.getByRole("link", { name: "Enquire", exact: true }).getAttribute("href")) ?? "");
   ok("the chosen fabric's name and description show", panelText.includes(checkedName) && /smooth velvet pile/.test(panelText), checkedName);
@@ -336,7 +371,7 @@ const browser = await chromium.launch();
     }
   });
   const st = await scrollTiming;
-  ok("scrolling smooth", st.over50 <= 3, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
+  smooth("scrolling smooth", st.over50 <= 3, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
 
   const footerGap = await page.locator("footer").evaluate((el) => window.innerWidth - el.getBoundingClientRect().width - (window.innerWidth - document.documentElement.clientWidth));
   ok("footer spans the full width", Math.abs(footerGap) < 1, `${footerGap.toFixed(0)} px short`);
@@ -403,7 +438,7 @@ const browser = await chromium.launch();
 // Phone (4x slower CPU): menu smoothness, open and close.
 {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  const cdp = await page.context().newCDPSession(page);
+  const cdp = await devtools(page);
   await page.goto(url, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.waitForTimeout(1500);
@@ -420,7 +455,7 @@ const browser = await chromium.launch();
   const closedState = await panel.evaluate((el) => `${getComputedStyle(el).opacity}/${getComputedStyle(el).visibility}`);
   ok("phone menu opens and closes", openState === "1" && closedState === "0/hidden", `opacity ${openState} -> ${closedState}`);
   ok("phone menu fills the screen", box && box.height > 700, `${box?.height.toFixed(0)} px tall`);
-  ok("phone menu smooth", mt.over50 <= 1, `p95 ${mt.p95.toFixed(1)} ms, max ${mt.max.toFixed(1)} ms, frames >50ms: ${mt.over50}`);
+  smooth("phone menu smooth", mt.over50 <= 1, `p95 ${mt.p95.toFixed(1)} ms, max ${mt.max.toFixed(1)} ms, frames >50ms: ${mt.over50}`);
   const words = await page.locator("h1 .word").count();
   ok("phone hero animates word by word", words >= 4, `${words} words`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -461,7 +496,8 @@ const browser = await chromium.launch();
   await catRow.scrollIntoViewIfNeeded();
   const rb = await catRow.boundingBox();
   await page.mouse.move(rb.x + 80, rb.y + 150);
-  await page.mouse.wheel(0, 80);
+  // Mobile WebKit has no wheel input in Playwright; there only the style is checked.
+  await page.mouse.wheel(0, 80).catch(() => {});
   await page.waitForTimeout(1600);
   const rowState = await catRow.evaluate((el) => ({ y: el.scrollTop, oy: getComputedStyle(el).overflowY, extra: el.scrollHeight - el.clientHeight }));
   ok("phone category row never scrolls up and down", rowState.y === 0 && rowState.oy === "hidden", `scrollTop ${rowState.y}, overflow-y ${rowState.oy}`);
@@ -473,7 +509,7 @@ const browser = await chromium.launch();
 // photo is uncovered once scrolled to, and scrolling stays smooth.
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const cdp = await page.context().newCDPSession(page);
+  const cdp = await devtools(page);
   const res = await page.goto(new URL("/about", url).href, { waitUntil: "networkidle" });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.waitForTimeout(1200);
@@ -504,7 +540,7 @@ const browser = await chromium.launch();
   const st = await scrollTiming;
   ok("About Us shows every section once scrolled", after.hidden === 0, `${after.hidden} hidden`);
   ok("About Us photos are uncovered once scrolled", after.covers === 0, `${after.covers} still covered`);
-  ok("About Us scrolling smooth", st.over50 <= 2, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
+  smooth("About Us scrolling smooth", st.over50 <= 2, `p95 ${st.p95.toFixed(1)} ms, max ${st.max.toFixed(1)} ms, frames >50ms: ${st.over50}`);
   ok("header turns solid after scrolling", after.header !== "rgba(0, 0, 0, 0)", after.header);
 
   const tiles = await page.$$eval(".about-tile", (els) => els.map((a) => a.getAttribute("href")));
@@ -706,8 +742,12 @@ const browser = await chromium.launch();
   ok("collection has no 'WhatsApp' wording", r.hits.length === 0, r.hits.join(" | ") || "none");
   await page.locator(".product-card").first().tap();
   await page.waitForTimeout(800);
-  const box = await page.evaluate(() => document.querySelector("dialog[open]")?.getBoundingClientRect().toJSON());
-  ok("viewer fills the phone screen", box && box.top <= 0 && box.height >= 843 && box.width >= 389, box ? `${box.width}x${box.height}` : "not open");
+  // Compared with the visible area (WebKit's phone emulation shows 384 of the 390 px).
+  const box = await page.evaluate(() => {
+    const r = document.querySelector("dialog[open]")?.getBoundingClientRect().toJSON();
+    return r && { ...r, vw: window.visualViewport.width, vh: window.visualViewport.height };
+  });
+  ok("viewer fills the phone screen", box && box.top <= 0 && box.height >= box.vh - 1 && box.width >= box.vw - 1, box ? `${box.width}x${box.height} of ${box.vw}x${box.vh}` : "not open");
   const enq = await page.locator("dialog[open] a", { hasText: "Enquire" }).getAttribute("href");
   ok("viewer Enquire opens a message about that design", /^https:\/\/wa\.me\/\d+\?text=/.test(enq ?? ""), (enq ?? "").split("?")[0]);
   await page.close();
@@ -722,6 +762,9 @@ const browser = await chromium.launch();
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(800);
   const scrolled = await page.evaluate(() => [...document.querySelectorAll("header img")].map((i) => getComputedStyle(i).opacity));
+  // The footer logo is lazy-loaded: bring it into view before reading it.
+  await page.locator("footer img").scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => document.querySelector("footer img")?.complete, null, { timeout: 5000 }).catch(() => {});
   const foot = await page.evaluate(() => {
     const i = document.querySelector("footer img");
     const reds = [...document.querySelectorAll("footer *")].filter((el) => {

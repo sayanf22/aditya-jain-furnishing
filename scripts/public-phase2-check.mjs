@@ -12,6 +12,15 @@ import playwright from "playwright";
 
 const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? fallback;
 const BASE = arg("base", "http://localhost:3000");
+// A local https Worker (LOCAL_HTTPS=1 node worker/dev/start.mjs) has a self-signed certificate.
+const LOCAL_TLS = /^https:\/\/localhost[:/]/.test(BASE);
+const trustLocal = (browser) => {
+  if (LOCAL_TLS) {
+    const orig = browser.newContext.bind(browser);
+    browser.newContext = (o = {}) => orig({ ignoreHTTPSErrors: true, ...o });
+  }
+  return browser;
+};
 const BROWSERS = arg("browsers", "chromium").split(",");
 let pass = 0;
 let failed = 0;
@@ -54,7 +63,7 @@ async function pageChecks(name) {
   const type = playwright[name];
   let browser;
   try {
-    browser = await type.launch();
+    browser = trustLocal(await type.launch());
   } catch (e) {
     console.log(`skip ${name}: ${String(e.message).split("\n")[0]}`);
     return;
@@ -123,7 +132,7 @@ async function pageChecks(name) {
 
 // ------------------------------------------------------------------ perf
 async function perf() {
-  const browser = await playwright.chromium.launch();
+  const browser = trustLocal(await playwright.chromium.launch());
   const out = {};
   for (const path of ["/", "/collection", "/about", "/contact"]) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
