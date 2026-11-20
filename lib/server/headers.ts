@@ -8,7 +8,8 @@
 const adminCsp = (scripts: string[] = [], styles: string[] = []) =>
   [
     "default-src 'self'",
-    `script-src 'self' ${scripts.join(" ")}`.trim(),
+    // 'wasm-unsafe-eval' lets the photo encoder (WebAssembly libwebp, used where the browser cannot make WebP, e.g. Safari) compile; it does not allow eval() of JavaScript.
+    `script-src 'self' 'wasm-unsafe-eval' ${scripts.join(" ")}`.trim(),
     `style-src 'self' ${styles.join(" ")}`.trim(),
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' data: blob:",
@@ -63,14 +64,18 @@ export async function withSecurityHeaders(response: Response, pathname: string):
   if (isAdminPath(pathname) && (response.headers.get("Content-Type") ?? "").includes("text/html")) {
     // Pre-rendered pages don't change while a Worker version runs (a deploy starts new instances): remember the
     // policy per page, and stream the body untouched on later requests instead of reading it again.
-    policy = POLICIES.get(pathname) ?? null;
+    // The key includes the ETag (a hash of the page): the same path can answer with different HTML (for
+    // example a page rendered again after a change), and a stale policy would block its inline scripts.
+    const etag = response.headers.get("ETag");
+    const key = etag ? `${pathname} ${etag}` : null;
+    policy = key ? (POLICIES.get(key) ?? null) : null;
     if (policy) {
       out = new Response(response.body, response);
     } else {
       const html = await response.text();
       policy = adminCsp(await inlineHashes(html, "script"), await inlineHashes(html, "style"));
       if (POLICIES.size > 64) POLICIES.clear();
-      POLICIES.set(pathname, policy);
+      if (key) POLICIES.set(key, policy);
       out = new Response(html, response);
     }
   } else {
@@ -79,5 +84,13 @@ export async function withSecurityHeaders(response: Response, pathname: string):
   for (const [name, value] of Object.entries(GLOBAL)) if (!out.headers.has(name)) out.headers.set(name, value);
   if (isAdminPath(pathname)) for (const [name, value] of Object.entries(ADMIN)) out.headers.set(name, value);
   if (policy) out.headers.set("Content-Security-Policy", policy);
+  else if (response.status === 304 && isAdminPath(pathname)) {
+    // A 304 updates the headers of the copy the browser keeps (RFC 9111, 4.3.4; Firefox applies it to CSP).
+    // Without its page's hashes it would block that page's inline scripts, so send the policy we know or none.
+    const etag = response.headers.get("ETag");
+    const known = etag ? POLICIES.get(`${pathname} ${etag}`) : undefined;
+    if (known) out.headers.set("Content-Security-Policy", known);
+    else out.headers.delete("Content-Security-Policy");
+  }
   return out;
 }
