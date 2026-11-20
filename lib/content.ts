@@ -142,15 +142,23 @@ export function getSitePhotos(): Promise<SitePhotos> {
 }
 let sitePhotos: Promise<SitePhotos> | null = null;
 
-/** The Home slides: fixed, one for each of the first collections. */
+/** The Home slides' own photos (fixed, never from the dashboard), in order. */
+const HOME_SLIDE_PHOTOS = ["demo/hero-upholstery", "demo/hero-curtains", "demo/hero-carpets"];
+
+/** The Home slides: fixed, one for each of the first collections. The hero
+ * always shows: a slide never depends on a photo the dashboard can remove. */
 async function getHeroSlides(categories: Category[], settings: Record<string, string>): Promise<HeroSlide[]> {
   const [catalogue, media] = await Promise.all([getCatalogue(), getMediaIndex()]);
   const texts = parseSlides(settings.hero_slides);
   const slides: HeroSlide[] = [];
-  for (const category of categories.slice(0, HOME_SLIDES)) {
+  for (const [i, category] of categories.slice(0, HOME_SLIDES).entries()) {
     const text = texts.find((t) => t.href === category.href);
     const own = catalogue.categories.find((c) => c.id === category.id);
-    const image = imageSource(text?.image, media) ?? own?.heroImage ?? category.image;
+    const image =
+      imageSource(text?.image, media) ??
+      own?.heroImage ??
+      category.image ??
+      imageSource(HOME_SLIDE_PHOTOS[i % HOME_SLIDE_PHOTOS.length], media);
     if (!image) continue;
     slides.push({
       image,
