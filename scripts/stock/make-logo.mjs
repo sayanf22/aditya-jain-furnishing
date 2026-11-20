@@ -73,6 +73,30 @@ function build(colourRed, colourMark, colourText) {
   return buf;
 }
 
+// Footer version: no colour at all. Mark in a diagonal gradient of greys,
+// "Delta" (and the small D inside the mark) in light grey, tagline in a
+// darker grey that still reads on the near-black footer (#0b0b0c-ish).
+function buildGrey() {
+  const DELTA = 232;
+  const TAG = 168;
+  const buf = Buffer.alloc(width * height * 4);
+  const markTop = minY, markBottom = Math.min(height, 470), markLeft = minX, markRight = 540;
+  for (let i = 0, q = 0; i < alpha.length; i++, q += 4) {
+    if (!alpha[i]) continue;
+    const x = i % width, y = (i / width) | 0;
+    const t = red[i];
+    let dark;
+    if (isMark(i)) {
+      const u = Math.max(0, Math.min(1, ((x - markLeft) / (markRight - markLeft) + (y - markTop) / (markBottom - markTop)) / 2));
+      dark = 236 - u * 78; // light grey top-left to mid grey bottom-right
+    } else dark = TAG;
+    const v = Math.round(DELTA * t + dark * (1 - t));
+    buf[q] = buf[q + 1] = buf[q + 2] = v;
+    buf[q + 3] = alpha[i];
+  }
+  return buf;
+}
+
 const pad = 6;
 const crop = {
   left: Math.max(0, minX - pad),
@@ -95,5 +119,5 @@ async function write(name, buf) {
 
 await write("logo-color", build(RED, MARK, TEXT));
 await write("logo-light", build([232, 30, 40], [255, 255, 255], [255, 255, 255]));
-await write("logo-grey", build([205, 205, 205], [150, 150, 150], [150, 150, 150]));
+await write("logo-grey", buildGrey());
 console.log("crop", crop);
