@@ -2,7 +2,7 @@
 
 // Photos: the library. Upload, rename, describe, replace and delete.
 import { useState } from "react";
-import type { MediaAsset } from "@/lib/admin-api";
+import type { MediaAsset, SweepResult } from "@/lib/admin-api";
 import { api, asFailure } from "./api";
 import { fileSize } from "./format";
 import { useDebounced } from "./hooks";
@@ -16,7 +16,9 @@ import { Badge, Button, ConfirmDialog, Empty, ErrorNote, Field, Loading, PageHea
 const USE_NAMES = { product: "Design", category: "Collection", subcategory: "Type", site: "Site", room: "Room" } as const;
 
 export function PhotosScreen() {
+  const toast = useToast();
   const [search, setSearch] = useState("");
+  const [clearing, setClearing] = useState(false);
   const library = useMediaLibrary(useDebounced(search));
   const uploads = useUploads({ onUploaded: library.add });
   const [openId, setOpenId] = useState<number | null>(null);
@@ -25,6 +27,9 @@ export function PhotosScreen() {
   return (
     <Dropzone onFiles={uploads.addFiles}>
       <PageHeader title="Photos">
+        <Button variant="ghost" icon={<IconTrash />} onClick={() => setClearing(true)}>
+          Clear unused
+        </Button>
         <UploadButton onFiles={uploads.addFiles} />
       </PageHeader>
 
@@ -66,6 +71,21 @@ export function PhotosScreen() {
           }}
           onReplaced={library.reload}
         />
+      )}
+
+      {clearing && (
+        <ConfirmDialog
+          title="Clear unused photos?"
+          actionLabel="Clear"
+          onClose={() => setClearing(false)}
+          onConfirm={async () => {
+            const result = await api.post<SweepResult>("/media/sweep");
+            toast(result.photos === 0 ? "Nothing to clear" : `Cleared ${result.photos} ${result.photos === 1 ? "photo" : "photos"}`);
+            library.reload();
+          }}
+        >
+          <p>Photos that no design, collection or site place uses, uploaded over an hour ago, are deleted for good.</p>
+        </ConfirmDialog>
       )}
     </Dropzone>
   );

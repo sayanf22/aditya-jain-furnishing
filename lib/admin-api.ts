@@ -16,6 +16,13 @@
 //
 // Change log
 //   2026-11-20  first version (lead)
+//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
+//               MediaAsset.usedBy type may also be "room" (room fabric textures);
+//               PublishStatus.configured (false while DEPLOY_HOOK_URL is empty;
+//               POST /publish then answers 503 PUBLISH_NOT_CONFIGURED).
+//               Behaviour notes: an upload needs two sizes unless the original is
+//               under 800 px wide; requests with no body (DELETE, bare POST) need
+//               the X-CSRF-Token but not a Content-Type.
 //   2026-11-22  site photo places reduced to the four replaceable ones, each with a
 //               defaultKey; hero places listed in NON_REPLACEABLE_SLOTS; new helpers
 //               isReplaceableSlot, isHeroSlot, defaultFor, categoryCardDefaultFor,
@@ -25,13 +32,6 @@
 //               longer be changed (400 NOT_REPLACEABLE); AuthStatus.emailCodes;
 //               POST /auth/code/request, /auth/code/verify, /auth/password/reset;
 //               MeResponse.mustSetPassword.
-//   2026-11-21  additive (backend): ApiError.error.usedBy (on MEDIA_IN_USE);
-//               MediaAsset.usedBy type may also be "room" (room fabric textures);
-//               PublishStatus.configured (false while DEPLOY_HOOK_URL is empty;
-//               POST /publish then answers 503 PUBLISH_NOT_CONFIGURED).
-//               Behaviour notes: an upload needs two sizes unless the original is
-//               under 800 px wide; requests with no body (DELETE, bare POST) need
-//               the X-CSRF-Token but not a Content-Type.
 
 // ---------------------------------------------------------------- shared
 
