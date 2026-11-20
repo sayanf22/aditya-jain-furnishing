@@ -3,8 +3,9 @@
 // Sign in (with the authenticator step when it is on) and first-run setup.
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import type { AuthStatus, LoginBody, LoginResponse, MeResponse, SetupBody } from "@/lib/admin-api";
+import type { LoginBody, LoginResponse, MeResponse, SetupBody } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure, setCsrf } from "./api";
+import { type AuthStatusWithEmail, type CodeVerifyResponse, emailCodesAvailable } from "./email-code";
 import { IconCheck } from "./icons";
 import { Button, Field, Loading, PasswordInput, TextInput } from "./ui";
 
@@ -45,6 +46,7 @@ function waitMessage(failure: ApiFailure): string {
 function useAuthRedirect(wantSetup: boolean) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<AuthStatusWithEmail | null>(null);
   useEffect(() => {
     let live = true;
     (async () => {
@@ -56,9 +58,10 @@ function useAuthRedirect(wantSetup: boolean) {
         // Not signed in: expected here.
       }
       try {
-        const status = await api.get<AuthStatus>("/auth/status");
+        const found = await api.get<AuthStatusWithEmail>("/auth/status");
         if (!live) return;
-        if (status.setupRequired !== wantSetup) router.replace(status.setupRequired ? "/admin/setup" : "/admin/login");
+        setStatus(found);
+        if (found.setupRequired !== wantSetup) router.replace(found.setupRequired ? "/admin/setup" : "/admin/login");
         else setReady(true);
       } catch {
         if (live) setReady(true);
@@ -68,34 +71,79 @@ function useAuthRedirect(wantSetup: boolean) {
       live = false;
     };
   }, [router, wantSetup]);
-  return ready;
+  return { ready, status };
 }
+
+type Step = "password" | "email" | "code" | "totp" | "newpass";
+const TITLES: Record<Step, string> = {
+  password: "Sign in",
+  email: "Email me a code",
+  code: "Enter the code",
+  totp: "Enter your code",
+  newpass: "New password",
+};
 
 export function SignInScreen() {
   const router = useRouter();
-  const ready = useAuthRedirect(false);
+  const { ready, status } = useAuthRedirect(false);
+  const emailOn = emailCodesAvailable(status);
+  const [step, setStep] = useState<Step>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState(""); // authenticator or emailed code, depending on step
+  const [next, setNext] = useState("");
+  const [emailed, setEmailed] = useState(""); // the emailed code, kept while the authenticator code is asked for
+  const [needsTotp, setNeedsTotp] = useState(false); // 2FA after a password sign-in
   const [busy, setBusy] = useState(false);
   const form = useFormError();
+
+  const go = (to: Step) => {
+    setStep(to);
+    setCode("");
+    form.clear();
+  };
+
+  async function finish(me?: MeResponse) {
+    const current = me ?? (await api.get<MeResponse>("/me"));
+    setCsrf(current.csrf);
+    router.replace("/admin");
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     form.clear();
     try {
-      const body: LoginBody = { email: email.trim(), password, ...(needsCode ? { code: code.replace(/\s/g, "") } : {}) };
-      const result = await api.post<LoginResponse>("/auth/login", body);
-      if ("needsCode" in result) {
-        setNeedsCode(true);
+      const digits = code.replace(/\s/g, "");
+      if (step === "password" || step === "totp") {
+        const body: LoginBody = { email: email.trim(), password, ...(needsTotp ? { code: digits } : {}) };
+        const result = await api.post<LoginResponse>("/auth/login", body);
+        if ("needsCode" in result) {
+          setNeedsTotp(true);
+          go("totp");
+          setBusy(false);
+          return;
+        }
+        await finish();
+        return;
+      }
+      if (step === "email") {
+        await api.post("/auth/code/request", { email: email.trim() });
+        go("code");
         setBusy(false);
         return;
       }
-      const me = await api.get<MeResponse>("/me");
-      setCsrf(me.csrf);
-      router.replace("/admin");
+      if (step === "code") {
+        setEmailed(digits);
+        const result = await api.post<CodeVerifyResponse>("/auth/code/verify", { email: email.trim(), code: digits });
+        // An emailed code never replaces the authenticator code.
+        go("needsCode" in result ? "totp" : "newpass");
+        setNeedsTotp(false);
+        setBusy(false);
+        return;
+      }
+      const me = await api.post<MeResponse>("/auth/code/password", { next });
+      await finish(me);
     } catch (error) {
       form.set(error);
       setBusy(false);
@@ -110,22 +158,28 @@ export function SignInScreen() {
     );
   }
 
+  // The authenticator step after an emailed code asks again with the same endpoint.
+  const emailedTotp = step === "totp" && !needsTotp;
+  async function submitEmailedTotp(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    form.clear();
+    try {
+      const result = await api.post<CodeVerifyResponse>("/auth/code/verify", { email: email.trim(), code: emailed, totp: code.replace(/\s/g, "") });
+      if ("needsCode" in result) throw new ApiFailure(400, "INVALID", "That code is not right.", "code");
+      go("newpass");
+      setEmailed("");
+      setBusy(false);
+    } catch (error) {
+      form.set(error);
+      setBusy(false);
+    }
+  }
+
   return (
-    <AuthCard title={needsCode ? "Enter your code" : "Sign in"}>
-      <form className="a-form" onSubmit={submit} noValidate>
-        {needsCode ? (
-          <Field label="6-digit code" error={form.forField("code")} hint="From your authenticator app">
-            <TextInput
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={7}
-              autoFocus
-              required
-            />
-          </Field>
-        ) : (
+    <AuthCard title={TITLES[step]}>
+      <form className="a-form" onSubmit={emailedTotp ? submitEmailedTotp : submit} noValidate>
+        {step === "password" && (
           <>
             <Field label="Email" error={form.forField("email")}>
               <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" autoFocus required />
@@ -135,22 +189,49 @@ export function SignInScreen() {
             </Field>
           </>
         )}
+        {step === "email" && (
+          <Field label="Email" error={form.forField("email")} hint="We send a 6-digit code if this is the owner's email.">
+            <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" autoFocus required />
+          </Field>
+        )}
+        {step === "code" && (
+          <Field label="6-digit code" error={form.forField("code")} hint="Check your email. It works for 10 minutes.">
+            <TextInput value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus required />
+          </Field>
+        )}
+        {step === "totp" && (
+          <Field label="6-digit code" error={form.forField("code")} hint="From your authenticator app">
+            <TextInput value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus required />
+          </Field>
+        )}
+        {step === "newpass" && (
+          <Field label="New password" error={form.forField("next") ?? form.forField("password")} hint={<PasswordHint password={next} email={email} />}>
+            <PasswordInput value={next} onChange={(event) => setNext(event.target.value)} autoComplete="new-password" maxLength={128} autoFocus required />
+          </Field>
+        )}
         {form.general && (
           <p className="a-form__error" role="alert">
             {form.general}
           </p>
         )}
         <Button type="submit" variant="primary" busy={busy} className="a-btn--block">
-          {needsCode ? "Verify" : "Sign in"}
+          {{ password: "Sign in", email: "Send code", code: "Continue", totp: "Verify", newpass: "Save and sign in" }[step]}
         </Button>
-        {needsCode && (
+        {step === "password" &&
+          (emailOn ? (
+            <button type="button" className="a-authlink" onClick={() => go("email")}>
+              Forgot password? Email me a code
+            </button>
+          ) : (
+            <p className="a-authnote">Forgot password? Emailed codes are not set up yet.</p>
+          ))}
+        {step !== "password" && step !== "newpass" && (
           <Button
             variant="ghost"
             className="a-btn--block"
             onClick={() => {
-              setNeedsCode(false);
-              setCode("");
-              form.clear();
+              setNeedsTotp(false);
+              go("password");
             }}
           >
             Back
@@ -160,7 +241,6 @@ export function SignInScreen() {
     </AuthCard>
   );
 }
-
 const MIN_PASSWORD = 12;
 
 export function PasswordHint({ password, email }: { password: string; email?: string }) {
@@ -177,7 +257,7 @@ export function PasswordHint({ password, email }: { password: string; email?: st
 
 export function SetupScreen() {
   const router = useRouter();
-  const ready = useAuthRedirect(true);
+  const { ready } = useAuthRedirect(true);
   const [values, setValues] = useState({ setupCode: "", name: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
   const form = useFormError();

@@ -1875,3 +1875,30 @@ body:has(dialog.a-sheet[open]) {
     transition-delay: 0s !important;
   }
 }
+
+/* ------------------------------------------------ sign in: emailed code */
+.a-authlink {
+  align-self: center;
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--a-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.a-authlink:hover {
+  color: var(--a-text, inherit);
+}
+.a-authlink:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.a-authnote {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--a-muted);
+}
