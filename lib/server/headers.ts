@@ -34,8 +34,13 @@ async function inlineHashes(html: string, tag: "script" | "style"): Promise<stri
   }
   return [...found];
 }
-const SITE_CSP =
-  "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests";
+// Public pages: scripts only from this site, Cloudflare Turnstile (the enquiry form check) and the inline
+// blocks of that page, by hash (same approach as the dashboard). Styles stay 'unsafe-inline': Next.js and
+// React write style attributes, and CSS cannot run script.
+const siteCsp = (scripts: string[] = []) =>
+  `default-src 'self'; script-src 'self' https://challenges.cloudflare.com ${scripts.join(" ")}`.trim() +
+  "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests";
+const SITE_CSP = siteCsp();
 
 const GLOBAL: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -59,13 +64,12 @@ export const isAdminPath = (pathname: string): boolean => pathname === "/admin" 
 /** Returns a copy of `response` with the site's security headers added (existing ones are kept, admin ones win). */
 export async function withSecurityHeaders(response: Response, pathname: string): Promise<Response> {
   if (response.status === 101) return response;
+  const admin = isAdminPath(pathname);
   let out: Response;
   let policy: string | null = null;
-  if (isAdminPath(pathname) && (response.headers.get("Content-Type") ?? "").includes("text/html")) {
-    // Pre-rendered pages don't change while a Worker version runs (a deploy starts new instances): remember the
-    // policy per page, and stream the body untouched on later requests instead of reading it again.
-    // The key includes the ETag (a hash of the page): the same path can answer with different HTML (for
-    // example a page rendered again after a change), and a stale policy would block its inline scripts.
+  if ((response.headers.get("Content-Type") ?? "").includes("text/html")) {
+    // Pre-rendered pages don't change while a Worker version runs: remember the policy per page and version
+    // (the ETag is a hash of the page), and stream the body untouched on later requests instead of reading it.
     const etag = response.headers.get("ETag");
     const key = etag ? `${pathname} ${etag}` : null;
     policy = key ? (POLICIES.get(key) ?? null) : null;
@@ -73,24 +77,22 @@ export async function withSecurityHeaders(response: Response, pathname: string):
       out = new Response(response.body, response);
     } else {
       const html = await response.text();
-      policy = adminCsp(await inlineHashes(html, "script"), await inlineHashes(html, "style"));
-      if (POLICIES.size > 64) POLICIES.clear();
+      const scripts = await inlineHashes(html, "script");
+      policy = admin ? adminCsp(scripts, await inlineHashes(html, "style")) : siteCsp(scripts);
+      if (POLICIES.size > 256) POLICIES.clear();
       if (key) POLICIES.set(key, policy);
       out = new Response(html, response);
     }
   } else {
     out = new Response(response.body, response);
   }
+  // A 304 updates the headers of the copy the browser keeps (RFC 9111, 4.3.4). That copy already has the policy
+  // made for its own HTML, so a 304 carries no policy: a general one without the page's hashes would replace it
+  // and block the page's inline scripts (seen in Firefox).
+  const notModified = response.status === 304;
   for (const [name, value] of Object.entries(GLOBAL)) if (!out.headers.has(name)) out.headers.set(name, value);
-  if (isAdminPath(pathname)) for (const [name, value] of Object.entries(ADMIN)) out.headers.set(name, value);
+  if (admin) for (const [name, value] of Object.entries(ADMIN)) out.headers.set(name, value);
   if (policy) out.headers.set("Content-Security-Policy", policy);
-  else if (response.status === 304 && isAdminPath(pathname)) {
-    // A 304 updates the headers of the copy the browser keeps (RFC 9111, 4.3.4; Firefox applies it to CSP).
-    // Without its page's hashes it would block that page's inline scripts, so send the policy we know or none.
-    const etag = response.headers.get("ETag");
-    const known = etag ? POLICIES.get(`${pathname} ${etag}`) : undefined;
-    if (known) out.headers.set("Content-Security-Policy", known);
-    else out.headers.delete("Content-Security-Policy");
-  }
+  else if (notModified) out.headers.delete("Content-Security-Policy");
   return out;
 }
