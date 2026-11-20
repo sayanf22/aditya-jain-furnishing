@@ -5,6 +5,7 @@
 import type { AdminUser, AuthStatus, LoginResponse, MeResponse, Ok, SessionInfo, TwoFactorStart } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx, Session } from "./context";
+import { emailAvailable } from "./email";
 import { PBKDF2_ITERATIONS, b64u, decryptSecret, encryptSecret, fromB64u, hashPassword, pseudonym, randomBytes, randomToken, safeEqual, secretOk, sha256Hex } from "./crypto";
 import { fail, json, parse, readJson, text, type Rule } from "./http";
 import { newTotpSecret, otpauthUri, verifyTotp } from "./totp";
@@ -13,6 +14,7 @@ export const COOKIE = "__Host-delta_admin";
 const IDLE_SECONDS = 30 * 60;
 const ABSOLUTE_SECONDS = 12 * 60 * 60;
 const TOUCH_AFTER_SECONDS = 60;
+const RECOVERY_SECONDS = 15 * 60;
 const THROTTLE_WINDOW = 15 * 60;
 const MAX_FAILS_EMAIL = 5;
 const MAX_FAILS_IP = 20;
@@ -74,7 +76,7 @@ export function checkCsrf(request: Request, session: Session): void {
 
 type SessionRow = {
   id: string; user_id: number; csrf: string; created_at: number; last_seen_at: number; idle_expires_at: number; expires_at: number;
-  email: string; display_name: string | null; totp_enabled: number;
+  email: string; display_name: string | null; totp_enabled: number; recovery: number;
 };
 
 /** The signed-in session for this request, or null. Slides the idle expiry (at most once a minute). */
@@ -85,7 +87,7 @@ export async function loadSession(c: Pick<Ctx, "request" | "env" | "exec">): Pro
   const row = await c.env.AUTH_DB
     .prepare(
       `SELECT s.id, s.user_id, s.csrf, s.created_at, s.last_seen_at, s.idle_expires_at, s.expires_at,
-              u.email, u.display_name, u.totp_enabled
+              u.email, u.display_name, u.totp_enabled, s.recovery
          FROM sessions s JOIN admin_users u ON u.id = s.user_id
         WHERE s.id = ?1 AND u.disabled = 0`,
     )
@@ -103,50 +105,53 @@ export async function loadSession(c: Pick<Ctx, "request" | "env" | "exec">): Pro
     c.exec.waitUntil(c.env.AUTH_DB.prepare("UPDATE sessions SET last_seen_at = ?2, idle_expires_at = ?3 WHERE id = ?1").bind(id, t, idle).run().then(() => undefined));
   }
   return {
-    id, userId: row.user_id, email: row.email, name: row.display_name, totpEnabled: row.totp_enabled === 1,
+    id, userId: row.user_id, email: row.email, name: row.display_name, totpEnabled: row.totp_enabled === 1, recovery: row.recovery === 1,
     csrf: row.csrf, createdAt: row.created_at, idleExpiresAt: idle, expiresAt: row.expires_at,
   };
 }
 
-async function startSession(c: Ctx, userId: number, mail: string, name: string | null, totpEnabled = false): Promise<{ cookie: string; session: Session }> {
+export async function startSession(c: Ctx, userId: number, mail: string, name: string | null, totpEnabled = false, recovery = false): Promise<{ cookie: string; session: Session }> {
   const token = randomToken(32); // new on every sign-in: no fixation
   const t = now();
   const ua = (c.request.headers.get("User-Agent") ?? "").slice(0, 200);
   const id = await sha256Hex(token);
   const csrf = randomToken(24);
+  const idle = recovery ? t + RECOVERY_SECONDS : t + IDLE_SECONDS;
+  const absolute = recovery ? t + RECOVERY_SECONDS : t + ABSOLUTE_SECONDS;
   await c.env.AUTH_DB.batch([
     c.env.AUTH_DB.prepare("DELETE FROM sessions WHERE expires_at < ?1 OR idle_expires_at < ?1").bind(t),
     c.env.AUTH_DB
-      .prepare("INSERT INTO sessions (id, user_id, csrf, created_at, last_seen_at, idle_expires_at, expires_at, ip_hash, user_agent) VALUES (?1, ?2, ?3, ?4, ?4, ?5, ?6, ?7, ?8)")
-      .bind(id, userId, csrf, t, t + IDLE_SECONDS, t + ABSOLUTE_SECONDS, await pseudonym(c.pepper, "ip", c.ip), ua),
+      .prepare("INSERT INTO sessions (id, user_id, csrf, created_at, last_seen_at, idle_expires_at, expires_at, ip_hash, user_agent, recovery) VALUES (?1, ?2, ?3, ?4, ?4, ?5, ?6, ?7, ?8, ?9)")
+      .bind(id, userId, csrf, t, idle, absolute, await pseudonym(c.pepper, "ip", c.ip), ua, recovery ? 1 : 0),
   ]);
-  const session: Session = { id, userId, email: mail, name, totpEnabled, csrf, createdAt: t, idleExpiresAt: t + IDLE_SECONDS, expiresAt: t + ABSOLUTE_SECONDS };
+  const session: Session = { id, userId, email: mail, name, totpEnabled, recovery, csrf, createdAt: t, idleExpiresAt: idle, expiresAt: absolute };
   return { cookie: sessionCookie(token), session };
 }
 
-function meResponse(s: Session): MeResponse {
+export function meResponse(s: Session): MeResponse {
   return {
     user: { id: s.userId, email: s.email, name: s.name, totpEnabled: s.totpEnabled } satisfies AdminUser,
     csrf: s.csrf,
     idleExpiresAt: isoOf(s.idleExpiresAt),
     expiresAt: isoOf(s.expiresAt),
+    ...(s.recovery ? { mustSetPassword: true } : {}),
   };
 }
 
 // ------------------------------------------------------------- validation
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/;
-const email: Rule<string> = (value, field) => {
+export const email: Rule<string> = (value, field) => {
   const v = text(254, 1)(value, field).toLowerCase();
   if (!EMAIL.test(v)) throw fail(400, "INVALID", "Enter a valid email address.", field);
   return v;
 };
 /** Passwords are never trimmed or altered. */
-const rawPassword: Rule<string> = (value, field) => {
+export const rawPassword: Rule<string> = (value, field) => {
   if (typeof value !== "string" || value.length < 1 || value.length > 128) throw fail(400, "INVALID", "Enter your password.", field);
   return value;
 };
-const code: Rule<string> = (value, field) => {
+export const code: Rule<string> = (value, field) => {
   if (typeof value !== "string" || !/^\d{6}$/.test(value.replace(/\s/g, ""))) throw fail(400, "INVALID", "Enter the 6-digit code.", field);
   return value.replace(/\s/g, "");
 };
@@ -167,7 +172,7 @@ async function isBreached(password: string): Promise<boolean> {
   }
 }
 
-async function checkNewPassword(password: string, mail: string, field = "password"): Promise<void> {
+export async function checkNewPassword(password: string, mail: string, field = "password"): Promise<void> {
   if (password.length < 12) throw fail(400, "WEAK_PASSWORD", "Use at least 12 characters.", field);
   if (password.length > 128) throw fail(400, "WEAK_PASSWORD", "Use at most 128 characters.", field);
   if (password.toLowerCase() === mail.toLowerCase()) throw fail(400, "WEAK_PASSWORD", "The password can't be your email.", field);
@@ -181,7 +186,7 @@ async function checkNewPassword(password: string, mail: string, field = "passwor
 type Key = { kind: "ip" | "email"; key: string; max: number };
 
 /** The counters one sign-in try touches: this address, this email from this address, and this email from anywhere. */
-async function loginKeys(c: Ctx, mail: string): Promise<Key[]> {
+export async function loginKeys(c: Ctx, mail: string): Promise<Key[]> {
   return [
     { kind: "ip", key: await pseudonym(c.pepper, "ip", c.ip), max: MAX_FAILS_IP },
     { kind: "email", key: await pseudonym(c.pepper, "email-ip", `${mail}|${c.ip}`), max: MAX_FAILS_EMAIL },
@@ -190,7 +195,7 @@ async function loginKeys(c: Ctx, mail: string): Promise<Key[]> {
 }
 
 /** Refuses with 429 when one of these counters has failed too often lately. */
-async function ensureNotThrottled(c: Ctx, keys: Key[], windowSeconds = THROTTLE_WINDOW): Promise<void> {
+export async function ensureNotThrottled(c: Ctx, keys: Key[], windowSeconds = THROTTLE_WINDOW): Promise<void> {
   const since = now() - windowSeconds;
   const marks = keys.map((_, i) => `?${i + 2}`).join(", ");
   const { results } = await c.env.AUTH_DB
@@ -210,7 +215,7 @@ async function ensureNotThrottled(c: Ctx, keys: Key[], windowSeconds = THROTTLE_
  * Writes the try down BEFORE the password is checked, so parallel guesses all
  * count. Returns the row ids; a successful try removes its own rows.
  */
-async function beginAttempt(c: Ctx, keys: Key[]): Promise<number[]> {
+export async function beginAttempt(c: Ctx, keys: Key[]): Promise<number[]> {
   const t = now();
   const stmts = keys.map((k) => c.env.AUTH_DB.prepare("INSERT INTO login_attempts (kind, key_hash, at, ok) VALUES (?1, ?2, ?3, 0)").bind(k.kind, k.key, t));
   stmts.push(c.env.AUTH_DB.prepare("DELETE FROM login_attempts WHERE at < ?1").bind(t - 24 * 3600));
@@ -218,10 +223,10 @@ async function beginAttempt(c: Ctx, keys: Key[]): Promise<number[]> {
   return res.slice(0, keys.length).map((r) => Number(r.meta.last_row_id));
 }
 
-async function clearAttempt(c: Ctx, ids: number[]): Promise<void> {
+export async function clearAttempt(c: Ctx, ids: number[]): Promise<void> {
   await c.env.AUTH_DB.prepare("DELETE FROM login_attempts WHERE id IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(ids)).run();
 }
-async function limitByIp(c: Ctx): Promise<void> {
+export async function limitByIp(c: Ctx): Promise<void> {
   if (!c.env.LOGIN_LIMITER) {
     console.error("limiter missing: LOGIN_LIMITER");
     return;
@@ -232,11 +237,11 @@ async function limitByIp(c: Ctx): Promise<void> {
 
 // ---------------------------------------------------------------- handlers
 
-type UserRow = {
+export type UserRow = {
   id: number; email: string; display_name: string | null; pw_salt: string; pw_hash: string; pw_iterations: number;
   totp_secret: string | null; totp_enabled: number; totp_last_step: number | null;
 };
-const USER_COLS = "id, email, display_name, pw_salt, pw_hash, pw_iterations, totp_secret, totp_enabled, totp_last_step";
+export const USER_COLS = "id, email, display_name, pw_salt, pw_hash, pw_iterations, totp_secret, totp_enabled, totp_last_step";
 
 // A fixed salt: unknown emails still cost one password hash, so timing doesn't show which emails exist.
 const DUMMY_SALT = new Uint8Array(16);
@@ -252,7 +257,7 @@ async function passwordMatches(c: Ctx, user: UserRow | null, password: string): 
 
 export async function authStatus(c: Ctx): Promise<AuthStatus> {
   const row = await c.env.AUTH_DB.prepare("SELECT COUNT(*) AS n FROM admin_users").first<{ n: number }>();
-  return { setupRequired: (row?.n ?? 0) === 0 };
+  return { setupRequired: (row?.n ?? 0) === 0, emailCodes: emailAvailable(c.env) };
 }
 
 export async function setup(c: Ctx): Promise<Response> {
@@ -291,7 +296,7 @@ export async function setup(c: Ctx): Promise<Response> {
   return jsonWithCookie(meResponse(session), cookie);
 }
 
-function jsonWithCookie(body: unknown, cookie: string, status = 200): Response {
+export function jsonWithCookie(body: unknown, cookie: string, status = 200): Response {
   const headers = new Headers({ "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
   headers.append("Set-Cookie", cookie);
   return new Response(JSON.stringify(body), { status, headers });
@@ -355,7 +360,7 @@ export async function logout(c: Ctx): Promise<Response> {
 }
 
 /** After a password or 2FA change: a new session id and CSRF token for this device, and every other session ends. */
-async function renewSession(c: Ctx, totpEnabled: boolean): Promise<Response> {
+export async function renewSession(c: Ctx, totpEnabled: boolean): Promise<Response> {
   const s = c.session!;
   const { cookie, session } = await startSession(c, s.userId, s.email, s.name, totpEnabled);
   await c.env.AUTH_DB.prepare("DELETE FROM sessions WHERE user_id = ?1 AND id != ?2").bind(s.userId, session.id).run();
@@ -380,7 +385,10 @@ export async function changePassword(c: Ctx): Promise<Response> {
   await checkNewPassword(body.next!, s.email, "next");
   const salt = randomBytes(16);
   const hash = await hashPassword(c.pepper, body.next!, salt);
-  await c.env.AUTH_DB.prepare("UPDATE admin_users SET pw_salt = ?2, pw_hash = ?3, pw_iterations = ?4, password_changed_at = datetime('now') WHERE id = ?1").bind(s.userId, b64u(salt), hash, PBKDF2_ITERATIONS).run();
+  await c.env.AUTH_DB.batch([
+    c.env.AUTH_DB.prepare("UPDATE admin_users SET pw_salt = ?2, pw_hash = ?3, pw_iterations = ?4, password_changed_at = datetime('now') WHERE id = ?1").bind(s.userId, b64u(salt), hash, PBKDF2_ITERATIONS),
+    c.env.AUTH_DB.prepare("DELETE FROM email_codes WHERE user_id = ?1").bind(s.userId),
+  ]);
   audit(c, "password_change", "user", s.userId);
   return renewSession(c, s.totpEnabled);
 }

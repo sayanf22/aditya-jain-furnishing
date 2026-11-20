@@ -39,6 +39,8 @@ mkdirSync(".wrangler", { recursive: true });
 const log = openSync(".wrangler/dev.log", "w");
 // WRANGLER_EXTRA adds local-only options, e.g. "--var DEPLOY_HOOK_URL:http://127.0.0.1:9911/hook".
 const extra = (process.env.WRANGLER_EXTRA ?? "").split(/\s+/).filter(Boolean);
+// Email codes go to the local stub (worker/dev/email-stub.mjs), never to Resend; the Worker honours this only in development.
+if (!extra.some((x) => x.startsWith("DEV_EMAIL_STUB"))) extra.push("--var", "NEXTJS_ENV:development", "--var", "DEV_EMAIL_STUB:http://127.0.0.1:8799");
 const child = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--inspector-port", String(INSPECTOR), ...extra], {
   detached: true,
   stdio: ["ignore", log, log],

@@ -6,6 +6,8 @@ export type Session = {
   email: string;
   name: string | null;
   totpEnabled: boolean;
+  /** True for the short session a sign-in code opens: it can only set a new password. */
+  recovery: boolean;
   csrf: string;
   createdAt: number; // unix seconds
   idleExpiresAt: number;

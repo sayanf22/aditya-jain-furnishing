@@ -8,6 +8,7 @@ import type { AdminEnv } from "../lib/server/env";
 import * as enquiries from "../lib/server/enquiries";
 import { API_HEADERS, ApiFail, errorResponse, fail, json } from "../lib/server/http";
 import * as media from "../lib/server/media";
+import * as recovery from "../lib/server/recovery";
 import * as products from "../lib/server/products";
 import * as publish from "../lib/server/publish";
 import * as site from "../lib/server/site";
@@ -22,10 +23,16 @@ function route(method: string, pattern: string, handler: Handler, open = false):
   return { method, re: new RegExp(`^${pattern.replace(/:\w+/g, "([^/]+)")}$`), handler, open };
 }
 
+/** What a recovery session (opened by an emailed code) may call. */
+const RECOVERY_ROUTES = new Set(["GET /me", "POST /auth/logout", "POST /auth/password/reset"]);
+
 const ROUTES: Route[] = [
   route("GET", "/auth/status", auth.authStatus, true),
   route("POST", "/auth/setup", auth.setup, true),
   route("POST", "/auth/login", auth.login, true),
+  route("POST", "/auth/code/request", recovery.codeRequest, true),
+  route("POST", "/auth/code/verify", recovery.codeVerify, true),
+  route("POST", "/auth/password/reset", recovery.passwordReset),
   route("POST", "/auth/logout", auth.logout),
   route("GET", "/me", async (c) => auth.currentUser(c)),
   route("POST", "/auth/password", auth.changePassword),
@@ -122,6 +129,8 @@ export async function handleAdmin(request: Request, env: AdminEnv, exec: Executi
         throw fail(401, "UNAUTHORIZED", "Please sign in.", undefined, undefined, had ? { "Set-Cookie": auth.clearedCookie() } : undefined);
       }
       if (method !== "GET") auth.checkCsrf(request, c.session);
+      // A code sign-in opens a short session that can only set a new password or sign out.
+      if (c.session.recovery && !RECOVERY_ROUTES.has(`${method} ${subPath}`)) throw fail(403, "PASSWORD_RESET_REQUIRED", "Set a new password first.");
     }
 
     const result = await hit.r.handler(c);

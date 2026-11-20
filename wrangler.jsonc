@@ -78,6 +78,11 @@
       "simple": { "limit": 240, "period": 60 }
     }
   ],
+  // Plain settings (not secrets). RESEND_API_KEY is a secret and is set outside git.
+  // Without a verified domain Resend only sends from onboarding@resend.dev to the account owner's own address.
+  "vars": {
+    "RESEND_FROM": "Delta Furnishings <onboarding@resend.dev>"
+  },
   "upload_source_maps": true,
   "observability": {
     "enabled": true

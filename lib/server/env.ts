@@ -16,4 +16,11 @@ export type AdminEnv = {
   SETUP_CODE?: string;
   EXPORT_TOKEN?: string;
   DEPLOY_HOOK_URL?: string;
+  /** Resend API key (Worker secret). Without it, email codes are off and password sign-in is unaffected. */
+  RESEND_API_KEY?: string;
+  /** Sender, e.g. "Delta Furnishings <onboarding@resend.dev>". A verified domain is needed to send from your own address. */
+  RESEND_FROM?: string;
+  /** Local development only (see lib/server/email.ts). */
+  NEXTJS_ENV?: string;
+  DEV_EMAIL_STUB?: string;
 };

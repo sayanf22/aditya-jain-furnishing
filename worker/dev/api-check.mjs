@@ -6,6 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { startStub } from "./email-stub.mjs";
 
 const BASE = process.env.BASE ?? "http://localhost:8787";
 const vars = Object.fromEntries(
@@ -116,6 +117,23 @@ function uploadForm(sizes, meta) {
   f.set("meta", JSON.stringify(meta));
   for (const [w, buf] of sizes) f.set(`w${w}`, new Blob([buf], { type: "image/webp" }), `x${w}.webp`);
   return f;
+}
+
+// NO_EMAIL=1: run against a Worker started without the email stub (WRANGLER_EXTRA="--var DEV_EMAIL_STUB:").
+// Email codes are then off, say so plainly, and password sign-in still works.
+if (process.env.NO_EMAIL) {
+  d1("AUTH_DB", "DELETE FROM sessions; DELETE FROM login_attempts; DELETE FROM email_code_requests; DELETE FROM email_codes; DELETE FROM admin_users;");
+  const c0 = new Client(ip(29900));
+  let q = await c0.api("GET", "/auth/status");
+  ok("no email key: status says email codes are off", q.status === 200 && q.data.emailCodes === false, JSON.stringify(q.data));
+  q = await c0.api("POST", "/auth/setup", { setupCode: vars.SETUP_CODE, email: EMAIL, password: PASS1 });
+  ok("no email key: setup works", q.status === 200);
+  q = await new Client(ip(29901)).api("POST", "/auth/code/request", { email: EMAIL });
+  ok("no email key: a code request says so plainly (503)", q.status === 503 && q.data.error.code === "EMAIL_NOT_CONFIGURED" && /not set up/i.test(q.data.error.message), JSON.stringify(q.data));
+  q = await new Client(ip(29902)).api("POST", "/auth/login", { email: EMAIL, password: PASS1 });
+  ok("no email key: password sign-in is unaffected", q.status === 200 && q.data.ok === true, JSON.stringify(q.data));
+  console.log(`\n${results.filter(Boolean).length}/${results.length} passed`);
+  process.exit(results.includes(false) ? 1 : 0);
 }
 
 // =================================================================== run
@@ -589,6 +607,163 @@ await r.arrayBuffer();
 ok("/admin carries DENY, noindex and CSP", r.headers.get("x-frame-options") === "DENY" && /noindex/.test(r.headers.get("x-robots-tag") ?? "") && /frame-ancestors 'none'/.test(r.headers.get("content-security-policy") ?? ""), `${r.status} ${[...r.headers.keys()].join()}`);
 
 r = await owner.api("POST", "/auth/logout");
+// ---- sign in by emailed code (against the local email stub)
+try {
+  await startStub();
+} catch {
+  /* the stub is already running */
+}
+const STUB = "http://127.0.0.1:8799";
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+const lastMail = async (to) => {
+  const res = await fetch(`${STUB}/last?to=${encodeURIComponent(to)}`);
+  return res.status === 200 ? res.json() : null;
+};
+const waitMail = async (to, since, tries = 25) => {
+  for (let i = 0; i < tries; i++) {
+    const m = await lastMail(to);
+    if (m && m.at >= since) return m;
+    await wait(120);
+  }
+  return null;
+};
+const codeOf = (m) => /\b(\d{6})\b/.exec(m.text)?.[1];
+let nextIp = 31000;
+const fresh = () => new Client(ip(nextIp++));
+const PASS3 = "yet another long passphrase 3";
+const clean = () => d1("AUTH_DB", "DELETE FROM login_attempts; DELETE FROM email_code_requests; DELETE FROM email_codes;");
+const requestCode = async (to = EMAIL) => {
+  const since = Date.now();
+  const res = await fresh().api("POST", "/auth/code/request", { email: to });
+  const mail = res.status === 200 ? await waitMail(to, since) : null;
+  return { res, mail, code: mail ? codeOf(mail) : null };
+};
+const wrongOf = (c) => (c === "111111" ? "222222" : "111111");
+
+d1("AUTH_DB", "UPDATE admin_users SET totp_enabled = 0, totp_last_step = NULL;");
+clean();
+r = await anon.api("GET", "/auth/status");
+ok("status: email codes are available", r.status === 200 && r.data.emailCodes === true && r.data.setupRequired === false, JSON.stringify(r.data));
+
+const since0 = Date.now();
+const ghost = await fresh().api("POST", "/auth/code/request", { email: "nobody@example.com" });
+const first = await requestCode();
+ok("request: the answer is the same for an unknown email and the owner (no enumeration)", ghost.status === 200 && first.res.status === 200 && ghost.text === first.res.text && ghost.text === JSON.stringify({ ok: true }), `${ghost.text} | ${first.res.text}`);
+ok("request: no mail is sent to an unknown address", (await waitMail("nobody@example.com", since0, 10)) === null);
+ok("request: the owner gets a 6-digit code, in text only, no link", !!first.code && /^\d{6}$/.test(first.code) && first.mail.to[0] === EMAIL && !/https?:|href=|<a /i.test(first.mail.text + first.mail.html), JSON.stringify(first.mail)?.slice(0, 200));
+ok("request: the code is never written to the Worker log", !readFileSync(".wrangler/dev.log", "utf8").includes(first.code ?? "no-code"));
+r = await fresh().api("POST", "/auth/code/request", { email: "not an email" });
+ok("request: a malformed email is refused", r.status === 400);
+r = await fresh().api("POST", "/auth/code/request", { email: EMAIL }, { headers: { "Sec-Fetch-Site": "cross-site" } });
+ok("request: from another site is refused (CSRF)", r.status === 403);
+
+// wrong code, then the right one
+const bad1 = await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: wrongOf(first.code) });
+const badGhost = await fresh().api("POST", "/auth/code/verify", { email: "nobody@example.com", code: first.code });
+ok("verify: a wrong code is refused", bad1.status === 401 && bad1.data.error.code === "BAD_CODE", bad1.text);
+ok("verify: the same refusal for an unknown email (no enumeration)", badGhost.status === 401 && badGhost.text === bad1.text, badGhost.text);
+const rc = fresh();
+r = await rc.api("POST", "/auth/code/verify", { email: EMAIL, code: first.code });
+ok("verify: the right code signs in with a password-reset session", r.status === 200 && r.data.mustSetPassword === true && !!r.data.csrf && r.set.some((s) => s.startsWith("__Host-delta_admin=") && /HttpOnly/.test(s)), r.text);
+rc.csrf = r.data?.csrf ?? "";
+r = await rc.api("GET", "/catalogue");
+ok("reset session: dashboard routes are closed until the password is set", r.status === 403 && r.data.error.code === "PASSWORD_RESET_REQUIRED", r.text);
+r = await rc.api("GET", "/me");
+ok("reset session: /me says the password must be set", r.status === 200 && r.data.mustSetPassword === true);
+r = await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: first.code });
+ok("verify: a code works once only", r.status === 401 && r.data.error.code === "BAD_CODE", r.text);
+r = await rc.api("POST", "/auth/password/reset", { next: "short" });
+ok("set password: a weak one is refused", r.status === 400 && r.data.error.code === "WEAK_PASSWORD", r.text);
+r = await anon.api("POST", "/auth/password/reset", { next: PASS3 });
+ok("set password: needs a session", r.status === 401);
+r = await rc.api("POST", "/auth/password/reset", { next: PASS3 });
+ok("set password: the new password is accepted and the session becomes normal", r.status === 200 && r.data.mustSetPassword === undefined && !!r.data.csrf, r.text);
+rc.csrf = r.data?.csrf ?? "";
+r = await rc.api("GET", "/catalogue");
+ok("after the new password the dashboard opens", r.status === 200);
+r = await rc.api("POST", "/auth/password/reset", { next: PASS2 });
+ok("set password: a normal session cannot use the reset route", r.status === 403 && r.data.error.code === "NOT_RECOVERY", r.text);
+r = await fresh().api("POST", "/auth/login", { email: EMAIL, password: PASS2 });
+ok("the old password no longer works", r.status === 401);
+r = await fresh().api("POST", "/auth/login", { email: EMAIL, password: PASS3 });
+ok("the new password works", r.status === 200 && r.data.ok === true, r.text);
+
+// expiry
+clean();
+const expired = await requestCode();
+d1("AUTH_DB", "UPDATE email_codes SET expires_at = expires_at - 700;");
+r = await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: expired.code });
+ok("verify: a code older than 10 minutes is refused", r.status === 401 && r.data.error.code === "BAD_CODE", r.text);
+
+// five wrong tries kill the code
+clean();
+const lim = await requestCode();
+for (let i = 0; i < 5; i++) await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: wrongOf(lim.code) });
+r = await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: lim.code });
+ok("verify: after 5 wrong tries even the right code is dead", r.status === 401 && r.data.error.code === "BAD_CODE", r.text);
+const lim2 = await requestCode();
+ok("a fresh code can be asked for after that", !!lim2.code && lim2.code !== undefined);
+r = await fresh().api("POST", "/auth/code/verify", { email: EMAIL, code: lim2.code });
+ok("the new code works (the old one is replaced)", r.status === 200 && r.data.mustSetPassword === true, r.text);
+
+// the authenticator app is still required
+clean();
+d1("AUTH_DB", "UPDATE admin_users SET totp_enabled = 1, totp_last_step = NULL;");
+const two = await requestCode();
+const tc = fresh();
+r = await tc.api("POST", "/auth/code/verify", { email: EMAIL, code: two.code });
+ok("2FA: the emailed code alone asks for the authenticator code and signs nobody in", r.status === 200 && r.data.needsCode === true && !tc.cookie && r.set.length === 0, r.text);
+r = await tc.api("POST", "/auth/code/verify", { email: EMAIL, code: two.code, totp: "000000" });
+ok("2FA: a wrong authenticator code is refused", r.status === 401 && r.data.error.field === "totp" && !tc.cookie, r.text);
+r = await tc.api("POST", "/auth/code/verify", { email: EMAIL, code: two.code, totp: totp(secret) });
+ok("2FA: emailed code plus authenticator code signs in to the reset session", r.status === 200 && r.data.mustSetPassword === true && !!tc.cookie, r.text);
+tc.csrf = r.data?.csrf ?? "";
+r = await tc.api("POST", "/auth/password/reset", { next: PASS2 });
+ok("2FA: set the new password", r.status === 200 && r.data.user.totpEnabled === true, r.text);
+r = await fresh().api("POST", "/auth/login", { email: EMAIL, password: PASS2 });
+ok("2FA: password sign-in still asks for the authenticator code", r.status === 200 && r.data.needsCode === true);
+d1("AUTH_DB", "UPDATE admin_users SET totp_enabled = 0, totp_last_step = NULL;");
+
+// throttles
+clean();
+const asks = [];
+for (let i = 0; i < 4; i++) asks.push((await fresh().api("POST", "/auth/code/request", { email: "ghost@example.com" })).status);
+ok("throttle per email: the 4th request in 15 minutes is refused, for an unknown email too", asks.slice(0, 3).every((s) => s === 200) && asks[3] === 429, asks.join());
+clean();
+const owners = [];
+for (let i = 0; i < 4; i++) owners.push((await fresh().api("POST", "/auth/code/request", { email: EMAIL })).status);
+ok("throttle per email: the same for the owner", owners.slice(0, 3).every((s) => s === 200) && owners[3] === 429, owners.join());
+clean();
+const sameAddress = new Client(ip(nextIp++));
+const perIp = [];
+for (let i = 0; i < 8; i++) perIp.push((await sameAddress.api("POST", "/auth/code/request", { email: `person${i}@example.com` })).status);
+ok("throttle per address: one address cannot ask without limit", perIp.slice(0, 4).every((s) => s === 200) && perIp.includes(429), perIp.join());
+clean();
+d1("AUTH_DB", "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 21) INSERT INTO email_code_requests (key_hash, at) SELECT 'global', CAST(strftime('%s', 'now') AS INTEGER) FROM n;");
+r = await fresh().api("POST", "/auth/code/request", { email: "someone@example.com" });
+ok("throttle global: too many requests across all addresses stops them", r.status === 429, r.text);
+clean();
+const tries = new Client(ip(nextIp++));
+const verifyStatuses = [];
+for (let i = 0; i < 6; i++) verifyStatuses.push((await tries.api("POST", "/auth/code/verify", { email: "ghost@example.com", code: "123456" })).status);
+ok("throttle on verify: repeated wrong codes from one address are stopped (429)", verifyStatuses.slice(0, 5).every((s) => s === 401) && verifyStatuses[5] === 429, verifyStatuses.join());
+r = await anon.api("POST", "/auth/code/verify", { email: EMAIL, code: "12345" });
+ok("verify: a code that is not 6 digits is refused (400)", r.status === 400);
+clean();
+d1("AUTH_DB", "UPDATE admin_users SET totp_enabled = 0;");
+r = await fresh().api("POST", "/auth/login", { email: EMAIL, password: PASS2 });
+ok("password sign-in is unaffected by all of this", r.status === 200 && r.data.ok === true, r.text);
+{
+  const o2 = fresh();
+  await o2.api("POST", "/auth/login", { email: EMAIL, password: PASS2 });
+  await o2.refreshCsrf();
+  await wait(500);
+  const a = await o2.api("GET", "/audit?limit=200");
+  const seen = new Set((a.data?.items ?? []).map((x) => x.action));
+  ok("audit: code requests, code sign-ins and password resets are recorded, never the code", ["code_request", "login_code", "password_reset"].every((x) => seen.has(x)) && !a.text.includes(lim2.code ?? "no-code"), [...seen].join());
+  await o2.api("POST", "/auth/logout");
+}r = await fresh().api("GET", "/auth/status");
+ok("status still public and small", r.status === 200 && Object.keys(r.data).sort().join() === "emailCodes,setupRequired");
 const failed = results.filter((x) => !x).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);
 process.exit(failed ? 1 : 0);

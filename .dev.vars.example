@@ -18,3 +18,13 @@ EXPORT_TOKEN=change-me-generate-32-or-more-random-characters
 # Workers Builds deploy hook URL for the Publish button. Leave empty locally:
 # the dashboard then shows "not set up" instead of publishing.
 DEPLOY_HOOK_URL=
+# Email codes for a forgotten password (Resend, https://resend.com). Without the key the
+# sign-in screen says email codes are not set up and password sign-in works as before.
+# Live: a Worker secret, never in git. Until a domain is verified in Resend, mail can only be
+# sent from onboarding@resend.dev to the address that owns the Resend account.
+RESEND_API_KEY=
+# Sender. Also a plain var in wrangler.jsonc; set it here only to override locally.
+# RESEND_FROM=Delta Furnishings <onboarding@resend.dev>
+# Local development only: send the code to the stub (node worker/dev/email-stub.mjs) instead of Resend.
+# Honoured only when NEXTJS_ENV=development and the address is loopback; worker/dev/start.mjs sets it.
+# DEV_EMAIL_STUB=http://127.0.0.1:8799
