@@ -333,8 +333,8 @@ export async function login(c: Ctx): Promise<Response> {
   }
 
   await clearAttempt(c, attempt);
-  // Rehash when the stored password was made with fewer rounds than today (no-op until the count is raised).
-  if (user.pw_iterations < PBKDF2_ITERATIONS) {
+  // Rehash when the stored password was made with a different round count than today (up or down, so the constant can change without a lock-out).
+  if (user.pw_iterations !== PBKDF2_ITERATIONS) {
     const salt = randomBytes(16);
     const upgraded = await hashPassword(c.pepper, body.password!, salt);
     c.exec.waitUntil(c.env.AUTH_DB.prepare("UPDATE admin_users SET pw_salt = ?2, pw_hash = ?3, pw_iterations = ?4 WHERE id = ?1").bind(user.id, b64u(salt), upgraded, PBKDF2_ITERATIONS).run().then(() => undefined));
