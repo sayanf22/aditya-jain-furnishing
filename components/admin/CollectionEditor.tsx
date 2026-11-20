@@ -2,7 +2,7 @@
 
 // Add or edit one collection or type: name, description, photos, page address.
 import { useState } from "react";
-import type { AdminCategory, AdminSubcategory, CategoryPatch, SubcategoryPatch } from "@/lib/admin-api";
+import { categoryCardDefaultFor, type AdminCategory, type AdminSubcategory, CategoryPatch, SubcategoryPatch } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure } from "./api";
 import { type NodeKind, type TreeNode } from "./catalogue-utils";
 import { ORDINARY_WIDTHS } from "./image-pipeline";
@@ -21,20 +21,17 @@ type Props = {
   onDelete: (node: TreeNode) => void;
 };
 
-const HERO_WIDTHS = [800, 1200, 1600, 2048];
-
 type Draft = {
   name: string;
   description: string;
   slug: string;
   imageKey: string | null;
-  heroImageKey: string | null;
 };
 
 function startDraft(mode: EditorMode): Draft {
-  if (mode.type === "create") return { name: "", description: "", slug: "", imageKey: null, heroImageKey: null };
+  if (mode.type === "create") return { name: "", description: "", slug: "", imageKey: null };
   const { node } = mode;
-  return { name: node.name, description: node.description ?? "", slug: node.slug, imageKey: node.imageKey, heroImageKey: node.heroImageKey };
+  return { name: node.name, description: node.description ?? "", slug: node.slug, imageKey: node.imageKey };
 }
 
 export function CollectionEditor({ mode, onClose, onSaved, onAddChild, onDelete }: Props) {
@@ -77,7 +74,6 @@ export function CollectionEditor({ mode, onClose, onSaved, onAddChild, onDelete 
         if (description !== initial.description) patch.description = description || null;
         if (draft.slug !== initial.slug) patch.slug = draft.slug.trim();
         if (draft.imageKey !== initial.imageKey) patch.imageKey = draft.imageKey;
-        if (isCategory && draft.heroImageKey !== initial.heroImageKey) patch.heroImageKey = draft.heroImageKey;
         await api.patch(`/${isCategory ? "categories" : "subcategories"}/${mode.node.id}`, patch);
         toast("Saved");
         onSaved();
@@ -116,11 +112,9 @@ export function CollectionEditor({ mode, onClose, onSaved, onAddChild, onDelete 
               shape={isCategory ? "tall" : "square"}
               widths={ORDINARY_WIDTHS}
               mediaKey={draft.imageKey}
+              defaultKey={isCategory ? categoryCardDefaultFor(initial.slug) : null}
               onChange={(key) => set("imageKey", key)}
             />
-            {isCategory && (
-              <PhotoField label="Header photo" hint="Wide, shown at the top of the page" shape="wide" widths={HERO_WIDTHS} mediaKey={draft.heroImageKey} onChange={(key) => set("heroImageKey", key)} />
-            )}
           </>
         )}
 

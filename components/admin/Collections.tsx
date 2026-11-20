@@ -3,7 +3,7 @@
 // Collections: the same tree the public site shows, with controls to add,
 // rename, describe, photograph, show or hide, reorder and delete.
 import { useState } from "react";
-import type { AdminCategory } from "@/lib/admin-api";
+import { categoryCardDefaultFor, type AdminCategory } from "@/lib/admin-api";
 import { api, asFailure } from "./api";
 import { CollectionEditor, type EditorMode } from "./CollectionEditor";
 import {
@@ -144,7 +144,7 @@ export function CollectionsScreen() {
               const parts = [types ? plural(types, "type") : "", deleting.productCount ? plural(deleting.productCount, "design") : ""].filter(Boolean);
               return parts.length ? `This also deletes ${parts.join(" and ")} inside it.` : "Nothing else is inside it.";
             })()}{" "}
-            Photos stay in your library.
+            Their photos are removed too.
           </p>
         </ConfirmDialog>
       )}
@@ -185,7 +185,7 @@ function Branch({ nodes, scope, depth, folded, onFold, onOpen, onAdd, onMove, on
               )}
               <button type="button" className="a-row__main" onClick={() => onOpen(node)}>
                 <span className="a-row__thumb">
-                  <Photo mediaKey={node.imageKey} alt="" width={480} />
+                  <Photo mediaKey={node.imageKey ?? (node.kind === "category" ? categoryCardDefaultFor(node.slug) : null)} alt="" width={480} />
                 </span>
                 <span className="a-row__text">
                   <span className="a-row__name">{node.name}</span>

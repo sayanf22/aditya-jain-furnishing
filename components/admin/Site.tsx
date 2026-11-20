@@ -3,19 +3,19 @@
 // Site: the named photo places, business details and testimonials.
 // Photo and detail edits are held until the page-wide Save.
 import { useState } from "react";
-import { SITE_IMAGE_SLOTS, type SiteImage, type SiteSettings } from "@/lib/admin-api";
+import { SITE_IMAGE_SLOTS, isReplaceableSlot, type SiteImage, type SiteSettings } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure } from "./api";
 import { useResource } from "./hooks";
-import { IconPhotos, IconReplace } from "./icons";
+import { IconReplace, IconTrash } from "./icons";
 import { MediaPicker } from "./MediaPicker";
 import { Photo } from "./Photo";
 import { Testimonials } from "./Testimonials";
-import { Button, ErrorNote, Field, Loading, PageHeader, PageSaveBar, Segmented, TextInput, cx, useToast } from "./ui";
+import { Badge, Button, ErrorNote, Field, Loading, PageHeader, PageSaveBar, Segmented, TextInput, cx, useToast } from "./ui";
 
 type Tab = "photos" | "details" | "reviews";
 type PhotoChoice = { mediaKey: string | null; alt: string | null };
 
-const GROUPS = ["Home", "Collection", "About", "Contact"] as const;
+const GROUPS = ["About", "Contact"] as const;
 
 const DETAIL_FIELDS: { key: keyof SiteSettings; label: string; hint?: string; inputMode?: "tel" | "text"; autoComplete?: string }[] = [
   { key: "businessName", label: "Business name" },
@@ -120,7 +120,7 @@ export function SiteScreen() {
           ) : (
             <div className="a-stack a-stack--lg">
               {GROUPS.map((group) => {
-                const slots = imageData.slots.filter((slot) => slot.group === group);
+                const slots = imageData.slots.filter((slot) => slot.group === group && isReplaceableSlot(slot.slot));
                 if (slots.length === 0) return null;
                 return (
                   <section key={group} aria-label={group}>
@@ -172,17 +172,21 @@ function SlotRow({ slot, choice, onChoose }: { slot: SiteImage; choice?: PhotoCh
   return (
     <li className={cx("a-row a-row--slot", choice && "is-changed")}>
       <span className={cx("a-slotthumb", `is-${slot.shape}`)}>
-        <Photo mediaKey={mediaKey} alt="" width={slot.shape === "wide" ? 800 : 480} widths={slot.media?.widths} />
-        {usingDefault && <IconPhotos className="a-photofield__ghost" />}
+        <Photo
+          mediaKey={mediaKey ?? definition.defaultKey}
+          alt=""
+          width={slot.shape === "wide" ? 800 : 480}
+          widths={usingDefault ? definition.widths : choice ? undefined : slot.media?.widths}
+        />
       </span>
       <span className="a-row__text">
         <span className="a-row__name">{slot.label}</span>
-        <span className="a-row__meta">{usingDefault ? "Standard photo" : definition.hint}</span>
+        <span className="a-row__meta">{usingDefault ? <Badge>Default</Badge> : definition.hint}</span>
       </span>
       <div className="a-row__actions">
         {!usingDefault && (
-          <Button variant="ghost" onClick={() => onChoose({ mediaKey: null, alt: null })}>
-            Reset
+          <Button variant="ghost" icon={<IconTrash />} onClick={() => onChoose({ mediaKey: null, alt: null })} aria-label={`Remove your photo from ${slot.label}. The default returns.`}>
+            Remove
           </Button>
         )}
         <Button icon={<IconReplace />} onClick={() => setPicking(true)}>

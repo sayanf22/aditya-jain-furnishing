@@ -1,7 +1,7 @@
 // "Replace" for a photo that is already in use: the photo store is keyed by a
 // hash of the file, so replacing means pointing every place that shows the old
 // photo at the new one. Each step is one ordinary API call.
-import type { AdminCategory, AdminProduct, MediaAsset, SiteImage } from "@/lib/admin-api";
+import { isReplaceableSlot, type AdminCategory, type AdminProduct, MediaAsset, SiteImage } from "@/lib/admin-api";
 import { api } from "./api";
 import type { AdminSubcategory } from "@/lib/admin-api";
 
@@ -22,7 +22,6 @@ export async function replaceEverywhere(old: MediaAsset, next: MediaAsset): Prom
   for (const category of categories) {
     const patch: Record<string, string> = {};
     if (category.imageKey === old.key) patch.imageKey = next.key;
-    if (category.heroImageKey === old.key) patch.heroImageKey = next.key;
     if (Object.keys(patch).length) {
       await api.patch(`/categories/${category.id}`, patch);
       changed += 1;
@@ -37,7 +36,7 @@ export async function replaceEverywhere(old: MediaAsset, next: MediaAsset): Prom
 
   const { slots } = await api.get<{ slots: SiteImage[] }>("/site/images");
   for (const slot of slots) {
-    if (slot.mediaKey === old.key) {
+    if (isReplaceableSlot(slot.slot) && slot.mediaKey === old.key) {
       await api.put(`/site/images/${slot.slot}`, { mediaKey: next.key, alt: slot.alt });
       changed += 1;
     }

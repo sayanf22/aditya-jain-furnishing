@@ -173,7 +173,7 @@ export function DesignsScreen() {
             refresh();
           }}
         >
-          <p>The design is removed from the site. Its photos stay in your library.</p>
+          <p>The design is removed from the site. Its photos are removed too, unless another place uses them.</p>
         </ConfirmDialog>
       )}
 

@@ -175,7 +175,7 @@ function PhotoDetail({ asset, onClose, onChanged, onDeleted, onReplaced }: Detai
             onDeleted();
           }}
         >
-          <p>The photo is removed from your library for good.</p>
+          <p>The photo is removed from your library and from storage for good.</p>
         </ConfirmDialog>
       )}
     </Sheet>
