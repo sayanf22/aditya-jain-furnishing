@@ -56,6 +56,7 @@ const ROUTES: Route[] = [
 
   route("GET", "/media", media.listMedia),
   route("POST", "/media", media.uploadMedia),
+  route("POST", "/media/sweep", media.sweepMedia),
   route("PATCH", "/media/:id", media.updateMedia),
   route("DELETE", "/media/:id", media.deleteMedia),
 

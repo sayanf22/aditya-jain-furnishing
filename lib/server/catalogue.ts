@@ -3,6 +3,7 @@
 import type { AdminCategory, AdminSubcategory, Ok } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx } from "./context";
+import { removeUnusedMedia } from "./media";
 import { bit, applyOrder, bumpVersion, checkImageKey, freeSlug, slugify } from "./shared";
 import { bool, fail, idField, idList, idParam, nullable, optText, parse, readJson, slug, text } from "./http";
 
@@ -160,7 +161,8 @@ export async function updateCategory(c: Ctx): Promise<AdminCategory> {
   }
   if (body.visible !== undefined) sets.push(["visible", bit(body.visible)]);
   if (body.imageKey !== undefined) sets.push(["image_key", await checkImageKey(c, body.imageKey, "imageKey")]);
-  if (body.heroImageKey !== undefined) sets.push(["hero_image_key", await checkImageKey(c, body.heroImageKey, "heroImageKey")]);
+  // Every page header photo is fixed.
+  if (body.heroImageKey !== undefined) throw fail(400, "NOT_REPLACEABLE", "Header photos are fixed and cannot be changed.", "heroImageKey");
   if (sets.length === 0) throw fail(400, "INVALID", "Nothing to change.");
   // Column names above are fixed strings from this function, never from the request.
   await c.env.DB.batch([
@@ -176,9 +178,20 @@ export async function deleteCategory(c: Ctx): Promise<Ok> {
   const row = await c.env.DB.prepare("SELECT name FROM categories WHERE id = ?1").bind(id).first<{ name: string }>();
   if (!row) throw fail(404, "NOT_FOUND", "That collection was not found.");
   if ((c.url.searchParams.get("confirm") ?? "").trim() !== row.name) throw fail(400, "CONFIRM_MISMATCH", "Type the collection name to confirm.", "confirm");
+  // Photos of the collection, its types and its designs: removed from D1 and R2 afterwards if nothing else uses them.
+  const { results: held } = await c.env.DB
+    .prepare(
+      `SELECT image_key AS k FROM categories WHERE id = ?1
+       UNION SELECT hero_image_key FROM categories WHERE id = ?1
+       UNION SELECT image_key FROM subcategories WHERE category_id = ?1
+       UNION SELECT image_key FROM product_images WHERE product_id IN (SELECT id FROM products WHERE category_id = ?1)`,
+    )
+    .bind(id)
+    .all<{ k: string | null }>();
   // Types and designs go with it (foreign keys: ON DELETE CASCADE).
   await c.env.DB.batch([c.env.DB.prepare("DELETE FROM categories WHERE id = ?1").bind(id), bumpVersion(c)]);
-  audit(c, "category.delete", "category", id, { name: row.name });
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  audit(c, "category.delete", "category", id, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }
 
@@ -267,6 +280,14 @@ export async function deleteSubcategory(c: Ctx): Promise<Ok> {
   const subId = idParam(c.params[0]);
   const row = await subRow(c, subId);
   if ((c.url.searchParams.get("confirm") ?? "").trim() !== row.name) throw fail(400, "CONFIRM_MISMATCH", "Type the name to confirm.", "confirm");
+  const { results: held } = await c.env.DB
+    .prepare(
+      `WITH RECURSIVE d(id) AS (SELECT ?1 UNION ALL SELECT s.id FROM subcategories s JOIN d ON s.parent_id = d.id)
+       SELECT image_key AS k FROM subcategories WHERE id IN (SELECT id FROM d)
+       UNION SELECT image_key FROM product_images WHERE product_id IN (SELECT id FROM products WHERE subcategory_id IN (SELECT id FROM d))`,
+    )
+    .bind(subId)
+    .all<{ k: string | null }>();
   // products.subcategory_id is ON DELETE SET NULL, so designs in this type and
   // the types below it are removed explicitly; the sub-types go by cascade.
   await c.env.DB.batch([
@@ -279,7 +300,8 @@ export async function deleteSubcategory(c: Ctx): Promise<Ok> {
     c.env.DB.prepare("DELETE FROM subcategories WHERE id = ?1").bind(subId),
     bumpVersion(c),
   ]);
-  audit(c, "subcategory.delete", "subcategory", subId, { name: row.name });
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  audit(c, "subcategory.delete", "subcategory", subId, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }
 

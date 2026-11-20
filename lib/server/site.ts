@@ -1,9 +1,9 @@
 // Site pages: photo places, business details, testimonials.
-import { SITE_IMAGE_SLOTS, type Ok, type SiteImage, type SiteSettings, type Testimonial } from "../admin-api";
+import { SITE_IMAGE_SLOTS, isHeroSlot, type Ok, type SiteImage, type SiteSettings, type Testimonial } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx } from "./context";
 import { bool, fail, idList, idParam, nullable, optText, parse, readJson, text, type Rule } from "./http";
-import { toAsset } from "./media";
+import { removeUnusedMedia, toAsset } from "./media";
 import { applyOrder, bit, bumpVersion, checkImageKey } from "./shared";
 
 // ------------------------------------------------------------------ photos
@@ -31,24 +31,29 @@ function slotImage(def: (typeof SITE_IMAGE_SLOTS)[number], r: SlotRow | undefine
 
 export async function setSiteImage(c: Ctx): Promise<SiteImage> {
   const slot = c.params[0];
+  if (isHeroSlot(slot)) throw fail(400, "NOT_REPLACEABLE", "Hero photos are fixed and cannot be changed.");
   const def = SITE_IMAGE_SLOTS.find((s) => s.slot === slot);
   if (!def) throw fail(404, "NOT_FOUND", "That place was not found.");
   const body = parse(await readJson(c.request), { mediaKey: nullable(text(120, 1)), alt: optText(200) }, ["mediaKey"]);
   const key = body.mediaKey ?? null;
   if (key !== null) {
+    // Default photos are never stored: a place without an upload shows its default on its own.
     if (!key.startsWith("m/")) throw fail(400, "INVALID", "Pick a photo from the library.", "mediaKey");
     await checkImageKey(c, key, "mediaKey");
     const media = await c.env.DB.prepare("SELECT width FROM media WHERE key = ?1").bind(key).first<{ width: number }>();
     const needed = Math.min(...def.widths);
     if (media && media.width < needed) throw fail(400, "TOO_SMALL", `This photo is too small for this place. Use one at least ${needed} pixels wide.`, "mediaKey");
   }
+  const previous = (await c.env.DB.prepare("SELECT media_key FROM site_images WHERE slot = ?1").bind(slot).first<{ media_key: string | null }>())?.media_key ?? null;
   await c.env.DB.batch([
     c.env.DB
       .prepare("INSERT INTO site_images (slot, media_key, alt, updated_at) VALUES (?1, ?2, ?3, datetime('now')) ON CONFLICT (slot) DO UPDATE SET media_key = ?2, alt = ?3, updated_at = datetime('now')")
       .bind(slot, key, key === null ? null : (body.alt ?? null)),
     bumpVersion(c),
   ]);
-  audit(c, "site.image", "site_image", slot, { mediaKey: key });
+  // Back to the default: the owner's upload goes from D1 and R2 unless another place still uses it.
+  const removed = key === null ? await removeUnusedMedia(c.env, [previous]) : 0;
+  audit(c, "site.image", "site_image", slot, { mediaKey: key, removed });
   const { slots } = await listSiteImages(c);
   return slots.find((s) => s.slot === slot)!;
 }

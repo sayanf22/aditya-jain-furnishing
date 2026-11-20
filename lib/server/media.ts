@@ -2,13 +2,13 @@
 // Upload rules follow the OWASP File Upload cheat sheet: the type is checked
 // from the file's own bytes, sizes and counts are capped, and names are
 // generated from a hash, never taken from the client.
-import { MEDIA_WIDTHS, SITE_IMAGE_SLOTS, type MediaAsset, type Ok, type Page } from "../admin-api";
+import { MEDIA_WIDTHS, SITE_IMAGE_SLOTS, isProtectedDefault, type MediaAsset, type Ok, type Page, type SweepResult } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx } from "./context";
 import type { AdminEnv } from "./env";
 import { hex } from "./crypto";
 import { decodeCursor, encodeCursor, fail, idParam, int, iso, nullable, optText, pageLimit, parse, readBytes, readJson } from "./http";
-import { likeTerm } from "./shared";
+import { MEDIA_KEY, likeTerm } from "./shared";
 
 const MAX_FILE = 1_500_000;
 const MAX_TOTAL = 6_000_000;
@@ -245,14 +245,92 @@ export async function deleteMedia(c: Ctx): Promise<Ok> {
   const id = idParam(c.params[0]);
   const row = await c.env.DB.prepare(`SELECT ${COLS} FROM media WHERE id = ?1`).bind(id).first<MediaRow>();
   if (!row) throw fail(404, "NOT_FOUND", "That photo was not found.");
+  // Default photos are static files in public/demo/: they have no library row and can never be deleted here.
+  if (isProtectedDefault(row.key) || !MEDIA_KEY.test(row.key)) throw fail(403, "PROTECTED_DEFAULT", "A default photo cannot be deleted.");
   const usedBy = (await usageOf(c.env, [row.key])).get(row.key) ?? [];
   if (usedBy.length > 0) {
     throw fail(409, "MEDIA_IN_USE", "This photo is in use. Replace it where it is used, then delete it.", undefined, { usedBy });
   }
   await c.env.DB.prepare("DELETE FROM media WHERE id = ?1").bind(id).run();
-  await c.env.MEDIA.delete(row.widths.split(",").map((w) => `${row.key}-${w}.webp`));
+  await deleteFiles(c.env, row.key, row.widths);
   audit(c, "media.delete", "media", id, { key: row.key });
   return { ok: true };
+}
+
+// --------------------------------------------------- lifecycle and sweeping
+
+/** Deletes every size file of one photo from R2. Only names of the form m/<16 hex>-<width>.webp are ever touched. */
+async function deleteFiles(env: AdminEnv, key: string, widths: string): Promise<void> {
+  if (!MEDIA_KEY.test(key)) return;
+  const names = widths.split(",").filter((w) => /^\d{3,4}$/.test(w)).map((w) => `${key}-${w}.webp`);
+  if (names.length > 0) await env.MEDIA.delete(names);
+}
+
+/**
+ * Deletes these photos (D1 row and every R2 size file) when nothing uses them any more.
+ * Call it after the row that used them is gone. Default photos (demo/...) and anything
+ * that is not a library key are skipped. Returns how many photos were removed.
+ */
+export async function removeUnusedMedia(env: AdminEnv, keys: (string | null | undefined)[]): Promise<number> {
+  const candidates = [...new Set(keys.filter((k): k is string => typeof k === "string" && MEDIA_KEY.test(k)))];
+  if (candidates.length === 0) return 0;
+  const used = await usageOf(env, candidates);
+  const unused = candidates.filter((k) => !used.has(k));
+  if (unused.length === 0) return 0;
+  const { results } = await env.DB.prepare("SELECT key, widths FROM media WHERE key IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(unused)).all<{ key: string; widths: string }>();
+  if (results.length === 0) return 0;
+  await env.DB.prepare("DELETE FROM media WHERE key IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(results.map((r) => r.key))).run();
+  for (const r of results) await deleteFiles(env, r.key, r.widths);
+  return results.length;
+}
+
+const SWEEP_AGE_MS = 60 * 60 * 1000; // a fresh upload has an hour to be attached to something
+const SWEEP_MAX_PHOTOS = 600;
+const SWEEP_MAX_FILES = 3000;
+
+/** Removes photos nothing uses and R2 files with no library row (failed uploads), both older than an hour. */
+export async function sweepOrphans(env: AdminEnv, now = Date.now()): Promise<SweepResult> {
+  const cutoff = now - SWEEP_AGE_MS;
+  let photos = 0;
+  let files = 0;
+
+  // Unused photos in the library.
+  let after = 0;
+  for (let seen = 0; seen < SWEEP_MAX_PHOTOS; ) {
+    const { results } = await env.DB
+      .prepare("SELECT id, key FROM media WHERE id > ?1 AND created_at < datetime(?2 / 1000, 'unixepoch') ORDER BY id LIMIT 100")
+      .bind(after, cutoff)
+      .all<{ id: number; key: string }>();
+    if (results.length === 0) break;
+    photos += await removeUnusedMedia(env, results.map((r) => r.key));
+    after = results[results.length - 1].id;
+    seen += results.length;
+  }
+
+  // Files in R2 that the library does not know (an upload that failed half way).
+  let cursor: string | undefined;
+  for (let scanned = 0; scanned < SWEEP_MAX_FILES; ) {
+    const page = await env.MEDIA.list({ prefix: "m/", limit: 500, cursor });
+    scanned += page.objects.length;
+    const old = page.objects.filter((o) => o.uploaded.getTime() < cutoff && /^m\/[0-9a-f]{16}-\d{3,4}\.webp$/.test(o.key));
+    if (old.length > 0) {
+      const keys = [...new Set(old.map((o) => o.key.slice(0, 18)))];
+      const { results } = await env.DB.prepare("SELECT key, widths FROM media WHERE key IN (SELECT value FROM json_each(?1))").bind(JSON.stringify(keys)).all<{ key: string; widths: string }>();
+      const known = new Map(results.map((r) => [r.key, r.widths.split(",")]));
+      const stray = old.filter((o) => !known.get(o.key.slice(0, 18))?.includes(o.key.slice(19, -5))).map((o) => o.key);
+      for (let i = 0; i < stray.length; i += 100) await env.MEDIA.delete(stray.slice(i, i + 100));
+      files += stray.length;
+    }
+    if (!page.truncated) break;
+    cursor = page.cursor;
+  }
+  return { photos, files };
+}
+
+export async function sweepMedia(c: Ctx): Promise<SweepResult> {
+  const result = await sweepOrphans(c.env);
+  audit(c, "media.sweep", "media", undefined, { ...result });
+  return result;
 }
 
 // ------------------------------------------------------------ public /m/*

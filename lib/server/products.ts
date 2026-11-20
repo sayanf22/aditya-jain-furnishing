@@ -3,6 +3,7 @@ import type { AdminProduct, AdminProductImage, Ok, Page } from "../admin-api";
 import { holdsTypes } from "./catalogue";
 import { audit } from "./audit";
 import type { Ctx } from "./context";
+import { removeUnusedMedia } from "./media";
 import { bool, decodeCursor, encodeCursor, fail, idField, idList, idParam, iso, nullable, optText, pageLimit, parse, readJson, text } from "./http";
 import { bit, applyOrder, bumpVersion, freeSlug, likeTerm, MEDIA_KEY, slugify } from "./shared";
 
@@ -166,8 +167,11 @@ export async function deleteProduct(c: Ctx): Promise<Ok> {
   const pid = idParam(c.params[0]);
   const row = await c.env.DB.prepare("SELECT name FROM products WHERE id = ?1").bind(pid).first<{ name: string }>();
   if (!row) throw fail(404, "NOT_FOUND", "That design was not found.");
+  const { results: held } = await c.env.DB.prepare("SELECT image_key AS k FROM product_images WHERE product_id = ?1").bind(pid).all<{ k: string }>();
   await c.env.DB.batch([c.env.DB.prepare("DELETE FROM products WHERE id = ?1").bind(pid), bumpVersion(c)]);
-  audit(c, "product.delete", "product", pid, { name: row.name });
+  // The design's photos leave D1 and R2 too, unless another place still uses them.
+  const removed = await removeUnusedMedia(c.env, held.map((r) => r.k));
+  audit(c, "product.delete", "product", pid, { name: row.name, photosRemoved: removed });
   return { ok: true };
 }
 
