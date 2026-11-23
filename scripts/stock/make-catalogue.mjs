@@ -121,7 +121,7 @@ const lines = [
 for (const [slug, key] of Object.entries(spec.categoryHeroes)) lines.push(`UPDATE categories SET hero_image_key = ${sql(key)} WHERE slug = ${sql(slug)};`);
 lines.push(`INSERT INTO settings (key, value) VALUES ('collection_hero_image', 'demo/sc-collection') ON CONFLICT (key) DO UPDATE SET value = excluded.value;`);
 
-const SUB_CATEGORY = { 1: [10, 11, 12, 13, 14, 15, 16, 17, 20], 2: [100, 110, 111, 112, 113, 114, 115, 120, 121, 122, 130, 131, 132, 133, 134, 140, 150, 200, 201, 202, 203, 204, 205], 3: [300, 301] };
+const SUB_CATEGORY = { 1: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 2: [100, 110, 111, 112, 113, 114, 115, 120, 121, 122, 130, 131, 132, 133, 134, 140, 200, 201, 202, 203, 204, 205], 3: [300, 301] };
 const categoryOf = (sub) => Number(Object.entries(SUB_CATEGORY).find(([, ids]) => ids.includes(sub))?.[0]);
 
 const seen = new Set();

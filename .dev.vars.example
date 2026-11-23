@@ -28,3 +28,7 @@ RESEND_API_KEY=
 # Local development only: send the code to the stub (node worker/dev/email-stub.mjs) instead of Resend.
 # Honoured only when NEXTJS_ENV=development and the address is loopback; worker/dev/start.mjs sets it.
 # DEV_EMAIL_STUB=http://127.0.0.1:8799
+# Only this address may create the dashboard account (Worker secret). Optional locally.
+ADMIN_EMAIL=
+# Resend: the API key is a Worker secret; the sender is RESEND_FROM in wrangler.jsonc.
+RESEND_API_KEY=

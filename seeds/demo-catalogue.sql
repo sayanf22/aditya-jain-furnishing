@@ -109,10 +109,6 @@ INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VAL
 INSERT INTO product_images (product_id, image_key, width, height, alt, position) VALUES (1048, 'demo/p-2-print-bright-floral', 1200, 1500, 'Print, Bright Floral', 1);
 INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VALUES (1049, 2, 140, 'print-rose-toile', 'Print, Rose Toile', 3);
 INSERT INTO product_images (product_id, image_key, width, height, alt, position) VALUES (1049, 'demo/p-2-print-rose-toile', 1200, 1500, 'Print, Rose Toile', 1);
-INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VALUES (1050, 2, 150, 'trim-gold-fringe', 'Trim, Gold Fringe', 1);
-INSERT INTO product_images (product_id, image_key, width, height, alt, position) VALUES (1050, 'demo/p-2-trim-gold-fringe', 800, 1000, 'Trim, Gold Fringe', 1);
-INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VALUES (1051, 2, 150, 'trim-tassel-fringe', 'Trim, Tassel Fringe', 2);
-INSERT INTO product_images (product_id, image_key, width, height, alt, position) VALUES (1051, 'demo/p-2-trim-tassel-fringe', 1200, 1500, 'Trim, Tassel Fringe', 1);
 INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VALUES (1052, 2, 201, 'roller-graphite', 'Roller, Graphite', 1);
 INSERT INTO product_images (product_id, image_key, width, height, alt, position) VALUES (1052, 'demo/p-2-roller-graphite', 1200, 1500, 'Roller, Graphite', 1);
 INSERT INTO products (id, category_id, subcategory_id, slug, name, position) VALUES (1053, 2, 201, 'roller-red', 'Roller, Red', 2);

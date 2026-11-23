@@ -8,6 +8,7 @@ import type { AdminEnv } from "../lib/server/env";
 import * as enquiries from "../lib/server/enquiries";
 import { API_HEADERS, ApiFail, errorResponse, fail, json } from "../lib/server/http";
 import * as media from "../lib/server/media";
+import * as loginotp from "../lib/server/loginotp";
 import * as recovery from "../lib/server/recovery";
 import * as products from "../lib/server/products";
 import * as publish from "../lib/server/publish";
@@ -30,6 +31,8 @@ const ROUTES: Route[] = [
   route("GET", "/auth/status", auth.authStatus, true),
   route("POST", "/auth/setup", auth.setup, true),
   route("POST", "/auth/login", auth.login, true),
+  route("POST", "/auth/login/verify", loginotp.loginVerify, true),
+  route("POST", "/auth/login/resend", loginotp.loginResend, true),
   route("POST", "/auth/code/request", recovery.codeRequest, true),
   route("POST", "/auth/code/verify", recovery.codeVerify, true),
   route("POST", "/auth/password/reset", recovery.passwordReset),

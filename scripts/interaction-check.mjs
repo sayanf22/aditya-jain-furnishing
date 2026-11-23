@@ -189,7 +189,8 @@ async function devtools(page) {
   );
   await page.waitForTimeout(1200);
   const afterRerender = await page.locator(".cat-card").evaluateAll((els) => els.filter((el) => Number(getComputedStyle(el).opacity) > 0.9).length);
-  ok("category cards stay visible after a re-render", afterRerender === 5, `${afterRerender} of 5`);
+  const totalCards = await page.locator(".cat-card").count();
+  ok("category cards stay visible after a re-render", totalCards >= 5 && afterRerender === totalCards, `${afterRerender} of ${totalCards}`);
   await page.close();
 }
 
@@ -544,7 +545,7 @@ async function devtools(page) {
   ok("header turns solid after scrolling", after.header !== "rgba(0, 0, 0, 0)", after.header);
 
   const tiles = await page.$$eval(".about-tile", (els) => els.map((a) => a.getAttribute("href")));
-  ok("About Us links to all five collections", tiles.length === 5 && tiles.every((h) => h.startsWith("/collection/")), tiles.join(", "));
+  ok("About Us links to every collection", tiles.length >= 5 && tiles.every((h) => h.startsWith("/collection/")), tiles.join(", "));
   const nav = await page.$$eval('nav[aria-label="Main"] a', (els) => els.map((a) => a.textContent.trim()));
   ok("menu shows About Us instead of Gallery", nav.includes("About Us") && !nav.includes("Gallery"), nav.join(" · "));
   const waText = await page.evaluate(() => {
@@ -641,7 +642,7 @@ async function devtools(page) {
     steps: document.querySelectorAll('section[aria-label="How to browse"] li').length,
     tree: document.querySelectorAll("aside .tree-root > .tree-item").length,
   }));
-  ok("Collection page: five described collections, how to browse, the tree, no product wall", index.cards === 5 && index.described === 5 && index.products === 0 && index.steps === 3 && index.tree === 5, JSON.stringify(index));
+  ok("Collection page: every collection described, how to browse, the tree, no product wall", index.cards >= 5 && index.described === index.cards && index.products === 0 && index.steps === 3 && index.tree === index.cards, JSON.stringify(index));
 
   await page.goto(new URL("/collection/curtains-blinds/curtains/sheer/organza", url).href, { waitUntil: "networkidle" });
   const where = await page.evaluate(() => ({
@@ -670,7 +671,7 @@ async function devtools(page) {
   await page.goto(new URL("/collection/curtains-blinds/curtains", url).href, { waitUntil: "networkidle" });
   const typeCards = await page.$$eval("main a.type-card", (els) => els.map((a) => a.getAttribute("href")));
   const noProducts = (await page.locator(".product-card").count()) === 0;
-  ok("a page with types lists them as cards (no designs mixed in)", typeCards.length === 5 && noProducts && typeCards.every((h) => h.startsWith("/collection/curtains-blinds/curtains/")), `${typeCards.length} cards`);
+  ok("a page with types lists them as cards (no designs mixed in)", typeCards.length === 4 && noProducts && typeCards.every((h) => h.startsWith("/collection/curtains-blinds/curtains/")), `${typeCards.length} cards`);
 
   // Viewer on a page with designs
   await page.goto(new URL("/collection/wallpaper", url).href, { waitUntil: "networkidle" });

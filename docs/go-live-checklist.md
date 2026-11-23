@@ -87,3 +87,12 @@ Replace `<site>` with the live origin.
 
 - [ ] Verify the domain in Resend, set `RESEND_FROM` in `wrangler.jsonc` to an address on it, push.
 - [ ] Add the custom domain to the Worker, update `EXPORT_URL`, and consider HSTS `includeSubDomains` once nothing runs on plain http.
+
+## 6. Emailed sign-in code (added 23 Nov 2026)
+Every dashboard sign-in is email + password, then a 6-digit code emailed to the owner (`LOGIN_OTP` = `required` in `wrangler.jsonc`).
+- [ ] `migrations-auth/0003_login_challenges.sql` applied to `AUTH_DB` (done live 23 Nov 2026).
+- [ ] `ADMIN_EMAIL` Worker secret = the owner's email. Only that address can create the account (setup refuses any other). Set live 23 Nov 2026.
+- [ ] `RESEND_API_KEY` Worker secret set. Until it is, sign-in answers "Sign-in needs an emailed code, and email is not set up yet" (it never skips the code). The first-time setup still works without it, and signs in once.
+- [ ] The owner's email is the Resend account's own address while `RESEND_FROM` is `onboarding@resend.dev` (Resend delivers nowhere else until a domain is verified).
+- Locked out (key lost, email changed)? With the Cloudflare MCP: delete the row in `admin_users` of `delta-auth-db`, then `/admin/setup` works again with `SETUP_CODE` (set a new one first).
+- Tests: `WRANGLER_EXTRA="--var LOGIN_OTP:required" node worker/dev/start.mjs`, then `node worker/dev/otp-check.mjs` and `node scripts/otp-ui-check.mjs`. Without that variable the local Worker keeps password-only sign-in so the older suites run unchanged.

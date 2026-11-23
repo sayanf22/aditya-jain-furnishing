@@ -74,11 +74,12 @@ Stored in `migrations/0003_business_settings.sql` (editable later from the dashb
 **Catalogue** (the client's list, 15 Nov 2026; `migrations/0007_catalogue_v2.sql`)
 | # | Category | Inside |
 |---|---|---|
-| 1 | Upholstery | Fabrics (Suede, Velvet, Boucle, Jacquard, Jute, Prints, Tweed) · Leatherite |
-| 2 | Curtains & Blinds | Curtains: Main (Linen, Jacquard, Boucle, Velvet, Polyester), Blackouts and Dimouts (100% Blackout, 80% Blackout), Sheer (Linen, Embroidery, Tissue, Organza), Prints, Trims · Blinds: Roller, Roman, Zebra, Wooden Blinds, Prints |
+| 1 | Upholstery | Fabrics (Suede, Velvet, Boucle, Jacquard, Jute, Chenille, Linen, Tweed, Prints) · Leatherite |
+| 2 | Curtains & Blinds | Curtains: Main (Linen, Jacquard, Boucle, Velvet, Polyester), Blackouts and Dimouts (100% Blackout, 80% Blackout), Sheer (Linen, Embroidery, Tissue, Organza), Prints · Blinds: Roller, Roman, Zebra, Wooden Blinds, Prints |
 | 3 | Carpets & Mats | Carpets · Mats |
 | 4 | Wallpapers | One collection |
 | 5 | Cushions | One collection |
+| 6 | Borders & Laces | One collection (added 23 Nov 2026, client's list) |
 
 Every category and subcategory page also lists all the products inside it, so there is no separate "all" page.
 

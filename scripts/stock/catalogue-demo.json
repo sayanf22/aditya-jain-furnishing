@@ -122,8 +122,6 @@
     { "in": 140, "name": "Print, Manufacture Toile", "src": "toile-b", "crop": [0.25, 0.05, 0.5, 0.9] },
     { "in": 140, "name": "Print, Bright Floral", "src": "curtain-print", "crop": [0.05, 0.15, 0.4, 0.7] },
     { "in": 140, "name": "Print, Rose Toile", "src": "toile-rose", "crop": [0.05, 0.05, 0.9, 0.9] },
-    { "in": 150, "name": "Trim, Gold Fringe", "src": "fringe-a", "crop": [0.1, 0.05, 0.6, 0.9] },
-    { "in": 150, "name": "Trim, Tassel Fringe", "src": "fringe-b", "crop": [0.1, 0.05, 0.8, 0.9] },
 
     { "in": 201, "name": "Roller, Graphite", "src": "roller", "crop": [0, 0, 0.55, 0.75] },
     { "in": 201, "name": "Roller, Red", "src": "roller-red", "crop": [0.3, 0, 0.45, 0.7] },
