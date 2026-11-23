@@ -44,6 +44,19 @@ export const clearedCookie = () => `${COOKIE}=; Path=/; Max-Age=0; Secure; HttpO
 
 // ------------------------------------------------------------------- CSRF
 
+// Local development: `next dev` (port 3000) forwards /api/admin to the Worker (port 8787), so the
+// browser's Origin has another port than the Worker's own address. This only applies when the
+// Worker itself is reached on a loopback address, which never happens in production.
+const isLoopback = (host: string) => host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    return u.protocol === "http:" && isLoopback(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Same-site checks for every request that changes something (OWASP CSRF
  * Prevention: Fetch Metadata + Origin). Also used, without the token, on the
@@ -52,9 +65,10 @@ export const clearedCookie = () => `${COOKIE}=; Path=/; Max-Age=0; Secure; HttpO
 export function checkSameOrigin(request: Request): void {
   const site = request.headers.get("Sec-Fetch-Site");
   const origin = request.headers.get("Origin");
-  const own = new URL(request.url).origin;
+  const ownUrl = new URL(request.url);
+  const own = ownUrl.origin;
   if (site === "cross-site") throw fail(403, "CSRF", "That request was blocked.");
-  if (origin !== null && origin !== own) throw fail(403, "CSRF", "That request was blocked.");
+  if (origin !== null && origin !== own && !(isLoopback(ownUrl.hostname) && isLoopbackOrigin(origin))) throw fail(403, "CSRF", "That request was blocked.");
   // Without Fetch Metadata (older browsers) the Origin header must be there.
   if (site === null && origin === null) throw fail(403, "CSRF", "That request was blocked.");
   if (site === "same-site" && origin === null) throw fail(403, "CSRF", "That request was blocked.");

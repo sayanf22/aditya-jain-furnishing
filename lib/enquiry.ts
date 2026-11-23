@@ -48,7 +48,17 @@ async function processEnquiry(request: Request, env: EnquiryEnv, ctx?: Later): P
 
   // Only accept posts from this site's own pages.
   const origin = request.headers.get("Origin");
-  if (request.headers.get("Sec-Fetch-Site") === "cross-site" || (origin !== null && origin !== new URL(request.url).origin)) {
+  const own = new URL(request.url);
+  // Local development only: `next dev` (port 3000) forwards to the Worker (port 8787); never true in production.
+  const devLoopback = (() => {
+    const local = (h: string) => h === "localhost" || h === "127.0.0.1" || h === "[::1]";
+    try {
+      return origin !== null && local(own.hostname) && local(new URL(origin).hostname);
+    } catch {
+      return false;
+    }
+  })();
+  if (request.headers.get("Sec-Fetch-Site") === "cross-site" || (origin !== null && origin !== own.origin && !devLoopback)) {
     return json({ error: "Forbidden" }, 403);
   }
   if (!(request.headers.get("Content-Type") ?? "").includes("application/json")) {
