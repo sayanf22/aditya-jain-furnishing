@@ -1,21 +1,22 @@
 "use client";
 
-// Security: password, authenticator app, signed-in devices, recent activity.
+// Security: who can sign in, password, authenticator app, signed-in devices, recent activity.
 import { useState, type FormEvent, type ReactNode } from "react";
-import type { AuditEntry, SessionInfo, TwoFactorStart } from "@/lib/admin-api";
+import type { AuditEntry, NewMember, NewMemberResponse, SessionInfo, TeamMember, TwoFactorStart } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure } from "./api";
 import { PasswordHint } from "./AuthForms";
 import { dateTime, timeAgo } from "./format";
 import { usePaged, useResource } from "./hooks";
-import { IconCopy, IconDevice, IconExternal } from "./icons";
+import { IconCopy, IconDevice, IconExternal, IconPlus, IconTrash } from "./icons";
 import { useSession } from "./session";
-import { Badge, Button, Empty, ErrorNote, Field, Loading, PageHeader, PasswordInput, TextInput, useToast } from "./ui";
+import { Badge, Button, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, PageHeader, PasswordInput, TextInput, useToast } from "./ui";
 
 export function SecurityScreen() {
   return (
     <>
       <PageHeader title="Security" />
       <div className="a-stack a-stack--lg">
+        <PeopleCard />
         <PasswordCard />
         <TwoFactorCard />
         <DevicesCard />
@@ -34,6 +35,103 @@ function Card({ title, note, children }: { title: string; note?: ReactNode; chil
       </div>
       {children}
     </section>
+  );
+}
+
+/** Who can sign in. A new person chooses their own password with an emailed code, so none is ever shared. */
+function PeopleCard() {
+  const toast = useToast();
+  const people = useResource<{ items: TeamMember[] }>("/users");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<TeamMember | null>(null);
+  const form = useFieldFailure();
+  const items = people.data?.items ?? [];
+
+  async function add(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    form.clear();
+    try {
+      const body: NewMember = { email: email.trim(), ...(name.trim() ? { name: name.trim() } : {}) };
+      const made = await api.post<NewMemberResponse>("/users", body);
+      toast(made.invited ? "Added. We emailed them how to start." : "Added. Ask them to use “Forgot password or first time?” on the sign-in page.");
+      setEmail("");
+      setName("");
+      people.reload();
+    } catch (error) {
+      form.set(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="People" note={<Badge tone="neutral">{items.length || ""}</Badge>}>
+      <p className="a-card__text">Everyone here can sign in, and gets an email about each new enquiry.</p>
+      {people.error && !people.data ? (
+        <ErrorNote error={people.error} onRetry={people.reload} />
+      ) : !people.data ? (
+        <Loading />
+      ) : (
+        <ul className="a-devices a-people">
+          {items.map((person) => (
+            <li key={person.id} className="a-device">
+              <span className="a-person__initial" aria-hidden="true">
+                {(person.name || person.email).slice(0, 1).toUpperCase()}
+              </span>
+              <span className="a-device__text">
+                <span className="a-device__name">
+                  {person.name || person.email} {person.you && <Badge tone="green">You</Badge>} {person.waiting && <Badge tone="amber">Hasn’t signed in yet</Badge>}
+                </span>
+                <span className="a-device__meta">
+                  {person.name ? `${person.email} · ` : ""}
+                  {person.lastSignIn ? `Last sign-in ${timeAgo(person.lastSignIn).toLowerCase()}` : "Not signed in yet"}
+                </span>
+              </span>
+              {!person.you && (
+                <IconButton label={`Remove ${person.email}`} onClick={() => setRemoving(person)}>
+                  <IconTrash />
+                </IconButton>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="a-form a-people__add" onSubmit={add} noValidate>
+        <Field label="Add a person" error={form.field("email")} hint="They open the sign-in page, choose “Forgot password or first time?”, and set their own password.">
+          <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" autoComplete="off" required />
+        </Field>
+        <Field label="Name (optional)" error={form.field("name")}>
+          <TextInput value={name} onChange={(event) => setName(event.target.value)} maxLength={80} autoComplete="off" />
+        </Field>
+        {form.general && (
+          <p className="a-form__error" role="alert">
+            {form.general}
+          </p>
+        )}
+        <div className="a-actions">
+          <Button type="submit" variant="primary" busy={busy} icon={<IconPlus />}>
+            Add
+          </Button>
+        </div>
+      </form>
+      {removing && (
+        <ConfirmDialog
+          title={`Remove ${removing.name || removing.email}?`}
+          actionLabel="Remove"
+          onClose={() => setRemoving(null)}
+          onConfirm={async () => {
+            await api.del(`/users/${removing.id}`);
+            toast("Removed. Their devices are signed out.");
+            people.reload();
+          }}
+        >
+          <p>They can no longer sign in, and stop getting enquiry emails.</p>
+        </ConfirmDialog>
+      )}
+    </Card>
   );
 }
 

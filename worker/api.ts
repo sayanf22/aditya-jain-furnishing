@@ -23,7 +23,7 @@ export async function handleApi(request: Request, env: AdminEnv, exec: Execution
     return json({ ok: true });
   }
   if (pathname === "/api/enquiry") {
-    return handleEnquiry(request, env);
+    return handleEnquiry(request, env, exec);
   }
   if (pathname === "/api/content/export") {
     return handleExport(request, env, request.headers.get("CF-Connecting-IP") ?? "local");

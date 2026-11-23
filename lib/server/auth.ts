@@ -5,7 +5,6 @@
 import type { AdminUser, AuthStatus, LoginResponse, MeResponse, Ok, SessionInfo, TwoFactorStart } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx, Session } from "./context";
-import { createChallenge, ensureOtpPossible, otpRequired } from "./challenge";
 import { emailAvailable } from "./email";
 import { PBKDF2_ITERATIONS, b64u, decryptSecret, encryptSecret, fromB64u, hashPassword, pseudonym, randomBytes, randomToken, safeEqual, secretOk, sha256Hex } from "./crypto";
 import { fail, json, parse, readJson, text, type Rule } from "./http";
@@ -310,7 +309,6 @@ export async function login(c: Ctx): Promise<Response> {
   checkSameOrigin(c.request);
   await limitByIp(c);
   const body = parse(await readJson(c.request), { email, password: rawPassword, code }, ["email", "password"]);
-  ensureOtpPossible(c.env); // required but not possible: say so before any password work
   const keys = await loginKeys(c, body.email!);
   await ensureNotThrottled(c, keys);
   const attempt = await beginAttempt(c, keys);
@@ -348,12 +346,6 @@ export async function login(c: Ctx): Promise<Response> {
     const salt = randomBytes(16);
     const upgraded = await hashPassword(c.pepper, body.password!, salt);
     c.exec.waitUntil(c.env.AUTH_DB.prepare("UPDATE admin_users SET pw_salt = ?2, pw_hash = ?3, pw_iterations = ?4 WHERE id = ?1").bind(user.id, b64u(salt), upgraded, PBKDF2_ITERATIONS).run().then(() => undefined));
-  }
-  // Every sign-in needs the emailed code too (LOGIN_OTP=required): the password alone signs nobody in.
-  if (otpRequired(c.env)) {
-    const started = await createChallenge(c, user);
-    audit(c, "login_password_ok", "user", user.id, { next: "otp" }, { userId: user.id, email: user.email });
-    return json({ needsEmailCode: true, challenge: started.challenge, sentTo: started.sentTo } satisfies LoginResponse);
   }
   const { cookie } = await startSession(c, user.id, user.email, user.display_name, user.totp_enabled === 1);
   const held = readCookie(c.request.headers.get("Cookie"), COOKIE);

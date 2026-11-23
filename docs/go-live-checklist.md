@@ -88,11 +88,12 @@ Replace `<site>` with the live origin.
 - [ ] Verify the domain in Resend, set `RESEND_FROM` in `wrangler.jsonc` to an address on it, push.
 - [ ] Add the custom domain to the Worker, update `EXPORT_URL`, and consider HSTS `includeSubDomains` once nothing runs on plain http.
 
-## 6. Emailed sign-in code (added 23 Nov 2026)
-Every dashboard sign-in is email + password, then a 6-digit code emailed to the owner (`LOGIN_OTP` = `required` in `wrangler.jsonc`).
-- [ ] `migrations-auth/0003_login_challenges.sql` applied to `AUTH_DB` (done live 23 Nov 2026).
-- [ ] `ADMIN_EMAIL` Worker secret = the owner's email. Only that address can create the account (setup refuses any other). Set live 23 Nov 2026.
-- [ ] `RESEND_API_KEY` Worker secret set. Until it is, sign-in answers "Sign-in needs an emailed code, and email is not set up yet" (it never skips the code). The first-time setup still works without it, and signs in once.
-- [ ] The owner's email is the Resend account's own address while `RESEND_FROM` is `onboarding@resend.dev` (Resend delivers nowhere else until a domain is verified).
-- Locked out (key lost, email changed)? With the Cloudflare MCP: delete the row in `admin_users` of `delta-auth-db`, then `/admin/setup` works again with `SETUP_CODE` (set a new one first).
-- Tests: `WRANGLER_EXTRA="--var LOGIN_OTP:required" node worker/dev/start.mjs`, then `node worker/dev/otp-check.mjs` and `node scripts/otp-ui-check.mjs`. Without that variable the local Worker keeps password-only sign-in so the older suites run unchanged.
+## 6. Signing in, people and enquiry emails (updated 23 Nov 2026)
+Sign-in is email + password. The emailed 6-digit code is used only to set or reset a password ("Forgot password or first time? Email me a code"); it is not a second step at every sign-in (removed at the owner's request; `migrations-auth/0004` drops the unused table).
+- [ ] `RESEND_API_KEY` Worker secret set (done live 23 Nov 2026). Without it the sign-in page says emailed codes are not set up; password sign-in still works.
+- [ ] The first account was created by the lead (no setup screen needed): a row in `admin_users` of `delta-auth-db` with a password nobody knows. The owner opens `/admin/login`, chooses "Forgot password or first time?", types the emailed code and chooses a password.
+- [ ] More people: dashboard, Security, People, Add. They get an email on how to start and choose their own password the same way. Up to 10. Removing someone signs their devices out.
+- [ ] Enquiry emails: every person in People gets an email for each new enquiry from the website form (at most 20 an hour; the enquiry is always saved and shown in the dashboard). Mail is sent after the visitor has their answer, so the form never waits for it.
+- [ ] **Resend limit:** while `RESEND_FROM` is `onboarding@resend.dev`, Resend delivers only to the email address that owns the Resend account. Any other person added gets no code and no enquiry mail (Resend answers 403) until a domain is verified in Resend and `RESEND_FROM` is changed in `wrangler.jsonc`.
+- [ ] `ADMIN_EMAIL` Worker secret (optional): when set, the first-time setup page accepts only that address. With an account already created, setup is closed anyway.
+- Locked out (all passwords lost)? Use "Forgot password" first. If email is down: with the Cloudflare MCP, set a fresh unknown password row or delete the `admin_users` row, set a new `SETUP_CODE` secret, and run `/admin/setup`.

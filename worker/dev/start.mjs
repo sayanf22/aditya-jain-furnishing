@@ -49,8 +49,6 @@ const extra = (process.env.WRANGLER_EXTRA ?? "").split(/\s+/).filter(Boolean);
 if (HTTPS) extra.push("--local-protocol", "https");
 // Email codes go to the local stub (worker/dev/email-stub.mjs), never to Resend; the Worker honours this only in development.
 if (!extra.some((x) => x.startsWith("DEV_EMAIL_STUB"))) extra.push("--var", "NEXTJS_ENV:development", "--var", "DEV_EMAIL_STUB:http://127.0.0.1:8799");
-// wrangler.jsonc turns the emailed sign-in code on for the live site; local runs keep it off unless asked (WRANGLER_EXTRA="--var LOGIN_OTP:required"), so the password-only suites still run.
-if (!extra.some((x) => x.startsWith("LOGIN_OTP"))) extra.push("--var", "LOGIN_OTP:optional");
 const child = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--inspector-port", String(INSPECTOR), ...extra], {
   detached: true,
   stdio: ["ignore", log, log],

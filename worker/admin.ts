@@ -8,11 +8,11 @@ import type { AdminEnv } from "../lib/server/env";
 import * as enquiries from "../lib/server/enquiries";
 import { API_HEADERS, ApiFail, errorResponse, fail, json } from "../lib/server/http";
 import * as media from "../lib/server/media";
-import * as loginotp from "../lib/server/loginotp";
 import * as recovery from "../lib/server/recovery";
 import * as products from "../lib/server/products";
 import * as publish from "../lib/server/publish";
 import * as site from "../lib/server/site";
+import * as users from "../lib/server/users";
 import { listAudit } from "../lib/server/audit";
 import { secretOk } from "../lib/server/crypto";
 
@@ -31,8 +31,6 @@ const ROUTES: Route[] = [
   route("GET", "/auth/status", auth.authStatus, true),
   route("POST", "/auth/setup", auth.setup, true),
   route("POST", "/auth/login", auth.login, true),
-  route("POST", "/auth/login/verify", loginotp.loginVerify, true),
-  route("POST", "/auth/login/resend", loginotp.loginResend, true),
   route("POST", "/auth/code/request", recovery.codeRequest, true),
   route("POST", "/auth/code/verify", recovery.codeVerify, true),
   route("POST", "/auth/password/reset", recovery.passwordReset),
@@ -42,6 +40,9 @@ const ROUTES: Route[] = [
   route("POST", "/auth/2fa/start", auth.twoFactorStart),
   route("POST", "/auth/2fa/enable", auth.twoFactorEnable),
   route("POST", "/auth/2fa/disable", auth.twoFactorDisable),
+  route("GET", "/users", users.listUsers),
+  route("POST", "/users", users.addUser),
+  route("DELETE", "/users/:id", users.removeUser),
   route("GET", "/sessions", auth.listSessions),
   route("DELETE", "/sessions/:id", auth.endSession),
 

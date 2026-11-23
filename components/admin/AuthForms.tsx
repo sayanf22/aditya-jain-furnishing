@@ -79,14 +79,13 @@ function useAuthRedirect(wantSetup: boolean) {
   return { ready, status, resuming };
 }
 
-type Step = "password" | "email" | "code" | "totp" | "newpass" | "otp";
+type Step = "password" | "email" | "code" | "totp" | "newpass";
 const TITLES: Record<Step, string> = {
   password: "Sign in",
   email: "Email me a code",
   code: "Enter the code",
   totp: "Enter your code",
   newpass: "New password",
-  otp: "Check your email",
 };
 
 export function SignInScreen() {
@@ -101,30 +100,8 @@ export function SignInScreen() {
   const [next, setNext] = useState("");
   const [emailed, setEmailed] = useState(""); // the emailed code, kept while the authenticator code is asked for
   const [needsTotp, setNeedsTotp] = useState(false); // 2FA after a password sign-in
-  const [challenge, setChallenge] = useState(""); // the emailed sign-in code is asked for with this
-  const [sentTo, setSentTo] = useState("");
-  const [cooldown, setCooldown] = useState(0); // seconds until another code can be sent
-  const [resending, setResending] = useState(false);
   const [busy, setBusy] = useState(false);
   const form = useFormError();
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((s) => s - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [cooldown]);
-
-  async function resend() {
-    setResending(true);
-    form.clear();
-    try {
-      await api.post("/auth/login/resend", { challenge });
-      setCooldown(30);
-    } catch (error) {
-      form.set(error);
-    }
-    setResending(false);
-  }
 
   const go = (to: Step) => {
     setStep(to);
@@ -153,22 +130,6 @@ export function SignInScreen() {
           setBusy(false);
           return;
         }
-        if ("needsEmailCode" in result) {
-          // The password was right and a code was emailed. The password stays out of the next request.
-          setChallenge(result.challenge);
-          setSentTo(result.sentTo);
-          setPassword("");
-          setNeedsTotp(false);
-          setCooldown(30);
-          go("otp");
-          setBusy(false);
-          return;
-        }
-        await finish();
-        return;
-      }
-      if (step === "otp") {
-        await api.post<LoginResponse>("/auth/login/verify", { challenge, code: digits });
         await finish();
         return;
       }
@@ -240,7 +201,7 @@ export function SignInScreen() {
           </>
         )}
         {step === "email" && (
-          <Field label="Email" error={form.forField("email")} hint="We send a 6-digit code if this is the owner's email.">
+          <Field label="Email" error={form.forField("email")} hint="We send a 6-digit code if this email can sign in.">
             <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" autoFocus required />
           </Field>
         )}
@@ -251,15 +212,6 @@ export function SignInScreen() {
         )}
         {step === "totp" && (
           <Field label="6-digit code" error={form.forField("code")} hint="From your authenticator app">
-            <TextInput value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus required />
-          </Field>
-        )}
-        {step === "otp" && (
-          <Field
-            label="6-digit code"
-            error={form.forField("code")}
-            hint={`We emailed a code to ${sentTo}. It works for 10 minutes.`}
-          >
             <TextInput value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus required />
           </Field>
         )}
@@ -274,28 +226,22 @@ export function SignInScreen() {
           </p>
         )}
         <Button type="submit" variant="primary" busy={busy} className="a-btn--block">
-          {{ password: "Sign in", email: "Send code", code: "Continue", totp: "Verify", newpass: "Save and sign in", otp: "Verify and sign in" }[step]}
+          {{ password: "Sign in", email: "Send code", code: "Continue", totp: "Verify", newpass: "Save and sign in" }[step]}
         </Button>
         {step === "password" &&
           (emailOn ? (
             <button type="button" className="a-authlink" onClick={() => go("email")}>
-              Forgot password? Email me a code
+              Forgot password or first time? Email me a code
             </button>
           ) : (
             <p className="a-authnote">Forgot password? Emailed codes are not set up yet.</p>
           ))}
-        {step === "otp" && (
-          <button type="button" className="a-authlink" onClick={resend} disabled={cooldown > 0 || resending}>
-            {cooldown > 0 ? `Send a new code in ${cooldown}s` : resending ? "Sending…" : "Send a new code"}
-          </button>
-        )}
         {step !== "password" && step !== "newpass" && (
           <Button
             variant="ghost"
             className="a-btn--block"
             onClick={() => {
               setNeedsTotp(false);
-              setChallenge("");
               go("password");
             }}
           >

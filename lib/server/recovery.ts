@@ -11,7 +11,6 @@ import { audit } from "./audit";
 import { checkNewPassword, checkSameOrigin, beginAttempt, clearAttempt, code, email, ensureNotThrottled, jsonWithCookie, limitByIp, loginKeys, meResponse, rawPassword, renewSession, startSession, USER_COLS, type UserRow } from "./auth";
 import type { Ctx } from "./context";
 import { PBKDF2_ITERATIONS, b64u, decryptSecret, hashPassword, pseudonym, randomBytes, safeEqual } from "./crypto";
-import { hashCode, newCode } from "./challenge";
 import { codeEmail, emailAvailable, sendEmail } from "./email";
 import { fail, json, parse, readJson } from "./http";
 import { verifyTotp } from "./totp";
@@ -26,6 +25,16 @@ const MAX_GLOBAL = 20; // Resend's free plan allows 100 emails a day
 
 const now = () => Math.floor(Date.now() / 1000);
 
+/** Six digits, uniformly random (no modulo bias). */
+function newCode(): string {
+  const limit = 4_294_000_000 - (4_294_000_000 % 1_000_000);
+  const buf = new Uint32Array(1);
+  do crypto.getRandomValues(buf);
+  while (buf[0] >= limit);
+  return String(buf[0] % 1_000_000).padStart(6, "0");
+}
+
+const hashCode = (c: Ctx, userId: number, value: string) => pseudonym(c.pepper, "email-code", `${userId}|${value}`);
 
 export async function codeRequest(c: Ctx): Promise<Response> {
   checkSameOrigin(c.request);

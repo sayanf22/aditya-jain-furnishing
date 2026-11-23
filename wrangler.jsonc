@@ -81,9 +81,7 @@
   // Plain settings (not secrets). RESEND_API_KEY is a secret and is set outside git.
   // Without a verified domain Resend only sends from onboarding@resend.dev to the account owner's own address.
   "vars": {
-    "RESEND_FROM": "Delta Furnishings <onboarding@resend.dev>",
-    // Every dashboard sign-in needs the emailed 6-digit code after the password.
-    "LOGIN_OTP": "required"
+    "RESEND_FROM": "Delta Furnishings <onboarding@resend.dev>"
   },
   "upload_source_maps": true,
   "observability": {

@@ -7,10 +7,13 @@
 // loopback address, the mail goes to worker/dev/email-stub.mjs instead and no key is needed.
 import type { AdminEnv } from "./env";
 
+/** What sending needs from the environment (the dashboard's and the enquiry form's both have it). */
+type MailEnv = Pick<AdminEnv, "RESEND_API_KEY" | "RESEND_FROM" | "NEXTJS_ENV" | "DEV_EMAIL_STUB">;
+
 const DEFAULT_FROM = "Delta Furnishings <onboarding@resend.dev>";
 
 /** The loopback address of the local stub, or null when it must not be used (anything but local development). */
-function stubUrl(env: AdminEnv): string | null {
+function stubUrl(env: MailEnv): string | null {
   if (env.NEXTJS_ENV !== "development" || !env.DEV_EMAIL_STUB) return null;
   try {
     const u = new URL(env.DEV_EMAIL_STUB);
@@ -20,15 +23,15 @@ function stubUrl(env: AdminEnv): string | null {
   }
 }
 
-const hasKey = (env: AdminEnv): boolean => typeof env.RESEND_API_KEY === "string" && env.RESEND_API_KEY.length >= 10 && !/change-me/i.test(env.RESEND_API_KEY);
+const hasKey = (env: MailEnv): boolean => typeof env.RESEND_API_KEY === "string" && env.RESEND_API_KEY.length >= 10 && !/change-me/i.test(env.RESEND_API_KEY);
 
 /** True when a sign-in code can be emailed (a Resend key is set, or the local stub is on). */
-export const emailAvailable = (env: AdminEnv): boolean => hasKey(env) || stubUrl(env) !== null;
+export const emailAvailable = (env: MailEnv): boolean => hasKey(env) || stubUrl(env) !== null;
 
 export type Mail = { to: string; subject: string; text: string; html: string; idempotencyKey: string };
 
 /** Sends one email. Resolves true when the provider accepted it. Never logs the message or the key. */
-export async function sendEmail(env: AdminEnv, mail: Mail): Promise<boolean> {
+export async function sendEmail(env: MailEnv, mail: Mail): Promise<boolean> {
   const stub = stubUrl(env);
   const url = stub ? `${stub}/emails` : "https://api.resend.com/emails";
   const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": mail.idempotencyKey };
@@ -49,6 +52,17 @@ export async function sendEmail(env: AdminEnv, mail: Mail): Promise<boolean> {
     console.error("email not sent", e instanceof Error ? e.name : "unknown");
     return false;
   }
+}
+
+/** Tells a new person how to start: no password is sent, they choose their own with an emailed code. */
+export function inviteEmail(siteOrigin: string, addedBy: string): Omit<Mail, "to" | "idempotencyKey"> {
+  const page = `${siteOrigin}/admin/login`;
+  const by = addedBy.replace(/[\r\n<>&"]/g, " ").slice(0, 80);
+  return {
+    subject: "You can sign in to the Delta dashboard",
+    text: `${by} added you to the Delta Furnishings dashboard.\n\nTo start: open ${page}, choose "Forgot password or first time? Email me a code", enter this email address, type the 6-digit code we send you, and choose your own password.\n\nIf you were not expecting this, ignore this email.\n\nDelta Furnishings`,
+    html: `<div style="font-family:Arial,sans-serif;color:#1c1c1c;max-width:460px"><p style="margin:0 0 12px">${by} added you to the Delta Furnishings dashboard.</p><p style="margin:0 0 12px">To start: open <a href="${page}" style="color:#c40000">the sign-in page</a>, choose <b>Forgot password or first time? Email me a code</b>, enter this email address, type the 6-digit code we send you, and choose your own password.</p><p style="margin:0;color:#555;font-size:14px">If you were not expecting this, ignore this email.</p></div>`,
+  };
 }
 
 /** The sign-in code message: the code only, no links. */

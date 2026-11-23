@@ -1902,3 +1902,27 @@ body:has(dialog.a-sheet[open]) {
   font-size: 0.85rem;
   color: var(--a-muted);
 }
+
+/* Security: People. A round initial, then the same rows as the devices list. */
+.a-person__initial {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--a-sunk, #efefed);
+  color: var(--a-text, #141414);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.a-people__add {
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--a-line);
+}
+.a-card__text {
+  margin: 0 0 0.75rem;
+  color: var(--a-muted);
+  font-size: 0.9rem;
+}

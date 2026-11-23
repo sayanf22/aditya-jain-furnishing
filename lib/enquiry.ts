@@ -10,6 +10,7 @@
 // once TURNSTILE_SECRET is set (it is left off for the local build).
 import { LIMITS, validateEnquiry, type CustomerType, type EnquiryInput } from "./enquiry-rules";
 import { API_HEADERS, ApiFail, parse, readBytes, text } from "./server/http";
+import { notifyEnquiry } from "./server/notify";
 
 const JSON_HEADERS = API_HEADERS;
 
@@ -24,18 +25,25 @@ type EnquiryEnv = {
   DB?: D1Database;
   ENQUIRY_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   TURNSTILE_SECRET?: string;
+  /** Who gets an email about a new enquiry: the dashboard's people. */
+  AUTH_DB?: D1Database;
+  RESEND_API_KEY?: string;
+  RESEND_FROM?: string;
+  NEXTJS_ENV?: string;
+  DEV_EMAIL_STUB?: string;
 };
+type Later = { waitUntil(promise: Promise<unknown>): void };
 
-export async function handleEnquiry(request: Request, env: EnquiryEnv): Promise<Response> {
+export async function handleEnquiry(request: Request, env: EnquiryEnv, ctx?: Later): Promise<Response> {
   try {
-    return await processEnquiry(request, env);
+    return await processEnquiry(request, env, ctx);
   } catch (e) {
     console.error("enquiry error", e instanceof Error ? `${e.name}: ${e.message}` : "unknown");
     return json({ error: "Something went wrong. Please try again." }, 500);
   }
 }
 
-async function processEnquiry(request: Request, env: EnquiryEnv): Promise<Response> {
+async function processEnquiry(request: Request, env: EnquiryEnv, ctx?: Later): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   // Only accept posts from this site's own pages.
@@ -107,12 +115,17 @@ async function processEnquiry(request: Request, env: EnquiryEnv): Promise<Respon
       category = null; // the enquiry still matters more than the label
     }
   }
-  await env.ENQ_DB.prepare(
+  const name = (input.name ?? "").trim();
+  const saved = await env.ENQ_DB.prepare(
     `INSERT INTO enquiries (customer_type, name, phone, company, message, category_id, category_name, source)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
   )
-    .bind(customerType, (input.name ?? "").trim(), phone, company, message, category?.id ?? null, category?.name ?? null, source)
+    .bind(customerType, name, phone, company, message, category?.id ?? null, category?.name ?? null, source)
     .run();
+  // Email the dashboard's people after the visitor has their answer. Never blocks or fails the form.
+  if (ctx) {
+    ctx.waitUntil(notifyEnquiry(env, new URL(request.url).origin, { id: Number(saved.meta.last_row_id), customerType, name, phone, company, message, categoryName: category?.name ?? null, source }));
+  }
 
   return json({ ok: true }, 201);
 }

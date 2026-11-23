@@ -773,7 +773,81 @@ ok("password sign-in is unaffected by all of this", r.status === 200 && r.data.o
   const seen = new Set((a.data?.items ?? []).map((x) => x.action));
   ok("audit: code requests, code sign-ins and password resets are recorded, never the code", ["code_request", "login_code", "password_reset"].every((x) => seen.has(x)) && !a.text.includes(lim2.code ?? "no-code"), [...seen].join());
   await o2.api("POST", "/auth/logout");
-}r = await fresh().api("GET", "/auth/status");
+}// ---- people who can sign in, and the enquiry email
+{
+  clean();
+  const boss = fresh();
+  r = await boss.api("POST", "/auth/login", { email: EMAIL, password: PASS2 });
+  await boss.refreshCsrf();
+  const NEWBIE = "new.person@example.com";
+  r = await boss.api("GET", "/users");
+  ok("people: the list shows the owner, marked as you", r.status === 200 && r.data.items.some((u) => u.email === EMAIL && u.you === true) && !/pw_hash|pw_salt|totp/.test(r.text), r.text);
+  const sinceAdd = Date.now();
+  r = await boss.api("POST", "/users", { email: NEWBIE, name: "New Person" });
+  const newId = r.data?.member?.id;
+  ok("people: adding an email works and says they are waiting", r.status === 201 && r.data.member.email === NEWBIE && r.data.member.waiting === true && r.data.invited === true, r.text);
+  const invite = await waitMail(NEWBIE, sinceAdd);
+  ok("people: the new person is emailed how to start (no password, no code)", !!invite && /Forgot password or first time/.test(invite.text) && !/\b\d{6}\b/.test(invite.text), invite?.text);
+  r = await boss.api("POST", "/users", { email: NEWBIE.toUpperCase() });
+  ok("people: the same email again is refused", r.status === 409, r.text);
+  r = await boss.api("POST", "/users", { email: "not-an-email" });
+  ok("people: a bad email is refused", r.status === 400, r.text);
+  r = await anon.api("GET", "/users");
+  ok("people: a visitor cannot list them", r.status === 401);
+  r = await anon.api("POST", "/users", { email: "x@example.com" }, { headers: { "X-CSRF-Token": "x" } });
+  ok("people: a visitor cannot add one", r.status === 401);
+  r = await boss.api("POST", "/users", { email: "no.csrf@example.com" }, { noCsrf: true });
+  ok("people: adding without the CSRF token is refused", r.status === 403, r.text);
+
+  // The new person cannot sign in with any password, and sets their own with an emailed code.
+  r = await fresh().api("POST", "/auth/login", { email: NEWBIE, password: "any password at all 1" });
+  ok("people: nobody can sign in as them before they choose a password", r.status === 401, r.text);
+  clean();
+  const first = await requestCode(NEWBIE);
+  ok("people: they ask for a code and one is emailed", first.res.status === 200 && !!first.code, first.res.text);
+  const chosen = fresh();
+  r = await chosen.api("POST", "/auth/code/verify", { email: NEWBIE, code: first.code });
+  await chosen.refreshCsrf();
+  r = await chosen.api("POST", "/auth/password/reset", { next: PASS3 });
+  ok("people: they choose their own password", r.status === 200, r.text);
+  r = await fresh().api("POST", "/auth/login", { email: NEWBIE, password: PASS3 });
+  ok("people: they can then sign in with it", r.status === 200 && r.data.ok === true, r.text);
+
+  // Enquiry emails go to every person, never reveal the others, and carry no raw HTML from the visitor.
+  const sinceEnq = Date.now();
+  r = await anon.call("POST", "/api/enquiry", { customerType: "B2B", name: "Pat <b>Smith</b>", company: "Firm & Co", phone: "98765 43210", message: "Need <script>alert(1)</script> curtains\nfor 3 rooms", interest: "curtains-blinds" }, { headers: { Origin: BASE } });
+  ok("enquiry: the form still saves", r.status === 201, r.text);
+  const toOwner = await waitMail(EMAIL, sinceEnq);
+  const toNew = await waitMail(NEWBIE, sinceEnq);
+  ok("enquiry email: every person gets one", !!toOwner && !!toNew, `${!!toOwner} ${!!toNew}`);
+  ok("enquiry email: has the details, a link to the dashboard, and each mail has one recipient", /Pat/.test(toOwner?.text ?? "") && /9876543210/.test((toOwner?.text ?? "").replace(/\D/g, "")) && /\/admin\/enquiries/.test(toOwner?.text ?? "") && toOwner.to.length === 1 && toNew.to.length === 1, JSON.stringify(toOwner?.to));
+  ok("enquiry email: what the visitor typed is escaped in the HTML part", !/<script>|<b>Smith/.test(toOwner?.html ?? "") && /&lt;script&gt;/.test(toOwner?.html ?? ""), toOwner?.html);
+  ok("enquiry email: the subject is one plain line", /^New enquiry from /.test(toOwner?.subject ?? "") && !/[\r\n]/.test(toOwner?.subject ?? ""), toOwner?.subject);
+  d1("ENQ_DB", "DELETE FROM enquiries WHERE name LIKE 'Pat %';");
+
+  // Removing a person signs them out and stops their mail.
+  const theirs = fresh();
+  await theirs.api("POST", "/auth/login", { email: NEWBIE, password: PASS3 });
+  r = await theirs.api("GET", "/me");
+  ok("people: before removal their session works", r.status === 200);
+  r = await boss.api("DELETE", `/users/${newId}`);
+  ok("people: removing them works", r.status === 200, r.text);
+  r = await theirs.api("GET", "/me");
+  ok("people: their open session ends at once", r.status === 401, `${r.status}`);
+  r = await fresh().api("POST", "/auth/login", { email: NEWBIE, password: PASS3 });
+  ok("people: they can no longer sign in", r.status === 401);
+  const meId = (await boss.api("GET", "/users")).data.items.find((u) => u.you).id;
+  r = await boss.api("DELETE", `/users/${meId}`);
+  ok("people: you cannot remove yourself", r.status === 400, r.text);
+  const sinceAfter = Date.now();
+  await anon.call("POST", "/api/enquiry", { customerType: "B2C", name: "After Removal", phone: "98765 43210" }, { headers: { Origin: BASE } });
+  await wait(900);
+  const stray = await lastMail(NEWBIE);
+  ok("enquiry email: a removed person gets no more", !stray || stray.at < sinceAfter, "");
+  d1("ENQ_DB", "DELETE FROM enquiries WHERE name = 'After Removal';");
+  await boss.api("POST", "/auth/logout");
+}
+r = await fresh().api("GET", "/auth/status");
 ok("status still public and small", r.status === 200 && Object.keys(r.data).sort().join() === "emailCodes,setupRequired");
 const failed = results.filter((x) => !x).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);

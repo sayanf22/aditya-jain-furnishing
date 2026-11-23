@@ -44,8 +44,6 @@ export type SweepResult = { photos: number; files: number };
 //   GET    /api/admin/auth/status            (public)   -> AuthStatus
 //   POST   /api/admin/auth/setup             (public)   SetupBody  -> MeResponse (signed in)
 //   POST   /api/admin/auth/login             (public)   LoginBody  -> LoginResponse
-//   POST   /api/admin/auth/login/verify     (public)   LoginVerifyBody -> LoginResponse ({ ok: true }, cookie set)
-//   POST   /api/admin/auth/login/resend     (public)   LoginResendBody -> Ok (30 s apart, 3 times, then start again)
 //   POST   /api/admin/auth/code/request     (public)   CodeRequestBody -> Ok (the same answer for every email; 503 EMAIL_NOT_CONFIGURED when emailCodes is false)
 //   POST   /api/admin/auth/code/verify      (public)   CodeVerifyBody -> CodeVerifyResponse (needsCode = the authenticator code is also required; resend the same email code with totp)
 //            on success the session is a password-reset session (mustSetPassword true, 15 minutes): only /me, /auth/logout and /auth/password/reset work
@@ -62,10 +60,18 @@ export type SweepResult = { photos: number; files: number };
 export type AuthStatus = { setupRequired: boolean; emailCodes: boolean };
 export type SetupBody = { setupCode: string; email: string; name?: string; password: string };
 export type LoginBody = { email: string; password: string; code?: string };
-/** needsCode: the authenticator code is also asked for. needsEmailCode: the password was right and a 6-digit code was emailed; send it to /auth/login/verify with the challenge. */
-export type LoginResponse = { ok: true } | { needsCode: true } | { needsEmailCode: true; challenge: string; sentTo: string };
-export type LoginVerifyBody = { challenge: string; code: string };
-export type LoginResendBody = { challenge: string };
+export type LoginResponse = { ok: true } | { needsCode: true };
+
+// ----------------------------------------------------------------- people
+//   GET    /api/admin/users          -> { items: TeamMember[] }
+//   POST   /api/admin/users          NewMember -> NewMemberResponse (201). A new person has a password nobody
+//                                    knows and chooses their own through "Forgot password or first time?" (an
+//                                    emailed 6-digit code). 409 EXISTS for a known email, 409 LIMIT at 10 people.
+//   DELETE /api/admin/users/:id      -> Ok (their devices are signed out; you cannot remove yourself)
+// Every person can also receive an email about each new enquiry from the website form.
+export type TeamMember = { id: number; email: string; name: string | null; createdAt: string; lastSignIn: string | null; waiting: boolean; you: boolean };
+export type NewMember = { email: string; name?: string };
+export type NewMemberResponse = { member: TeamMember; invited: boolean };
 export type AdminUser = { id: number; email: string; name: string | null; totpEnabled: boolean };
 export type MeResponse = { user: AdminUser; csrf: string; idleExpiresAt: string; expiresAt: string; mustSetPassword?: boolean };
 export type CodeRequestBody = { email: string };
