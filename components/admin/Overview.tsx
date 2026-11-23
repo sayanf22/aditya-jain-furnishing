@@ -105,7 +105,7 @@ function PublishCard() {
       ? "Visitors see everything you’ve saved."
       : state === "building"
         ? `Started ${data.requestedAt ? timeAgo(data.requestedAt).toLowerCase() : "just now"}. Takes a few minutes.`
-        : "Saved, but visitors don’t see it yet.";
+        : "Saved. It goes live by itself a few minutes after you stop editing, or press Publish to send it now.";
 
   const offline = data?.configured === false;
 

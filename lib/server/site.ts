@@ -1,5 +1,5 @@
 // Site pages: photo places, business details, testimonials.
-import { SITE_IMAGE_SLOTS, isHeroSlot, type Ok, type SiteImage, type SiteSettings, type Testimonial } from "../admin-api";
+import { NO_PHOTO, SITE_IMAGE_SLOTS, isHeroSlot, type Ok, type SiteImage, type SiteSettings, type Testimonial } from "../admin-api";
 import { audit } from "./audit";
 import type { Ctx } from "./context";
 import { bool, fail, idList, idParam, nullable, optText, parse, readJson, text, type Rule } from "./http";
@@ -36,7 +36,7 @@ export async function setSiteImage(c: Ctx): Promise<SiteImage> {
   if (!def) throw fail(404, "NOT_FOUND", "That place was not found.");
   const body = parse(await readJson(c.request), { mediaKey: nullable(text(120, 1)), alt: optText(200) }, ["mediaKey"]);
   const key = body.mediaKey ?? null;
-  if (key !== null) {
+  if (key !== null && key !== NO_PHOTO) {
     // Default photos are never stored: a place without an upload shows its default on its own.
     if (!key.startsWith("m/")) throw fail(400, "INVALID", "Pick a photo from the library.", "mediaKey");
     await checkImageKey(c, key, "mediaKey");
@@ -48,11 +48,11 @@ export async function setSiteImage(c: Ctx): Promise<SiteImage> {
   await c.env.DB.batch([
     c.env.DB
       .prepare("INSERT INTO site_images (slot, media_key, alt, updated_at) VALUES (?1, ?2, ?3, datetime('now')) ON CONFLICT (slot) DO UPDATE SET media_key = ?2, alt = ?3, updated_at = datetime('now')")
-      .bind(slot, key, key === null ? null : (body.alt ?? null)),
+      .bind(slot, key, key === null || key === NO_PHOTO ? null : (body.alt ?? null)),
     bumpVersion(c),
   ]);
   // Back to the default: the owner's upload goes from D1 and R2 unless another place still uses it.
-  const removed = key === null ? await removeUnusedMedia(c.env, [previous], c.url.origin) : 0;
+  const removed = key === null || key === NO_PHOTO ? await removeUnusedMedia(c.env, [previous], c.url.origin) : 0;
   audit(c, "site.image", "site_image", slot, { mediaKey: key, removed });
   const { slots } = await listSiteImages(c);
   return slots.find((s) => s.slot === slot)!;

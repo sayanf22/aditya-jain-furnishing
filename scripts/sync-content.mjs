@@ -31,7 +31,7 @@ const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 const MEDIA_KEY = /^m\/([0-9a-f]{16})$/;
 const HERO_SLOT = /^(home\.hero\.\d+|collection\.hero|about\.hero|contact\.hero)$/;
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const IMAGE_KEY = /^(m\/[0-9a-f]{16}|demo\/[A-Za-z0-9._-]{1,80})$/;
+const IMAGE_KEY = /^(m\/[0-9a-f]{16}|demo\/[A-Za-z0-9._-]{1,80}|none)$/; // "none": the owner hid a default photo
 // Wrangler's bin file is not in its package "exports", so it cannot be resolved by name.
 const WRANGLER = here("node_modules/wrangler/bin/wrangler.js");
 
@@ -128,7 +128,7 @@ function validate(data) {
 /** Every uploaded photo (m/<hash>) the pages will show, checked against the media list. */
 function usedPhotos(data) {
   const keys = new Set();
-  const add = (key) => key && !key.startsWith("demo/") && keys.add(key);
+  const add = (key) => key && key !== "none" && !key.startsWith("demo/") && keys.add(key);
   data.categories.forEach((c) => (add(c.image_key), add(c.hero_image_key)));
   data.subcategories.forEach((s) => add(s.image_key));
   data.product_images.forEach((i) => add(i.image_key));

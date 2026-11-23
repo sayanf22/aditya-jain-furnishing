@@ -160,7 +160,8 @@ export async function updateCategory(c: Ctx): Promise<AdminCategory> {
     sets.push(["slug", body.slug]);
   }
   if (body.visible !== undefined) sets.push(["visible", bit(body.visible)]);
-  if (body.imageKey !== undefined) sets.push(["image_key", await checkImageKey(c, body.imageKey, "imageKey")]);
+  // A collection's Home card may be set to "no photo" (hides its default); types have no default.
+  if (body.imageKey !== undefined) sets.push(["image_key", await checkImageKey(c, body.imageKey, "imageKey", true)]);
   // Every page header photo is fixed.
   if (body.heroImageKey !== undefined) throw fail(400, "NOT_REPLACEABLE", "Header photos are fixed and cannot be changed.", "heroImageKey");
   if (sets.length === 0) throw fail(400, "INVALID", "Nothing to change.");

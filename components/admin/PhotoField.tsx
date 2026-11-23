@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MediaAsset } from "@/lib/admin-api";
+import { NO_PHOTO, isNoPhoto, type MediaAsset } from "@/lib/admin-api";
 import { IconPhotos, IconReplace, IconTrash } from "./icons";
 import { MediaPicker } from "./MediaPicker";
 import { Photo } from "./Photo";
@@ -19,28 +19,50 @@ type PhotoFieldProps = {
   onChange: (key: string | null) => void;
 };
 
-/** A photo with Change and Remove. The change is held in the draft until Save. */
+/**
+ * A photo with Replace and Remove. The change is held in the draft until Save.
+ * With a default photo there are three states: your upload (Remove brings the default back),
+ * the default (Hide shows no photo at all), and hidden (Use default brings it back).
+ */
 export function PhotoField({ label, hint, mediaKey, shape, widths, defaultKey, onChange }: PhotoFieldProps) {
   const [picking, setPicking] = useState(false);
+  const hidden = isNoPhoto(mediaKey);
+  const uploaded = Boolean(mediaKey) && !hidden;
+  const showing = uploaded ? mediaKey : hidden ? null : (defaultKey ?? null);
   return (
     <div className="a-photofield">
       <div className={cx("a-photofield__frame", `is-${shape}`)}>
-        <Photo mediaKey={mediaKey ?? defaultKey} alt="" width={shape === "wide" ? 800 : 480} />
-        {!mediaKey && !defaultKey && <IconPhotos className="a-photofield__ghost" />}
+        <Photo mediaKey={showing} alt="" width={shape === "wide" ? 800 : 480} />
+        {!showing && <IconPhotos className="a-photofield__ghost" />}
       </div>
       <div className="a-photofield__side">
-        <span className="a-photofield__label">{label}{!mediaKey && defaultKey && <Badge>Default</Badge>}</span>
+        <span className="a-photofield__label">
+          {label}
+          {!uploaded && !hidden && defaultKey && <Badge>Default</Badge>}
+          {hidden && <Badge>No photo</Badge>}
+        </span>
         {hint && <span className="a-photofield__hint">{hint}</span>}
         <div className="a-photofield__actions">
           <Button onClick={() => setPicking(true)} icon={<IconReplace />}>
-            {mediaKey || defaultKey ? "Replace" : "Add"}
+            {showing ? "Replace" : "Add"}
           </Button>
-          {mediaKey && (
+          {uploaded && (
             <Button variant="ghost" onClick={() => onChange(null)} icon={<IconTrash />} aria-label={`Remove ${label}`}>
               Remove
             </Button>
           )}
+          {!uploaded && !hidden && defaultKey && (
+            <Button variant="ghost" onClick={() => onChange(NO_PHOTO)} icon={<IconTrash />} aria-label={`Hide the default ${label}`}>
+              Hide default
+            </Button>
+          )}
+          {hidden && (
+            <Button variant="ghost" onClick={() => onChange(null)} aria-label={`Use the default ${label}`}>
+              Use default
+            </Button>
+          )}
         </div>
+        {uploaded && defaultKey && <span className="a-photofield__hint">Remove brings the default photo back.</span>}
       </div>
       {picking && (
         <MediaPicker

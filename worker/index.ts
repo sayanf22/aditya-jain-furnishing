@@ -21,6 +21,7 @@ import { default as nextHandler } from "../.open-next/worker.js";
 import type { AdminEnv } from "../lib/server/env";
 import { withSecurityHeaders } from "../lib/server/headers";
 import { serveMedia } from "../lib/server/media";
+import { autoPublishIfDue } from "../lib/server/publish";
 import { handleApi } from "./api";
 
 export default {
@@ -35,5 +36,9 @@ export default {
     // Headers in public/_headers only reach files served straight from static
     // assets, so pages answered here get the same ones added in code.
     return withSecurityHeaders(await nextHandler.fetch(request, env, ctx), pathname);
+  },
+  // Every 3 minutes (wrangler.jsonc triggers.crons): publish saved dashboard changes once editing has stopped.
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(autoPublishIfDue(env as unknown as AdminEnv).catch((e) => console.error("auto publish error", e instanceof Error ? e.name : "unknown")));
   },
 } satisfies ExportedHandler<CloudflareEnv>;

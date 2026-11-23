@@ -263,6 +263,14 @@ export function defaultFor(slot: string): string | null {
   return SLOT_BY_NAME.get(slot)?.defaultKey ?? null;
 }
 
+/**
+ * Stored instead of a photo key when the owner chose to show no photo at all on a place that has a
+ * default (a collection's Home card, or one of the replaceable site places). null still means
+ * "nothing uploaded: show the default".
+ */
+export const NO_PHOTO = "none";
+export const isNoPhoto = (key: string | null | undefined): boolean => key === NO_PHOTO;
+
 /** Default Home card photo key for a collection slug, or null (neutral tile). */
 export function categoryCardDefaultFor(slug: string): string | null {
   return Object.prototype.hasOwnProperty.call(CATEGORY_CARD_DEFAULTS, slug) ? CATEGORY_CARD_DEFAULTS[slug] : null;

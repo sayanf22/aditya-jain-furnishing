@@ -11,8 +11,9 @@ export const ORDINARY_WIDTHS: readonly number[] = [480, 800, 1200];
 const MAX_FILE_BYTES = 1_400_000; // the server refuses over 1.5 MB
 const MAX_FILES = 4; // the server allows 6; places never need more than 4
 const MAX_SIDE = 4096;
-const START_QUALITY = 0.82;
-const LOWEST_QUALITY = 0.5;
+// Start near-lossless (WebP 90) and only step down if a size is still over the upload limit.
+const START_QUALITY = 0.9;
+const LOWEST_QUALITY = 0.6;
 
 export type PreparedImage = {
   width: number;
@@ -79,7 +80,7 @@ async function encode(canvas: HTMLCanvasElement, quality: number): Promise<Blob 
 }
 
 async function encodeUnderLimit(canvas: HTMLCanvasElement): Promise<Blob> {
-  for (let quality = START_QUALITY; quality >= LOWEST_QUALITY - 0.001; quality -= 0.08) {
+  for (let quality = START_QUALITY; quality >= LOWEST_QUALITY - 0.001; quality -= 0.06) {
     const blob = await encode(canvas, quality);
     if (!blob || blob.type !== "image/webp") fail("This browser can't prepare photos. Try again, or use another browser.");
     if (blob.size <= MAX_FILE_BYTES) return blob;

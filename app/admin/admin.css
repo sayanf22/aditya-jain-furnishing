@@ -1932,3 +1932,55 @@ body:has(dialog.a-sheet[open]) {
   margin: -0.25rem 0 1rem;
   line-height: 1.5;
 }
+
+/* Slim bar above every page while saved changes are not on the website yet. */
+.a-pubnote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--a-line);
+  border-radius: 0.75rem;
+  background: var(--a-amber-wash);
+  color: var(--a-amber);
+  font-size: 0.875rem;
+}
+.a-pubnote__dot {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--a-red);
+}
+.a-pubnote.is-building .a-pubnote__dot {
+  background: #d98a00;
+  animation: a-pulse 1.3s ease-in-out infinite;
+}
+.a-pubnote__text {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.a-pubnote__btn {
+  flex: none;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.a-pubnote__btn:hover:not(:disabled) {
+  background: var(--a-amber);
+  color: #fff;
+}
+.a-pubnote__btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

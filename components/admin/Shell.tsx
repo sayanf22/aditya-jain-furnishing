@@ -7,6 +7,7 @@ import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import type { Enquiry, Page } from "@/lib/admin-api";
 import { api } from "./api";
 import { IconCollections, IconDesigns, IconEnquiries, IconExternal, IconLogout, IconMore, IconOverview, IconPhotos, IconSecurity, IconSite } from "./icons";
+import { PublishNotice } from "./PublishNotice";
 import { SessionProvider, useSession } from "./session";
 import { Sheet, ToastProvider, cx } from "./ui";
 
@@ -91,7 +92,10 @@ function Frame({ children }: { children: ReactNode }) {
         </Link>
       </header>
 
-      <main className="a-main">{children}</main>
+      <main className="a-main">
+        <PublishNotice />
+        {children}
+      </main>
 
       <nav className="a-tabs" aria-label="Dashboard">
         {TABS.map(({ href, label, icon: Icon }) => (

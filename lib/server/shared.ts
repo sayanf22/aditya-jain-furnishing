@@ -1,4 +1,5 @@
 // Pieces the content handlers share: change counter, slugs, photo keys.
+import { NO_PHOTO } from "../admin-api";
 import type { Ctx } from "./context";
 import { fail } from "./http";
 
@@ -37,8 +38,12 @@ const DEMO_KEY = /^demo\/[a-z0-9][a-z0-9._-]{0,80}$/;
  * A photo key stored on a collection, type or site place: null, a library photo
  * that exists ("m/<hash>"), or a stand-in ("demo/<name>").
  */
-export async function checkImageKey(c: Ctx, key: unknown, field: string): Promise<string | null> {
+export async function checkImageKey(c: Ctx, key: unknown, field: string, allowNoPhoto = false): Promise<string | null> {
   if (key === null) return null;
+  if (key === NO_PHOTO) {
+    if (!allowNoPhoto) throw fail(400, "INVALID", "This place has no default photo to hide.", field);
+    return key;
+  }
   if (typeof key !== "string") throw fail(400, "INVALID", "Pick a photo.", field);
   if (DEMO_KEY.test(key)) return key;
   if (!MEDIA_KEY.test(key)) throw fail(400, "INVALID", "That photo is not valid.", field);

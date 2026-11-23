@@ -2,7 +2,7 @@
 // (they are pre-rendered), so visitors never wait on the database.
 // Collections come from lib/catalogue.ts, the single place that reads them.
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { defaultFor, isReplaceableSlot } from "./admin-api";
+import { NO_PHOTO, defaultFor, isReplaceableSlot } from "./admin-api";
 import { getCatalogue, getMediaIndex } from "./catalogue";
 import type { ContactInfo } from "./contact";
 import { imageSource, type ImageSource } from "./media";
@@ -131,7 +131,8 @@ async function loadSitePhotos(): Promise<SitePhotos> {
   return (slot) => {
     if (!isReplaceableSlot(slot)) return { image: imageSource(HERO_PHOTOS[slot], media), alt: null };
     const row = chosen.get(slot);
-    const image = (row && imageSource(row.media_key, media)) || imageSource(defaultFor(slot), media);
+    // "none": the owner chose to hide this place's default photo, so there is no photo at all.
+    const image = row?.media_key === NO_PHOTO ? null : (row && imageSource(row.media_key, media)) || imageSource(defaultFor(slot), media);
     return { image, alt: row?.alt ?? null };
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MEDIA_WIDTHS } from "@/lib/admin-api";
+import { MEDIA_WIDTHS, isNoPhoto } from "@/lib/admin-api";
 import { demoWidths } from "@/lib/media";
 
 /** Size that worked for each photo, so later views go straight to it. */
@@ -54,6 +54,6 @@ function PhotoImage({ mediaKey, alt, width, widths, className }: ImageProps) {
 
 /** A photo shown whole (never cropped). Falls back to another size, then to a quiet placeholder. */
 export function Photo({ mediaKey, alt, width = 480, widths, className }: PhotoProps) {
-  if (!mediaKey) return <span className={`a-photo a-photo--empty ${className ?? ""}`} aria-hidden="true" />;
+  if (!mediaKey || isNoPhoto(mediaKey)) return <span className={`a-photo a-photo--empty ${className ?? ""}`} aria-hidden="true" />;
   return <PhotoImage key={mediaKey} mediaKey={mediaKey} alt={alt} width={width} widths={widths} className={className} />;
 }

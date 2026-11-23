@@ -83,6 +83,8 @@
   "vars": {
     "RESEND_FROM": "Delta Furnishings <onboarding@resend.dev>"
   },
+  // Publishes saved dashboard changes by itself a few minutes after editing stops (worker/index.ts).
+  "triggers": { "crons": ["*/3 * * * *"] },
   "upload_source_maps": true,
   "observability": {
     "enabled": true

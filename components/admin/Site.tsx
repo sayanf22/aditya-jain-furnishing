@@ -3,7 +3,7 @@
 // Site: the named photo places, business details and testimonials.
 // Photo and detail edits are held until the page-wide Save.
 import { useState } from "react";
-import { SITE_IMAGE_SLOTS, isReplaceableSlot, type SiteImage, type SiteSettings } from "@/lib/admin-api";
+import { NO_PHOTO, SITE_IMAGE_SLOTS, isNoPhoto, isReplaceableSlot, type SiteImage, type SiteSettings } from "@/lib/admin-api";
 import { ApiFailure, api, asFailure } from "./api";
 import { useResource } from "./hooks";
 import { IconReplace, IconTrash } from "./icons";
@@ -168,29 +168,36 @@ function SlotRow({ slot, choice, onChoose }: { slot: SiteImage; choice?: PhotoCh
   const [picking, setPicking] = useState(false);
   const definition = SITE_IMAGE_SLOTS.find((item) => item.slot === slot.slot) ?? slot;
   const mediaKey = choice ? choice.mediaKey : slot.mediaKey;
+  const hidden = isNoPhoto(mediaKey);
   const usingDefault = mediaKey === null;
+  const showing = hidden ? null : (mediaKey ?? definition.defaultKey);
   return (
     <li className={cx("a-row a-row--slot", choice && "is-changed")}>
       <span className={cx("a-slotthumb", `is-${slot.shape}`)}>
-        <Photo
-          mediaKey={mediaKey ?? definition.defaultKey}
-          alt=""
-          width={slot.shape === "wide" ? 800 : 480}
-          widths={usingDefault || choice ? undefined : slot.media?.widths}
-        />
+        <Photo mediaKey={showing} alt="" width={slot.shape === "wide" ? 800 : 480} widths={usingDefault || hidden || choice ? undefined : slot.media?.widths} />
       </span>
       <span className="a-row__text">
         <span className="a-row__name">{slot.label}</span>
-        <span className="a-row__meta">{usingDefault ? <Badge>Default</Badge> : definition.hint}</span>
+        <span className="a-row__meta">{hidden ? <Badge>No photo</Badge> : usingDefault ? <Badge>Default</Badge> : definition.hint}</span>
       </span>
       <div className="a-row__actions">
-        {!usingDefault && (
+        {!usingDefault && !hidden && (
           <Button variant="ghost" icon={<IconTrash />} onClick={() => onChoose({ mediaKey: null, alt: null })} aria-label={`Remove your photo from ${slot.label}. The default returns.`}>
             Remove
           </Button>
         )}
+        {usingDefault && (
+          <Button variant="ghost" icon={<IconTrash />} onClick={() => onChoose({ mediaKey: NO_PHOTO, alt: null })} aria-label={`Hide the default photo on ${slot.label}`}>
+            Hide default
+          </Button>
+        )}
+        {hidden && (
+          <Button variant="ghost" onClick={() => onChoose({ mediaKey: null, alt: null })} aria-label={`Use the default photo on ${slot.label}`}>
+            Use default
+          </Button>
+        )}
         <Button icon={<IconReplace />} onClick={() => setPicking(true)}>
-          Replace
+          {hidden ? "Add" : "Replace"}
         </Button>
       </div>
       {picking && (
