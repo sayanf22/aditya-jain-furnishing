@@ -37,7 +37,15 @@ export function instagramLink(info: ContactInfo): string | null {
   return `https://ig.me/m/${encodeURIComponent(handle)}`;
 }
 
-export function mapsLink(info: ContactInfo): string {
-  const query = `${info.legalName}, ${info.addressLine1}, ${info.addressLine2}`;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+/** The showroom's own Google Business listing: directions, photos and Google reviews. */
+export const GOOGLE_LISTING_URL = "https://maps.app.goo.gl/kvrzmJNvyC4ECi1L9";
+
+/** Showroom position (from the Google listing), used for the embedded map. */
+export const SHOWROOM_LAT = 28.647461;
+export const SHOWROOM_LNG = 77.142804;
+
+export const MAP_EMBED_URL = `https://www.google.com/maps?q=${SHOWROOM_LAT},${SHOWROOM_LNG}&z=17&output=embed`;
+
+export function mapsLink(_info?: ContactInfo): string {
+  return GOOGLE_LISTING_URL;
 }

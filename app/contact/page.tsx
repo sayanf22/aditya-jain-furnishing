@@ -8,7 +8,7 @@ import { EnquiryForm } from "@/components/EnquiryForm";
 import { ArrowRightIcon, ArrowUpRightIcon, InstagramIcon, MapPinIcon, PhoneIcon, WhatsAppIcon } from "@/components/icons";
 import { PageHero } from "@/components/PageHero";
 import { RevealImage } from "@/components/RevealImage";
-import { enquiryMessage, instagramLink, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
+import { GOOGLE_LISTING_URL, MAP_EMBED_URL, enquiryMessage, instagramLink, mapsLink, phoneLink, whatsappLink } from "@/lib/contact";
 import { contactFrom, getCategories, getSettings, getSitePhotos } from "@/lib/content";
 
 export const dynamic = "force-static";
@@ -98,7 +98,18 @@ export default async function ContactPage() {
                   <span className="block text-ivory/80">{contact.addressLine2}</span>
                 </address>
                 {contact.gstin && <p className="mt-4 text-[0.82rem] tracking-[0.06em] text-ivory/60">GSTIN {contact.gstin}</p>}
+                <a href={GOOGLE_LISTING_URL} target="_blank" rel="noopener" className="mt-5 inline-flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-[0.1em] text-terracotta-light uppercase">
+                  <span className="link-line">Reviews and photos on Google</span>
+                  <ArrowUpRightIcon className="h-4 w-4" />
+                </a>
               </div>
+              <iframe
+                title="Delta Furnishings on Google Maps"
+                src={MAP_EMBED_URL}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="block aspect-[4/3] w-full border-0 sm:aspect-[16/9]"
+              />
             </div>
           </div>
 

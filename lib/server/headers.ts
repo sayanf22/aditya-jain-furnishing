@@ -39,7 +39,7 @@ async function inlineHashes(html: string, tag: "script" | "style"): Promise<stri
 // React write style attributes, and CSS cannot run script.
 const siteCsp = (scripts: string[] = []) =>
   `default-src 'self'; script-src 'self' https://challenges.cloudflare.com ${scripts.join(" ")}`.trim() +
-  "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests";
+  "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com https://www.google.com; media-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests";
 const SITE_CSP = siteCsp();
 
 const GLOBAL: Record<string, string> = {

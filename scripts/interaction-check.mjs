@@ -588,7 +588,7 @@ async function devtools(page) {
   await page.waitForTimeout(1200);
   const hrefs = await page.$$eval(".contact-option", (els) => els.map((a) => a.getAttribute("href")));
   const has = (re) => hrefs.some((h) => re.test(h));
-  ok("contact: message, call and directions links", has(/^https:\/\/wa\.me\/\d+/) && has(/^tel:\+\d+/) && has(/^https:\/\/www\.google\.com\/maps\//), hrefs.map((h) => h.split("?")[0]).join(", "));
+  ok("contact: message, call and directions links", has(/^https:\/\/wa\.me\/\d+/) && has(/^tel:\+\d+/) && has(/^https:\/\/maps\.app\.goo\.gl\//), hrefs.map((h) => h.split("?")[0]).join(", "));
   const card = page.locator(".contact-option").nth(1);
   const before = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
   await card.hover();
