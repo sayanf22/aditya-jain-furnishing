@@ -42,6 +42,7 @@ const ROUTES: Route[] = [
   route("POST", "/auth/2fa/disable", auth.twoFactorDisable),
   route("GET", "/users", users.listUsers),
   route("POST", "/users", users.addUser),
+  route("PUT", "/users/enquiry-emails", users.setEnquiryEmails),
   route("DELETE", "/users/:id", users.removeUser),
   route("GET", "/sessions", auth.listSessions),
   route("DELETE", "/sessions/:id", auth.endSession),

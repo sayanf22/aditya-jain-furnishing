@@ -12,12 +12,12 @@ import { email } from "./auth";
 import type { Ctx } from "./context";
 import { PBKDF2_ITERATIONS, b64u, randomBytes } from "./crypto";
 import { inviteEmail, emailAvailable, sendEmail } from "./email";
-import { fail, idParam, json, parse, readJson, text } from "./http";
+import { fail, idList, idParam, json, parse, readJson, text } from "./http";
 
 const MAX_PEOPLE = 10;
 
-type Row = { id: number; email: string; display_name: string | null; created_at: string; last_login_at: string | null; password_changed_at: string | null };
-const COLS = "id, email, display_name, created_at, last_login_at, password_changed_at";
+type Row = { id: number; email: string; display_name: string | null; created_at: string; last_login_at: string | null; password_changed_at: string | null; notify_enquiries: number };
+const COLS = "id, email, display_name, created_at, last_login_at, password_changed_at, notify_enquiries";
 
 function toMember(row: Row, selfId: number): TeamMember {
   return {
@@ -29,12 +29,26 @@ function toMember(row: Row, selfId: number): TeamMember {
     // Added but nobody has signed in or chosen a password yet.
     waiting: row.password_changed_at === null && row.last_login_at === null,
     you: row.id === selfId,
+    notifyEnquiries: row.notify_enquiries === 1,
   };
 }
 
 export async function listUsers(c: Ctx): Promise<{ items: TeamMember[] }> {
   const { results } = await c.env.AUTH_DB.prepare(`SELECT ${COLS} FROM admin_users WHERE disabled = 0 ORDER BY id`).all<Row>();
   return { items: results.map((r) => toMember(r, c.session!.userId)) };
+}
+
+/** Replaces the list of people who get an email about each new enquiry. Only people who can sign in; the list may be empty. */
+export async function setEnquiryEmails(c: Ctx): Promise<{ items: TeamMember[] }> {
+  const body = parse(await readJson(c.request), { ids: idList(MAX_PEOPLE) }, ["ids"]);
+  const ids = [...new Set(body.ids)];
+  await c.env.AUTH_DB.batch([
+    c.env.AUTH_DB.prepare("UPDATE admin_users SET notify_enquiries = 0 WHERE disabled = 0"),
+    ...ids.map((id) => c.env.AUTH_DB.prepare("UPDATE admin_users SET notify_enquiries = 1 WHERE id = ?1 AND disabled = 0").bind(id)),
+  ]);
+  const out = await listUsers(c);
+  audit(c, "enquiry-emails.set", "user", undefined, { emails: out.items.filter((m) => m.notifyEnquiries).map((m) => m.email).join(", ").slice(0, 300) });
+  return out;
 }
 
 export async function addUser(c: Ctx): Promise<Response> {

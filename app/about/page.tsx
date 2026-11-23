@@ -208,7 +208,7 @@ export default async function AboutPage() {
             </address>
             <div className="mt-9 flex flex-wrap gap-3" data-reveal style={delay(3)}>
               <a
-                href={mapsLink(contact)}
+                href={mapsLink()}
                 target="_blank"
                 rel="noopener"
                 className="btn inline-flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-[0.85rem] font-medium text-ivory hover:bg-terracotta"

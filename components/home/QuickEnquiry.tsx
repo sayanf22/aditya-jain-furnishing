@@ -70,7 +70,7 @@ export function QuickEnquiry({ contact, categories }: Props) {
                   <span className="block text-ink-soft">{contact.addressLine1}</span>
                   <span className="block text-ink-soft">{contact.addressLine2}</span>
                 </address>
-                <a href={mapsLink(contact)} target="_blank" rel="noopener" className="mt-3 inline-flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-[0.1em] text-terracotta uppercase">
+                <a href={mapsLink()} target="_blank" rel="noopener" className="mt-3 inline-flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-[0.1em] text-terracotta uppercase">
                   <span className="link-line">Get directions</span>
                   <ArrowUpRightIcon className="h-4 w-4" />
                 </a>

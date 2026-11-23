@@ -47,6 +47,8 @@ class Client {
     let payload;
     if (body instanceof FormData) payload = body;
     else if (body !== undefined) {
+      // The public form sends how long it was open; a script that sends nothing is ignored by the server.
+      if (path === "/api/enquiry" && !raw && body && typeof body === "object" && body.elapsed === undefined) body = { ...body, elapsed: 6000 };
       h["Content-Type"] ??= "application/json";
       payload = raw ? body : JSON.stringify(body);
     }
@@ -813,16 +815,53 @@ ok("password sign-in is unaffected by all of this", r.status === 200 && r.data.o
   r = await fresh().api("POST", "/auth/login", { email: NEWBIE, password: PASS3 });
   ok("people: they can then sign in with it", r.status === 200 && r.data.ok === true, r.text);
 
-  // Enquiry emails go to every person, never reveal the others, and carry no raw HTML from the visitor.
+  // Who gets enquiry emails is chosen in the dashboard. A newly added person is not on the list.
+  const listed = (await boss.api("GET", "/users")).data.items;
+  const ownerId = listed.find((u) => u.you).id;
+  ok("enquiry emails: a newly added person is off by default", listed.find((u) => u.id === newId)?.notifyEnquiries === false, JSON.stringify(listed.map((u) => [u.email, u.notifyEnquiries])));
+  r = await anon.api("PUT", "/users/enquiry-emails", { ids: [ownerId] }, { headers: { "X-CSRF-Token": "x" } });
+  ok("enquiry emails: a visitor cannot change who gets them", r.status === 401);
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: [ownerId] }, { noCsrf: true });
+  ok("enquiry emails: changing them without the CSRF token is refused", r.status === 403, r.text);
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: "all" });
+  ok("enquiry emails: a list that is not numbers is refused", r.status === 400, r.text);
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: [ownerId], extra: 1 });
+  ok("enquiry emails: an unknown field is refused", r.status === 400, r.text);
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: [ownerId, 99999] });
+  ok("enquiry emails: only the owner is on; an id that is not a person is ignored", r.status === 200 && r.data.items.filter((u) => u.notifyEnquiries).map((u) => u.id).join() === String(ownerId), r.text);
+
+  // Enquiry emails go only to the chosen people, never reveal the others, and carry no raw HTML from the visitor.
   const sinceEnq = Date.now();
-  r = await anon.call("POST", "/api/enquiry", { customerType: "B2B", name: "Pat <b>Smith</b>", company: "Firm & Co", phone: "98765 43210", message: "Need <script>alert(1)</script> curtains\nfor 3 rooms", interest: "curtains-blinds" }, { headers: { Origin: BASE } });
+  r = await fresh().call("POST", "/api/enquiry", { customerType: "B2B", name: "Pat <b>Smith</b>", company: "Firm & Co", phone: "98765 43210", message: "Need <script>alert(1)</script> curtains\nfor 3 rooms", interest: "curtains-blinds" }, { headers: { Origin: BASE } });
   ok("enquiry: the form still saves", r.status === 201, r.text);
   const toOwner = await waitMail(EMAIL, sinceEnq);
-  const toNew = await waitMail(NEWBIE, sinceEnq);
-  ok("enquiry email: every person gets one", !!toOwner && !!toNew, `${!!toOwner} ${!!toNew}`);
-  ok("enquiry email: has the details, a link to the dashboard, and each mail has one recipient", /Pat/.test(toOwner?.text ?? "") && /9876543210/.test((toOwner?.text ?? "").replace(/\D/g, "")) && /\/admin\/enquiries/.test(toOwner?.text ?? "") && toOwner.to.length === 1 && toNew.to.length === 1, JSON.stringify(toOwner?.to));
+  await wait(900);
+  const toNewFirst = await lastMail(NEWBIE);
+  ok("enquiry email: the chosen person gets one", !!toOwner);
+  ok("enquiry email: a person who is not chosen gets none", !toNewFirst || toNewFirst.at < sinceEnq, toNewFirst?.subject);
+  ok("enquiry email: the visitor is never emailed", !(await lastMail("98765 43210")) );
+  ok("enquiry email: has the details, a link to the dashboard, and one recipient", /Pat/.test(toOwner?.text ?? "") && /9876543210/.test((toOwner?.text ?? "").replace(/\D/g, "")) && /\/admin\/enquiries/.test(toOwner?.text ?? "") && toOwner.to.length === 1, JSON.stringify(toOwner?.to));
   ok("enquiry email: what the visitor typed is escaped in the HTML part", !/<script>|<b>Smith/.test(toOwner?.html ?? "") && /&lt;script&gt;/.test(toOwner?.html ?? ""), toOwner?.html);
   ok("enquiry email: the subject is one plain line", /^New enquiry from /.test(toOwner?.subject ?? "") && !/[\r\n]/.test(toOwner?.subject ?? ""), toOwner?.subject);
+
+  // Choose both: each gets their own mail.
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: [ownerId, newId] });
+  ok("enquiry emails: two people can be chosen", r.status === 200 && r.data.items.filter((u) => u.notifyEnquiries).length === 2, r.text);
+  const sinceBoth = Date.now();
+  await fresh().call("POST", "/api/enquiry", { customerType: "B2C", name: "Pat Two", phone: "98765 43211", message: "Second enquiry" }, { headers: { Origin: BASE } });
+  const bothOwner = await waitMail(EMAIL, sinceBoth);
+  const bothNew = await waitMail(NEWBIE, sinceBoth);
+  ok("enquiry email: both chosen people get one, each to themselves only", !!bothOwner && !!bothNew && bothOwner.to.length === 1 && bothNew.to.length === 1, `${!!bothOwner} ${!!bothNew}`);
+
+  // Choose nobody: the enquiry is saved and shown, but no mail goes out.
+  r = await boss.api("PUT", "/users/enquiry-emails", { ids: [] });
+  ok("enquiry emails: the list can be empty", r.status === 200 && r.data.items.every((u) => !u.notifyEnquiries), r.text);
+  const sinceNone = Date.now();
+  r = await fresh().call("POST", "/api/enquiry", { customerType: "B2C", name: "Pat Three", phone: "98765 43212", message: "Third enquiry" }, { headers: { Origin: BASE } });
+  await wait(1200);
+  const noneOwner = await lastMail(EMAIL);
+  ok("enquiry emails: with nobody chosen the form saves and no mail goes out", r.status === 201 && (!noneOwner || noneOwner.at < sinceNone), r.text);
+  await boss.api("PUT", "/users/enquiry-emails", { ids: [ownerId, newId] });
   d1("ENQ_DB", "DELETE FROM enquiries WHERE name LIKE 'Pat %';");
 
   // Removing a person signs them out and stops their mail.

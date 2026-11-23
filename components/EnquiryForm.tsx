@@ -2,10 +2,11 @@
 
 // Enquiry form (agreement §06 and §07): a customer-type dropdown (B2C
 // individual or B2B business / interior designer), saved to D1 and shown in
-// the admin dashboard marked B2C or B2B. No email or SMS alerts.
+// the admin dashboard marked B2C or B2B. The visitor gets a confirmation on this page only;
+// the showroom's chosen people are emailed by the server.
 // The same checks run here (instant feedback) and on the server.
 import Script from "next/script";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CUSTOMER_TYPES, validateEnquiry, type CustomerType, type FieldErrors } from "@/lib/enquiry-rules";
 import { CheckIcon, SendIcon } from "./icons";
 
@@ -18,11 +19,23 @@ type State = "idle" | "sending" | "sent" | "error";
 // (NEXT_PUBLIC_TURNSTILE_SITE_KEY); set TURNSTILE_SECRET on the Worker at the same time.
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
+declare global {
+  interface Window {
+    turnstile?: { reset: (widget?: string | HTMLElement) => void };
+  }
+}
+
 export function EnquiryForm({ categories, source, whatsappHref }: Props) {
   const [customerType, setCustomerType] = useState<CustomerType | "">("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [state, setState] = useState<State>("idle");
   const [problem, setProblem] = useState("");
+  const [firstName, setFirstName] = useState("");
+  // When the form appeared: the server ignores sends that are faster than a person can type.
+  const shownAt = useRef(0);
+  useEffect(() => {
+    shownAt.current = Date.now();
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +49,7 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
       message: String(form.get("message") ?? ""),
       website: String(form.get("website") ?? ""),
       source,
+      elapsed: Math.max(0, Math.round(Date.now() - shownAt.current)),
       ...(TURNSTILE_SITE_KEY ? { turnstileToken: String(form.get("cf-turnstile-response") ?? "") } : {}),
     };
     const check = validateEnquiry(input);
@@ -43,6 +57,11 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
     if (Object.keys(check.errors).length > 0) {
       const first = Object.keys(check.errors)[0];
       e.currentTarget.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
+      return;
+    }
+    if (TURNSTILE_SITE_KEY && !input.turnstileToken) {
+      setProblem("Please wait a moment for the security check to finish, then send again.");
+      setState("error");
       return;
     }
     setState("sending");
@@ -58,12 +77,15 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
         if (body.fields) setErrors(body.fields);
         setProblem(body.error ?? "Something went wrong. Please try again.");
         setState("error");
+        window.turnstile?.reset(); // a check can be used once
         return;
       }
+      setFirstName(input.name.trim().split(/\s+/)[0] ?? "");
       setState("sent");
     } catch {
       setProblem("Couldn't send right now. Please check your connection and try again.");
       setState("error");
+      window.turnstile?.reset();
     }
   }
 
@@ -73,8 +95,10 @@ export function EnquiryForm({ categories, source, whatsappHref }: Props) {
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-terracotta text-white">
           <CheckIcon className="h-8 w-8" />
         </span>
-        <p className="mt-6 text-[1.4rem] font-medium">Thank you, your enquiry has been sent.</p>
-        <p className="mt-3 max-w-sm text-[0.95rem] leading-relaxed text-muted">The showroom has your details and message.</p>
+        <p className="mt-6 text-[1.4rem] font-medium" role="status">
+          Thank you{firstName ? `, ${firstName}` : ""}. We have received your enquiry.
+        </p>
+        <p className="mt-3 max-w-sm text-[0.95rem] leading-relaxed text-muted">The showroom has your details and message. You do not need to send it again.</p>
         {whatsappHref && (
           <a href={whatsappHref} target="_blank" rel="noopener" className="link-line mt-6 text-[0.85rem] font-semibold tracking-[0.08em] text-terracotta uppercase">
             Or message us

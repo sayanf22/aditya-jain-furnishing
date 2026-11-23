@@ -247,7 +247,7 @@ async function runViewport(browser, name, viewport, ip, phone) {
   ok("setup creates the owner and opens the overview", /\/admin\/?$/.test(page.url()));
   const held = (await ctx.cookies()).find((x) => x.name === "__Host-delta_admin");
   // SameSite is read from the header the Worker sent: the WebKit build for Windows reports every cookie as SameSite=None.
-  ok("session cookie is Secure, HttpOnly, SameSite=Strict, Path=/", held && held.secure && held.httpOnly && held.path === "/" && /;\s*SameSite=Strict/i.test(setCookie), JSON.stringify({ ...held, value: undefined, header: setCookie.replace(/=[^;]+/, "=…") }));
+  ok("session cookie is Secure, HttpOnly, SameSite=Strict, Path=/", held && held.secure && held.httpOnly && held.path === "/" && /;\s*SameSite=Strict/i.test(setCookie), JSON.stringify({ ...held, value: undefined, header: setCookie.replace(/=[^;]+/, "=ï¿½") }));
   await shot(page, "overview");
   await checkLayout(page, "overview");
   ok("dashboard pages are noindex", (await page.locator('meta[name="robots"]').getAttribute("content"))?.includes("noindex") ?? false);
@@ -420,9 +420,10 @@ async function runViewport(browser, name, viewport, ip, phone) {
   await vp.goto(`${BASE}/contact`, { waitUntil: "networkidle" });
   await vp.selectOption("#eq-type", "B2C");
   await vp.fill("#eq-name", WHO);
-  await vp.fill("#eq-phone", "9876543210");
+  await vp.fill("#eq-phone", "9" + String(Date.now()).slice(-9)); // a new number each run: the same enquiry twice is stored once
+  await vp.waitForTimeout(2200); // the server ignores a form sent faster than a person can fill it
   await vp.getByRole("button", { name: "Send enquiry" }).click();
-  await vp.getByText("Thank you, your enquiry has been sent.").waitFor({ timeout: 10000 });
+  await vp.getByText(/We have received your enquiry/).waitFor({ timeout: 10000 });
   await visitor.close();
   await page.goto(`${BASE}/admin/enquiries`);
   const card = page.locator(".a-enquiry", { hasText: WHO });

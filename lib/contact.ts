@@ -46,6 +46,6 @@ export const SHOWROOM_LNG = 77.142804;
 
 export const MAP_EMBED_URL = `https://www.google.com/maps?q=${SHOWROOM_LAT},${SHOWROOM_LNG}&z=17&output=embed`;
 
-export function mapsLink(_info?: ContactInfo): string {
+export function mapsLink(): string {
   return GOOGLE_LISTING_URL;
 }

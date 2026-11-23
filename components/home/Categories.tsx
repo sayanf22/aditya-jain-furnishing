@@ -11,9 +11,15 @@ import type { CSSProperties } from "react";
 import { namesInText, sentenceCase, type Category } from "@/lib/content";
 import { ArrowRightIcon } from "../icons";
 import { Words } from "../Words";
+import { RowArrows } from "./RowArrows";
+
+// How many cards fit one desktop row. Up to this many sit in the widening row (as designed);
+// fewer are centred at the same card size; more become a slider with arrows.
+const ROW = 6;
 
 export function Categories({ categories }: { categories: Category[] }) {
   if (categories.length === 0) return null;
+  const slider = categories.length > ROW;
   return (
     <section className="bg-ivory py-20 sm:py-28 lg:py-32" aria-labelledby="categories-title">
       <div className="shell">
@@ -33,23 +39,34 @@ export function Categories({ categories }: { categories: Category[] }) {
             and down, so the cards slid inside their row while the page was
             scrolled. Bottom padding leaves room for the card shadows; the
             negative margin keeps the spacing below the same. */}
-        <div className="cat-row no-scrollbar -mx-5 mt-12 -mb-6 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pt-2 pb-10 sm:-mx-8 sm:mt-14 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:mt-16 lg:mb-0 lg:snap-none lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-4">
-          {categories.map((cat, i) => (
-            <CategoryCard key={cat.id} category={cat} index={i} />
-          ))}
+        <div
+          className={slider ? "" : "lg:mx-auto lg:w-[calc(var(--cat-n)/6*100%)]"}
+          style={slider ? undefined : ({ "--cat-n": Math.min(categories.length, ROW) } as CSSProperties)}
+        >
+          <div
+            id="cat-row"
+            className={`cat-row no-scrollbar -mx-5 mt-12 -mb-6 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain px-5 pt-2 pb-10 sm:-mx-8 sm:mt-14 sm:scroll-px-8 sm:px-8 lg:-mx-2.5 lg:mt-16 lg:mb-0 lg:gap-0 lg:px-0 lg:pb-4 ${
+              slider ? "cat-row--slider lg:scroll-px-0 lg:snap-x lg:snap-mandatory" : "lg:snap-none lg:overflow-visible"
+            }`}
+          >
+            {categories.map((cat, i) => (
+              <CategoryCard key={cat.id} category={cat} index={i} slider={slider} />
+            ))}
+          </div>
         </div>
+        {slider && <RowArrows targetId="cat-row" label="Browse the collections" />}
       </div>
     </section>
   );
 }
 
-function CategoryCard({ category, index }: { category: Category; index: number }) {
+function CategoryCard({ category, index, slider }: { category: Category; index: number; slider: boolean }) {
   const source = category.image;
   const href = category.href;
   const subs = category.subcategories;
 
   return (
-    <div className="cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:w-auto lg:max-w-none lg:px-2.5">
+    <div className={`cat-item w-[78vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] lg:max-w-none lg:px-2.5 ${slider ? "cat-item--slide lg:w-1/6" : "lg:w-auto"}`}>
       <article
         className={`cat-card relative isolate h-[26rem] overflow-hidden rounded-[1.4rem] ${source ? "bg-stone" : "bg-[#2e2e2e]"} shadow-[0_18px_40px_-30px_rgba(20,20,20,0.5)] lg:h-[30rem] xl:h-[32rem]`}
         data-reveal

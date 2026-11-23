@@ -73,6 +73,10 @@ export function DesignsScreen() {
           Add design
         </Button>
       </PageHeader>
+      <p className="a-card__text a-pagenote">
+        Designs are the individual products inside a collection or type, such as “Velvet, Emerald”. Each one shows on the website on its collection page, with its photos. Add one, change its photos or name, hide it, or delete it here;
+        a change appears on the website after you press Publish.
+      </p>
 
       <div className="a-toolbar">
         <Select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Collection">

@@ -27,7 +27,7 @@ export default async function ContactPage() {
   const whatsapp = whatsappLink(contact, enquiryMessage(contact));
   const tel = phoneLink(contact);
   const instagram = instagramLink(contact);
-  const directions = mapsLink(contact);
+  const directions = mapsLink();
 
   const options: Option[] = [];
   if (whatsapp) options.push({ href: whatsapp, external: true, icon: <WhatsAppIcon className="h-5 w-5" />, title: "Message us", detail: "Chat with the showroom", accent: true });

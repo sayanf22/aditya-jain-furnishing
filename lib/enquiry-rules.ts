@@ -17,6 +17,8 @@ export type EnquiryInput = {
   source?: string;
   website?: string;
   turnstileToken?: string;
+  /** Milliseconds between the form appearing and being sent; a script is faster than a person. */
+  elapsed?: number;
 };
 
 export type FieldErrors = Partial<Record<"customerType" | "name" | "phone" | "company" | "message", string>>;

@@ -69,7 +69,9 @@ export type LoginResponse = { ok: true } | { needsCode: true };
 //                                    emailed 6-digit code). 409 EXISTS for a known email, 409 LIMIT at 10 people.
 //   DELETE /api/admin/users/:id      -> Ok (their devices are signed out; you cannot remove yourself)
 // Every person can also receive an email about each new enquiry from the website form.
-export type TeamMember = { id: number; email: string; name: string | null; createdAt: string; lastSignIn: string | null; waiting: boolean; you: boolean };
+//   PUT    /api/admin/users/enquiry-emails  { ids: number[] } -> { items: TeamMember[] }  who gets an email about each
+//                                    new website enquiry (replaces the list; only people who can sign in; may be empty)
+export type TeamMember = { id: number; email: string; name: string | null; createdAt: string; lastSignIn: string | null; waiting: boolean; you: boolean; notifyEnquiries: boolean };
 export type NewMember = { email: string; name?: string };
 export type NewMemberResponse = { member: TeamMember; invited: boolean };
 export type AdminUser = { id: number; email: string; name: string | null; totpEnabled: boolean };

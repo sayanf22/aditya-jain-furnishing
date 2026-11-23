@@ -32,6 +32,10 @@ export function PhotosScreen() {
         </Button>
         <UploadButton onFiles={uploads.addFiles} />
       </PageHeader>
+      <p className="a-card__text a-pagenote">
+        Every photo you upload is kept here, ready to use. Choose a photo from this library when you edit a collection card, a design or a Site picture. A photo that is in use cannot be deleted: open it to see where it
+        is used, replace it there, then delete it. Deleting removes it from storage too. “Clear unused” deletes every photo that is not used anywhere.
+      </p>
 
       <label className="a-search a-search--solo">
         <IconSearch />

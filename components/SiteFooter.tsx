@@ -41,7 +41,7 @@ export function SiteFooter({ contact, categories }: Props) {
                 Call
               </a>
             )}
-            <a href={mapsLink(contact)} target="_blank" rel="noopener" className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ivory/25 px-5 text-[0.85rem] font-medium hover:border-ivory hover:bg-ivory hover:text-night">
+            <a href={mapsLink()} target="_blank" rel="noopener" className="btn inline-flex h-12 items-center gap-2 rounded-full border border-ivory/25 px-5 text-[0.85rem] font-medium hover:border-ivory hover:bg-ivory hover:text-night">
               <MapPinIcon className="h-[1.1rem] w-[1.1rem]" />
               Directions
             </a>

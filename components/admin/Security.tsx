@@ -9,14 +9,18 @@ import { dateTime, timeAgo } from "./format";
 import { usePaged, useResource } from "./hooks";
 import { IconCopy, IconDevice, IconExternal, IconPlus, IconTrash } from "./icons";
 import { useSession } from "./session";
-import { Badge, Button, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, PageHeader, PasswordInput, TextInput, useToast } from "./ui";
+import { Badge, Button, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, PageHeader, PasswordInput, SaveActions, Switch, TextInput, useToast } from "./ui";
+
+type PeopleResource = ReturnType<typeof useResource<{ items: TeamMember[] }>>;
 
 export function SecurityScreen() {
+  const people = useResource<{ items: TeamMember[] }>("/users");
   return (
     <>
       <PageHeader title="Security" />
       <div className="a-stack a-stack--lg">
-        <PeopleCard />
+        <PeopleCard people={people} />
+        <EnquiryEmailsCard people={people} />
         <PasswordCard />
         <TwoFactorCard />
         <DevicesCard />
@@ -39,9 +43,8 @@ function Card({ title, note, children }: { title: string; note?: ReactNode; chil
 }
 
 /** Who can sign in. A new person chooses their own password with an emailed code, so none is ever shared. */
-function PeopleCard() {
+function PeopleCard({ people }: { people: PeopleResource }) {
   const toast = useToast();
-  const people = useResource<{ items: TeamMember[] }>("/users");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,7 +72,7 @@ function PeopleCard() {
 
   return (
     <Card title="People" note={<Badge tone="neutral">{items.length || ""}</Badge>}>
-      <p className="a-card__text">Everyone here can sign in, and gets an email about each new enquiry.</p>
+      <p className="a-card__text">Everyone here can sign in to the dashboard. Choose who is emailed about new enquiries in “Enquiry emails” below.</p>
       {people.error && !people.data ? (
         <ErrorNote error={people.error} onRetry={people.reload} />
       ) : !people.data ? (
@@ -128,9 +131,76 @@ function PeopleCard() {
             people.reload();
           }}
         >
-          <p>They can no longer sign in, and stop getting enquiry emails.</p>
+          <p>They can no longer sign in, and are taken off the enquiry emails.</p>
         </ConfirmDialog>
       )}
+    </Card>
+  );
+}
+
+/** Who gets an email about each new website enquiry. Changes wait for Save. The visitor is never emailed. */
+function EnquiryEmailsCard({ people }: { people: PeopleResource }) {
+  const toast = useToast();
+  const items = people.data?.items ?? [];
+  const saved = items.filter((p) => p.notifyEnquiries).map((p) => p.id);
+  const [picked, setPicked] = useState<number[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = picked ?? saved;
+  const dirty = picked !== null && [...picked].sort().join(",") !== [...saved].sort().join(",");
+
+  function toggle(id: number, on: boolean) {
+    setError(null);
+    setPicked(on ? [...new Set([...current, id])] : current.filter((x) => x !== id));
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const out = await api.put<{ items: TeamMember[] }>("/users/enquiry-emails", { ids: current });
+      people.mutate(() => out);
+      setPicked(null);
+      toast(current.length ? "Saved. Only these people get the enquiry emails." : "Saved. No one will get enquiry emails; enquiries still appear in the Enquiries page.");
+    } catch (e) {
+      setError(asFailure(e).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card title="Enquiry emails" note={<Badge tone={saved.length ? "green" : "amber"}>{saved.length ? `${saved.length} on` : "none on"}</Badge>}>
+      <p className="a-card__text">
+        Turn on the people who should get an email each time someone sends the enquiry form. Customers are never emailed: they see a confirmation on the website. Every enquiry also shows in
+        the Enquiries page.
+      </p>
+      {people.error && !people.data ? (
+        <ErrorNote error={people.error} onRetry={people.reload} />
+      ) : !people.data ? (
+        <Loading />
+      ) : (
+        <ul className="a-devices a-people">
+          {items.map((person) => (
+            <li key={person.id} className="a-device">
+              <span className="a-person__initial" aria-hidden="true">
+                {(person.name || person.email).slice(0, 1).toUpperCase()}
+              </span>
+              <span className="a-device__text">
+                <span className="a-device__name">{person.name || person.email}</span>
+                <span className="a-device__meta">{person.name ? person.email : person.you ? "You" : ""}</span>
+              </span>
+              <Switch label={`Email ${person.email} about new enquiries`} checked={current.includes(person.id)} onChange={(on) => toggle(person.id, on)} disabled={saving} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && (
+        <p className="a-form__error" role="alert">
+          {error}
+        </p>
+      )}
+      <SaveActions dirty={dirty} saving={saving} onSave={save} onCancel={() => setPicked(null)} />
     </Card>
   );
 }

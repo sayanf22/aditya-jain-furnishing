@@ -360,6 +360,26 @@ address {
   }
 }
 
+/* More collections than fit one row: a slider. Every card keeps one fixed width (a sixth of
+   the row), nothing widens, and the type chips stay off the cards (they show on the
+   collection's own page). Arrows and the scroll position come from RowArrows. */
+@media (min-width: 1024px) {
+  .cat-item.cat-item--slide,
+  .cat-item.cat-item--slide:hover,
+  .cat-item.cat-item--slide:focus-within {
+    flex: 0 0 16.6667%;
+  }
+  .cat-item--slide .cat-subs {
+    display: none;
+  }
+  .cat-row--slider {
+    scroll-behavior: auto;
+  }
+  .cat-row--slider .cat-item {
+    scroll-snap-align: start;
+  }
+}
+
 /* Interactive room tap points: a soft ring that keeps expanding and fading. */
 @keyframes spot-ring {
   0% {

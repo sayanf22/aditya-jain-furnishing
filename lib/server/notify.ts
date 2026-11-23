@@ -1,5 +1,5 @@
-// Emails the dashboard's people when someone sends the enquiry form, so a new enquiry
-// is not missed. Runs after the visitor has their answer (waitUntil): the form never waits for it.
+// Emails the people ticked in the dashboard (Security -> Enquiry emails) when someone sends the
+// enquiry form, so a new enquiry is not missed. The visitor is never emailed. Runs after the visitor has their answer (waitUntil): the form never waits for it.
 // Everything typed by the visitor is escaped in the HTML part, and the plain-text part is text.
 // At most 20 notifications an hour (Resend's free plan: 100 mails a day), counted from the
 // enquiries themselves; enquiries are still saved and shown in the dashboard past that.
@@ -28,7 +28,7 @@ export async function notifyEnquiry(env: NotifyEnv, siteOrigin: string, e: Saved
     if (!emailAvailable(env) || !env.AUTH_DB) return;
     const recent = await env.ENQ_DB.prepare("SELECT COUNT(*) AS n FROM enquiries WHERE created_at > datetime('now', '-1 hour')").first<{ n: number }>();
     if ((recent?.n ?? 0) > 20) return;
-    const { results } = await env.AUTH_DB.prepare("SELECT email FROM admin_users WHERE disabled = 0 ORDER BY id").all<{ email: string }>();
+    const { results } = await env.AUTH_DB.prepare("SELECT email FROM admin_users WHERE disabled = 0 AND notify_enquiries = 1 ORDER BY id").all<{ email: string }>();
     if (results.length === 0) return;
     const who = e.customerType === "B2B" ? "Business" : "Customer";
     const lines: [string, string][] = [

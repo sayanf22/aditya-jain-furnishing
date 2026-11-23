@@ -104,6 +104,7 @@ export function CollectionEditor({ mode, onClose, onSaved, onAddChild, onDelete 
           <TextArea value={draft.description} onChange={(event) => set("description", event.target.value)} maxLength={500} rows={4} />
         </Field>
 
+        {!editing && <p className="a-card__text">After you add it, you can choose its photo, then press Save.</p>}
         {editing && (
           <>
             <PhotoField
